@@ -5,3 +5,4 @@ typechain-types/
 coverage/
 .env
 scripts/.env
+coverage.json
