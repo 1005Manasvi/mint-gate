@@ -138,9 +138,7 @@ def hardhat_node():
     if not npx or not ARTIFACT.exists():
         pytest.skip("needs Node and compiled contracts (cd Blockchain; npm ci; npx hardhat compile)")
     port = _free_port()
-    kwargs = (
-        {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True}
-    )
+    kwargs = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True}
     proc = subprocess.Popen(
         [npx, "hardhat", "node", "--port", str(port)],
         cwd=ROOT / "Blockchain",

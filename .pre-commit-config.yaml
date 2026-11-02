@@ -23,6 +23,7 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-merge-conflict
+      - id: check-yaml   # an invalid workflow file fails CI with zero jobs and no log
       - id: check-added-large-files
         args: [--maxkb=60000]   # the ResNet-18 weights (45 MB) are committed on purpose
       - id: detect-private-key

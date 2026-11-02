@@ -82,7 +82,7 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: v1.8.7
-      - name: forge test (ci profile: 5000 fuzz runs, 512 x 256 invariant calls)
+      - name: "forge test (ci profile: 5000 fuzz runs, 512 x 256 invariant calls)"
         run: forge test
         env:
           FOUNDRY_PROFILE: ci
