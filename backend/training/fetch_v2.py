@@ -15,6 +15,7 @@ so file format and resolution carry no label information.
 
 Run from backend/:   python -m training.fetch_v2
 """
+
 import random
 from collections import Counter, defaultdict
 
@@ -42,8 +43,18 @@ RAPIDATA_KEEP = {"dalle-3": 1500, "mj": 1500, "stable_diffusion": 1500, "flux": 
 RAPIDATA_NAME = {"dalle-3": "dalle3", "mj": "midjourney", "stable_diffusion": "sd3", "flux": "flux"}
 
 # v1 rebalancing caps: generator -> max images kept (None = drop entirely)
-CAPS = {"real_photo": 1200, "cryptopunk": 1000, "local_ai_art": 1500, "BigGAN": None,
-        "ADM": 300, "GLIDE": 300, "VQDM": 300, "Wukong": 300, "SD15": 300, "Midjourney": 300}
+CAPS = {
+    "real_photo": 1200,
+    "cryptopunk": 1000,
+    "local_ai_art": 1500,
+    "BigGAN": None,
+    "ADM": 300,
+    "GLIDE": 300,
+    "VQDM": 300,
+    "Wukong": 300,
+    "SD15": 300,
+    "Midjourney": 300,
+}
 
 
 def first_parquet(fs, repo):
@@ -62,20 +73,24 @@ def fetch_nfts(w, fs):
 
 
 def fetch_wikiart(w):
-    for i, row in enumerate(tqdm(parquet_rows(download("huggan/wikiart", "data/train-00010-of-00072.parquet"),
-                                              ["image", "style"]), desc="wikiart")):
+    for i, row in enumerate(
+        tqdm(
+            parquet_rows(download("huggan/wikiart", "data/train-00010-of-00072.parquet"), ["image", "style"]),
+            desc="wikiart",
+        )
+    ):
         w.add(f"wikiart_10_{i}", row["image"]["bytes"], "authentic", "wikiart", "human_art")
     w.save()
 
 
 def fetch_rapidata(w, fs):
-    files = [f for f in fs.glob(f"datasets/{RAPIDATA}/**/*.parquet")
-             if any(k in f for k in RAPIDATA_FILES)]
+    files = [f for f in fs.glob(f"datasets/{RAPIDATA}/**/*.parquet") if any(k in f for k in RAPIDATA_FILES)]
     got = Counter(r["generator"] for r in w.records if r["source"] == "rapidata")
     for f in sorted(files):
         rel = f.split(f"datasets/{RAPIDATA}/", 1)[1]
-        for i, row in enumerate(tqdm(parquet_rows(download(RAPIDATA, rel),
-                                                  ["image1", "image2", "model1", "model2"]), desc=rel[-30:])):
+        for i, row in enumerate(
+            tqdm(parquet_rows(download(RAPIDATA, rel), ["image1", "image2", "model1", "model2"]), desc=rel[-30:])
+        ):
             for k in ("1", "2"):
                 gen = RAPIDATA_NAME[row[f"model{k}"]]
                 if got[gen] >= RAPIDATA_KEEP[row[f"model{k}"]]:

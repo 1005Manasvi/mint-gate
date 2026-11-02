@@ -4,6 +4,7 @@ Settings come from environment variables; for local development they can be
 put in backend/.env (KEY=value lines, never committed). Every module imports
 paths from here so nothing depends on the current working directory.
 """
+
 import os
 from pathlib import Path
 
@@ -26,7 +27,7 @@ def _load_dotenv(path: Path):
 _load_dotenv(BACKEND_DIR / ".env")
 env = os.environ.get
 
-APP_ENV = env("APP_ENV", "development")           # "production" enables strict checks
+APP_ENV = env("APP_ENV", "development")  # "production" enables strict checks
 IS_PRODUCTION = APP_ENV == "production"
 
 # ---- Dataset (training only) --------------------------------------------------
@@ -62,7 +63,7 @@ DEMO_DIR = BACKEND_DIR / "demo_samples"
 # ---- Blockchain -------------------------------------------------------------------
 DEPLOYMENT_FILE = Path(env("DEPLOYMENT_FILE", str(BACKEND_DIR / "chain" / "deployment.json")))
 RPC_URL = env("RPC_URL", "http://127.0.0.1:8545")
-EXPLORER_URL = env("EXPLORER_URL", "")             # e.g. https://sepolia.etherscan.io
+EXPLORER_URL = env("EXPLORER_URL", "")  # e.g. https://sepolia.etherscan.io
 # Hardhat's account #0 key is public test data; only used on the local chain (chainId 31337).
 HARDHAT_DEV_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 VERIFIER_PRIVATE_KEY = env("VERIFIER_PRIVATE_KEY", "")
@@ -77,9 +78,9 @@ PORT = int(env("PORT", "5000"))
 REVIEWER_KEY = env("REVIEWER_KEY", "reviewer-demo-key")
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_IMAGE_PIXELS = 40_000_000  # decompression-bomb guard
-RATE_ANALYZE_PER_HOUR = int(env("RATE_ANALYZE_PER_HOUR", "60"))   # per client IP
-RATE_MINT_PER_DAY = int(env("RATE_MINT_PER_DAY", "5"))           # per client IP (mints cost gas)
-TRUSTED_PROXIES = int(env("TRUSTED_PROXIES", "0"))               # 1 behind HF Spaces / nginx
+RATE_ANALYZE_PER_HOUR = int(env("RATE_ANALYZE_PER_HOUR", "60"))  # per client IP
+RATE_MINT_PER_DAY = int(env("RATE_MINT_PER_DAY", "5"))  # per client IP (mints cost gas)
+TRUSTED_PROXIES = int(env("TRUSTED_PROXIES", "0"))  # 1 behind HF Spaces / nginx
 
 if IS_PRODUCTION:
     _problems = []

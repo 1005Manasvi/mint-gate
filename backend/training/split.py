@@ -4,6 +4,7 @@ The test split of the *originals* doubles as the pool of "new, never minted"
 artworks: those images are excluded from the reference index so they can be
 used to demonstrate a genuine PASS.
 """
+
 import json
 import random
 
@@ -20,8 +21,8 @@ def _split(files, rng):
     n_test, n_val = n // 10, n // 10
     return {
         "test": files[:n_test],
-        "val": files[n_test:n_test + n_val],
-        "train": files[n_test + n_val:],
+        "val": files[n_test : n_test + n_val],
+        "train": files[n_test + n_val :],
     }
 
 

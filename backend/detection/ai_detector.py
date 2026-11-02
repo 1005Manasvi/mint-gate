@@ -15,6 +15,7 @@ stored as plain JSON (no pickle), so loading the model can never execute code.
 The ensemble output is w * clip_probe + (1 - w) * spectral, with w chosen on the
 validation split (stored as `weight_clip`).
 """
+
 import json
 
 import cv2
@@ -38,7 +39,7 @@ def _crop(img: Image.Image) -> np.ndarray:
 
 
 _yy, _xx = np.indices((CROP, CROP)) - CROP // 2
-_radius = np.sqrt(_xx ** 2 + _yy ** 2) / (CROP // 2)
+_radius = np.sqrt(_xx**2 + _yy**2) / (CROP // 2)
 _bin = np.clip((_radius * BINS).astype(int), 0, BINS - 1)
 _bin_count = np.bincount(_bin.ravel(), minlength=BINS)
 
@@ -49,14 +50,15 @@ def spectral_features(img: Image.Image) -> np.ndarray:
     spec = np.fft.fftshift(np.fft.fft2((g - g.mean()) * win))
     logp = np.log1p(np.abs(spec) ** 2)
     profile = np.bincount(_bin.ravel(), weights=logp.ravel(), minlength=BINS) / _bin_count
-    profile = profile - profile[:4].mean()            # brightness / contrast invariance
+    profile = profile - profile[:4].mean()  # brightness / contrast invariance
 
     resid = g - cv2.medianBlur(g.astype(np.uint8), 3).astype(np.float32)
     r = resid.ravel()
     sd = r.std() + 1e-6
-    kurt = ((r - r.mean()) ** 4).mean() / sd ** 4
-    stats = np.array([np.log(sd), np.log(np.abs(r).mean() + 1e-6), np.log(kurt + 1e-6),
-                      (np.abs(r) < 0.5).mean()])     # fraction of perfectly flat pixels
+    kurt = ((r - r.mean()) ** 4).mean() / sd**4
+    stats = np.array(
+        [np.log(sd), np.log(np.abs(r).mean() + 1e-6), np.log(kurt + 1e-6), (np.abs(r) < 0.5).mean()]
+    )  # fraction of perfectly flat pixels
     return np.concatenate([profile, stats]).astype(np.float64)
 
 
@@ -97,5 +99,8 @@ class AIDetector:
         s = self.spectral(spectral_features(img))
         c = self.probe(clip_emb) if (self.probe is not None and clip_emb is not None) else None
         prob = s if c is None else self.weight_clip * c + (1 - self.weight_clip) * s
-        return {"spectral": round(s, 4), "clip_probe": None if c is None else round(c, 4),
-                "probability": round(prob, 4)}
+        return {
+            "spectral": round(s, 4),
+            "clip_probe": None if c is None else round(c, 4),
+            "probability": round(prob, 4),
+        }

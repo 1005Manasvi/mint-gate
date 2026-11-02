@@ -5,6 +5,7 @@ Regularisation strength C is chosen on the validation split.
 
 Run from backend/:   python -m training.train_ai_detector
 """
+
 import json
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -31,17 +32,25 @@ def featurise():
     # Heavy imports only in the main process (workers import spectral_worker only).
     from detection.clip_similarity import ClipEncoder
     from training.realworld_data import open_image
+
     manifest = json.loads(MANIFEST.read_text())
     enc = ClipEncoder()
     out = {}
     for split in SPLITS:
         recs = [r for r in manifest if r["split"] == split]
         with ProcessPoolExecutor(WORKERS) as ex:
-            out[f"{split}_spec"] = np.array(list(tqdm(ex.map(spectral_of, [r["file"] for r in recs], chunksize=32),
-                                                      total=len(recs), desc=f"spectral {split}")))
+            out[f"{split}_spec"] = np.array(
+                list(
+                    tqdm(
+                        ex.map(spectral_of, [r["file"] for r in recs], chunksize=32),
+                        total=len(recs),
+                        desc=f"spectral {split}",
+                    )
+                )
+            )
         embs = []
         for i in tqdm(range(0, len(recs), 64), desc=f"clip {split}"):
-            embs.append(enc.encode([open_image(r) for r in recs[i:i + 64]]))
+            embs.append(enc.encode([open_image(r) for r in recs[i : i + 64]]))
         out[f"{split}_clip"] = np.concatenate(embs)
         out[f"{split}_y"] = np.array([1 if r["label"] == "ai" else 0 for r in recs])
     np.savez(CACHE, **out)
@@ -58,8 +67,13 @@ def fit(Xtr, ytr, Xva, yva):
             best = (auc, C, clf)
     auc, C, clf = best
     print(f"  best C={C} (val AUC {auc:.4f})")
-    params = {"mean": scaler.mean_.tolist(), "scale": scaler.scale_.tolist(),
-              "coef": clf.coef_[0].tolist(), "intercept": float(clf.intercept_[0]), "C": C}
+    params = {
+        "mean": scaler.mean_.tolist(),
+        "scale": scaler.scale_.tolist(),
+        "coef": clf.coef_[0].tolist(),
+        "intercept": float(clf.intercept_[0]),
+        "C": C,
+    }
     return params, lambda X: clf.predict_proba(scaler.transform(X))[:, 1]
 
 
@@ -92,20 +106,33 @@ def main():
     for split in ("test", "test_unseen"):
         ps, pc = spec_pred(f[f"{split}_spec"]), clip_pred(f[f"{split}_clip"])
         y = f[f"{split}_y"]
-        metrics[split] = {"spectral": report(ps, y), "clip_probe": report(pc, y),
-                          "ensemble": report(combine(ps, pc), y)}
+        metrics[split] = {
+            "spectral": report(ps, y),
+            "clip_probe": report(pc, y),
+            "ensemble": report(combine(ps, pc), y),
+        }
     # Unseen generator (Flux) vs the authentic test images -> a proper ROC-AUC.
     auth = f["test_y"] == 0
     y = np.concatenate([np.zeros(auth.sum()), np.ones(len(f["test_unseen_y"]))]).astype(int)
     ps = np.concatenate([spec_pred(f["test_spec"][auth]), spec_pred(f["test_unseen_spec"])])
     pc = np.concatenate([clip_pred(f["test_clip"][auth]), clip_pred(f["test_unseen_clip"])])
-    metrics["unseen_vs_authentic"] = {"spectral": report(ps, y), "clip_probe": report(pc, y),
-                                                 "ensemble": report(combine(ps, pc), y)}
+    metrics["unseen_vs_authentic"] = {
+        "spectral": report(ps, y),
+        "clip_probe": report(pc, y),
+        "ensemble": report(combine(ps, pc), y),
+    }
     print(json.dumps(metrics, indent=2))
-    AI_DETECTOR_FILE.write_text(json.dumps({
-        "version": time.strftime("ai-ensemble-%Y%m%d-%H%M"),
-        "spectral": spec_params, "clip_probe": clip_params, "weight_clip": w, "metrics": metrics,
-    }))
+    AI_DETECTOR_FILE.write_text(
+        json.dumps(
+            {
+                "version": time.strftime("ai-ensemble-%Y%m%d-%H%M"),
+                "spectral": spec_params,
+                "clip_probe": clip_params,
+                "weight_clip": w,
+                "metrics": metrics,
+            }
+        )
+    )
     print("saved", AI_DETECTOR_FILE)
 
 

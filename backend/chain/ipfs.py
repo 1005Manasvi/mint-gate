@@ -3,6 +3,7 @@
 When PINATA_JWT is not configured (local development) the caller falls back to
 URLs served by this backend.
 """
+
 import json
 
 import requests
@@ -26,17 +27,22 @@ def _headers():
 
 
 def pin_file(data: bytes, filename: str, content_type: str) -> str:
-    r = requests.post(PIN_FILE, headers=_headers(), timeout=120,
-                      files={"file": (filename, data, content_type)},
-                      data={"pinataMetadata": json.dumps({"name": filename})})
+    r = requests.post(
+        PIN_FILE,
+        headers=_headers(),
+        timeout=120,
+        files={"file": (filename, data, content_type)},
+        data={"pinataMetadata": json.dumps({"name": filename})},
+    )
     if r.status_code != 200:
         raise IPFSError(f"Pinata file upload failed ({r.status_code}): {r.text[:200]}")
     return r.json()["IpfsHash"]
 
 
 def pin_json(obj: dict, name: str) -> str:
-    r = requests.post(PIN_JSON, headers=_headers(), timeout=60,
-                      json={"pinataContent": obj, "pinataMetadata": {"name": name}})
+    r = requests.post(
+        PIN_JSON, headers=_headers(), timeout=60, json={"pinataContent": obj, "pinataMetadata": {"name": name}}
+    )
     if r.status_code != 200:
         raise IPFSError(f"Pinata JSON upload failed ({r.status_code}): {r.text[:200]}")
     return r.json()["IpfsHash"]
@@ -44,4 +50,4 @@ def pin_json(obj: dict, name: str) -> str:
 
 def gateway_url(uri: str) -> str:
     """ipfs://CID[/path] -> https gateway URL; other URLs unchanged."""
-    return IPFS_GATEWAY + uri[len("ipfs://"):] if uri.startswith("ipfs://") else uri
+    return IPFS_GATEWAY + uri[len("ipfs://") :] if uri.startswith("ipfs://") else uri

@@ -1,4 +1,5 @@
 """Perceptual hashing (pHash) and fast Hamming search over the reference index."""
+
 import imagehash
 import numpy as np
 from PIL import Image

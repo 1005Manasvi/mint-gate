@@ -12,6 +12,7 @@
 
 Development:  python server.py            Production:  gunicorn wsgi:app (see Dockerfile)
 """
+
 import hmac
 import io
 import json
@@ -87,10 +88,12 @@ def rate_limited(bucket: str, limit: int, window_s: int) -> bool:
 
 # ---- security headers -----------------------------------------------------------------
 
-CSP = ("default-src 'self'; img-src 'self' data: https:; script-src 'self'; "
-       "style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; "
-       "connect-src 'self'; object-src 'none'; base-uri 'none'; "
-       "frame-ancestors 'self' https://huggingface.co https://*.hf.space")
+CSP = (
+    "default-src 'self'; img-src 'self' data: https:; script-src 'self'; "
+    "style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; "
+    "connect-src 'self'; object-src 'none'; base-uri 'none'; "
+    "frame-ancestors 'self' https://huggingface.co https://*.hf.space"
+)
 
 
 @app.after_request
@@ -102,6 +105,7 @@ def security_headers(resp):
 
 
 # ---- report storage ---------------------------------------------------------------------
+
 
 def _report_path(rid):
     if not REPORT_ID.match(rid):
@@ -126,6 +130,7 @@ def error(msg, code=400):
 
 # ---- static frontend --------------------------------------------------------------------
 
+
 @app.get("/")
 def index():
     return send_from_directory(FRONTEND_DIR, "index.html")
@@ -140,7 +145,7 @@ def static_files(name):
 def reference_image(name):
     if name.startswith("minted/"):  # artworks minted through Mint-Gate
         return send_from_directory(config.UPLOADS_DIR, name.removeprefix("minted/"))
-    if name.startswith("art/"):     # protected paintings
+    if name.startswith("art/"):  # protected paintings
         return send_from_directory(config.REFERENCE_ART_DIR, name.removeprefix("art/"))
     return send_from_directory(config.ORIGINALS_DIR, name)
 
@@ -176,21 +181,25 @@ def healthz():
 
 # ---- API --------------------------------------------------------------------------------
 
+
 @app.get("/api/status")
 def status():
     meta_results = {}
     if config.RESNET_META.exists():
         meta_results = json.loads(config.RESNET_META.read_text()).get("results", {})
-    return jsonify({
-        "references": len(pipeline.index),
-        "policy": pipeline.policy.describe(),
-        "models": {"resnet18": {"version": pipeline.resnet.version, "results": meta_results},
-                   "ai_detector": {"version": getattr(pipeline.ai, "version", None),
-                                   "metrics": pipeline.ai.metrics}},
-        "ipfs": ipfs.enabled(),
-        "ipfs_gateway": config.IPFS_GATEWAY,
-        "chain": chain().status(),
-    })
+    return jsonify(
+        {
+            "references": len(pipeline.index),
+            "policy": pipeline.policy.describe(),
+            "models": {
+                "resnet18": {"version": pipeline.resnet.version, "results": meta_results},
+                "ai_detector": {"version": getattr(pipeline.ai, "version", None), "metrics": pipeline.ai.metrics},
+            },
+            "ipfs": ipfs.enabled(),
+            "ipfs_gateway": config.IPFS_GATEWAY,
+            "chain": chain().status(),
+        }
+    )
 
 
 @app.post("/api/analyze")
@@ -232,8 +241,21 @@ def list_reports():
         r = json.loads(p.read_text())
         if wanted and r.get("status") != wanted:
             continue
-        out.append({k: r.get(k) for k in ("report_id", "filename", "decision", "status", "score",
-                                          "created_at", "reasons", "report_hash")})
+        out.append(
+            {
+                k: r.get(k)
+                for k in (
+                    "report_id",
+                    "filename",
+                    "decision",
+                    "status",
+                    "score",
+                    "created_at",
+                    "reasons",
+                    "report_hash",
+                )
+            }
+        )
     return jsonify(out)
 
 
@@ -289,8 +311,12 @@ def _publish(r, rid):
         "image": image_uri,
         "external_url": f"{config.PUBLIC_BASE_URL}/?report={rid}",
         "attributes": attributes,
-        "mint_gate": {"report_id": rid, "report_hash": r["report_hash"],
-                      "image_sha256": r["image_sha256"], "verification_report": report_uri},
+        "mint_gate": {
+            "report_id": rid,
+            "report_hash": r["report_hash"],
+            "image_sha256": r["image_sha256"],
+            "verification_report": report_uri,
+        },
     }
     (config.METADATA_DIR / f"{rid}.json").write_text(json.dumps(metadata, indent=2))
     if ipfs.enabled():
@@ -328,10 +354,8 @@ def mint(rid):
         except Exception as exc:  # contract revert = on-chain rule violated
             reason = next((e for e in CONTRACT_ERRORS if e in str(exc)), None)
             log.warning("mint failed: %s", exc)
-            return error(f"blocked on-chain: {CONTRACT_ERRORS[reason]}" if reason
-                         else "mint transaction failed", 409)
-        r["mint"] = {"recipient": Web3.to_checksum_address(recipient), "token_uri": token_uri,
-                     "links": links, **tx}
+            return error(f"blocked on-chain: {CONTRACT_ERRORS[reason]}" if reason else "mint transaction failed", 409)
+        r["mint"] = {"recipient": Web3.to_checksum_address(recipient), "token_uri": token_uri, "links": links, **tx}
         r["status"] = "MINTED"
         save_report(r)
     pipeline.register_minted(rid)
@@ -347,15 +371,17 @@ def verify(rid):
         onchain = chain().verification(r["report_hash"])
     except ChainUnavailable:
         return error("blockchain temporarily unavailable", 503)
-    return jsonify({
-        "report_hash": r["report_hash"],
-        "recomputed_hash": recomputed,
-        "report_untampered": recomputed == r["report_hash"],
-        "on_chain": onchain,
-        "on_chain_matches": onchain["decision"] != "NONE"
-                            and onchain["image_sha256"] == r["image_sha256"]
-                            and onchain["score"] == r["score"],
-    })
+    return jsonify(
+        {
+            "report_hash": r["report_hash"],
+            "recomputed_hash": recomputed,
+            "report_untampered": recomputed == r["report_hash"],
+            "on_chain": onchain,
+            "on_chain_matches": onchain["decision"] != "NONE"
+            and onchain["image_sha256"] == r["image_sha256"]
+            and onchain["score"] == r["score"],
+        }
+    )
 
 
 @app.get("/api/token/<int:token_id>")
@@ -384,11 +410,12 @@ def internal(_):
 
 # ---- startup: restore minted artworks from chain + IPFS -------------------------------
 
+
 def _fetch_minted_image(token):
     """(report_id, image) for a minted token, from local storage or via its IPFS metadata."""
     own = f"{config.PUBLIC_BASE_URL}/metadata/"
     if token["token_uri"].startswith(own):  # served by this very app: read from disk
-        rid = token["token_uri"][len(own):].removesuffix(".json")
+        rid = token["token_uri"][len(own) :].removesuffix(".json")
         local_meta = config.METADATA_DIR / f"{rid}.json"
         if REPORT_ID.match(rid) and local_meta.exists() and (config.UPLOADS_DIR / f"{rid}.png").exists():
             return rid, None

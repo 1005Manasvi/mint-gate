@@ -9,6 +9,7 @@ never-minted artworks in the evaluation.
 
 Run from backend/:   python -m training.build_index
 """
+
 import json
 import time
 
@@ -29,16 +30,18 @@ BATCH = 64
 def main():
     split = load_split()
     punks = paths(split, "authentic", "train") + paths(split, "authentic", "val")
-    art = [r["file"] for r in load_manifest()
-           if (r["generator"] == "human_art" or r["generator"].startswith("nft_"))
-           and r["split"] in ("train", "val")]
+    art = [
+        r["file"]
+        for r in load_manifest()
+        if (r["generator"] == "human_art" or r["generator"].startswith("nft_")) and r["split"] in ("train", "val")
+    ]
     entries = [(p.name, p) for p in punks] + [(ART_PREFIX + f, REFERENCE_ART_DIR / f) for f in art]
 
     enc = ClipEncoder()
     hashes, embs = [], []
     t = time.time()
     for i in tqdm(range(0, len(entries), BATCH), desc="indexing"):
-        imgs = [load_path(p) for _, p in entries[i:i + BATCH]]
+        imgs = [load_path(p) for _, p in entries[i : i + BATCH]]
         hashes += [phash_int(im) for im in imgs]
         embs.append(enc.encode(imgs))
     clip = np.concatenate(embs)

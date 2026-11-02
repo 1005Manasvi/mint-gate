@@ -1,4 +1,5 @@
 """Shared access to the real-world dataset produced by training/fetch_realworld.py."""
+
 import io
 import json
 import random
@@ -44,9 +45,11 @@ class ForgeryDataset(Dataset):
         auth = [r for r in recs if r["label"] == "authentic"]
         rng = random.Random(seed)
         manip = rng.sample(auth, int(len(auth) * manip_fraction)) if manip_fraction else []
-        self.items = ([(r, AUTH, False) for r in auth]
-                      + [(r, FORGED, False) for r in recs if r["label"] == "ai"]
-                      + [(r, FORGED, True) for r in manip])
+        self.items = (
+            [(r, AUTH, False) for r in auth]
+            + [(r, FORGED, False) for r in recs if r["label"] == "ai"]
+            + [(r, FORGED, True) for r in manip]
+        )
         self.kind = [("manipulated" if m else r["generator"]) for r, _, m in self.items]
         self.source = [r["source"] for r, _, _ in self.items]
         self.donors = recs

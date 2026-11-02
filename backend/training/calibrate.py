@@ -21,12 +21,14 @@ Threshold rules (all numbers measured here are written to policy.json):
 
 Run from backend/:   python -m training.calibrate --n 300
 """
+
 import argparse
 import json
 import random
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,10 +37,11 @@ from tqdm import tqdm
 
 from config import POLICY_FILE, PROJECT_DIR
 from detection import copy_move, feature_match
+from detection.ai_detector import AIDetector
 from detection.clip_similarity import ClipEncoder
 from detection.hashing import phash_int
-from detection.manipulations import copy_move as make_clone, near_duplicate
-from detection.ai_detector import AIDetector
+from detection.manipulations import copy_move as make_clone
+from detection.manipulations import near_duplicate
 from detection.preprocessing import detector_view, load_path
 from detection.reference_index import ReferenceIndex
 from detection.resnet_classifier import ResNetClassifier
@@ -51,8 +54,9 @@ def plagiarism_stats(img, idx, enc):
     sims, dists, cand = idx.search(phash_int(img), enc.encode_one(img))
     q = feature_match.describe(img)
     sparse = idx.sparse
-    orb = max([feature_match.match(q, feature_match.describe(load_path(idx.path(i))))[0]
-               for i in cand if sparse[i]] or [0])
+    orb = max(
+        [feature_match.match(q, feature_match.describe(load_path(idx.path(i))))[0] for i in cand if sparse[i]] or [0]
+    )
     return {"phash": idx.sparse_min_distance(dists)[0], "clip": idx.copy_score(sims)[0], "orb": int(orb)}
 
 
@@ -68,9 +72,14 @@ def thresholds(neg, pos, higher_is_worse):
         fail = min(fail, review - 1)
         tpr = lambda t: float((pos <= t).mean())
         fpr = lambda t: float((neg <= t).mean())
-    return {"review": float(review), "fail": float(fail),
-            "tpr_at_review": round(tpr(review), 4), "fpr_at_review": round(fpr(review), 4),
-            "tpr_at_fail": round(tpr(fail), 4), "fpr_at_fail": round(fpr(fail), 4)}
+    return {
+        "review": float(review),
+        "fail": float(fail),
+        "tpr_at_review": round(tpr(review), 4),
+        "fpr_at_review": round(fpr(review), 4),
+        "tpr_at_fail": round(tpr(fail), 4),
+        "fpr_at_fail": round(fpr(fail), 4),
+    }
 
 
 def main():
@@ -87,8 +96,9 @@ def main():
     genuine = [load_path(p) for p in new_art[: args.n // 2]] + [open_image(r) for r in new_paintings]
     # Plagiarised copies of protected works: half NFTs, half paintings.
     is_art = np.array([f.startswith("art/") and not f.startswith("art/nft_") for f in idx.files])
-    minted = (rng.sample(list(np.flatnonzero(~is_art)), args.n // 2)
-              + rng.sample(list(np.flatnonzero(is_art)), args.n // 2))
+    minted = rng.sample(list(np.flatnonzero(~is_art)), args.n // 2) + rng.sample(
+        list(np.flatnonzero(is_art)), args.n // 2
+    )
 
     neg, pos = {"phash": [], "clip": [], "orb": []}, {"phash": [], "clip": [], "orb": []}
     for img in tqdm(genuine, desc="genuine new art"):
@@ -119,18 +129,24 @@ def main():
         v = np.array(vals)
         review = float(np.clip(np.percentile(v, 95), 0.5, 0.95))
         fail = float(np.clip(np.percentile(v, 99), review + 0.02, 0.99))
-        det_th[name] = {"review": round(review, 3), "fail": round(fail, 3),
-                        "genuine_fpr_at_review": round(float((v >= review).mean()), 4),
-                        "genuine_fpr_at_fail": round(float((v >= fail).mean()), 4), "n": len(v)}
+        det_th[name] = {
+            "review": round(review, 3),
+            "fail": round(fail, 3),
+            "genuine_fpr_at_review": round(float((v >= review).mean()), 4),
+            "genuine_fpr_at_fail": round(float((v >= fail).mean()), 4),
+            "n": len(v),
+        }
 
     def auc(n, p, higher_is_worse):
         s = np.concatenate([n, p]) * (1 if higher_is_worse else -1)
         return round(float(roc_auc_score([0] * len(n) + [1] * len(p), s)), 4)
 
     def describe(n, p, higher_is_worse):
-        return {"auc": auc(n, p, higher_is_worse),
-                "genuine_p5_p50_p95": np.percentile(n, [5, 50, 95]).round(4).tolist(),
-                "copies_p5_p50_p95": np.percentile(p, [5, 50, 95]).round(4).tolist()}
+        return {
+            "auc": auc(n, p, higher_is_worse),
+            "genuine_p5_p50_p95": np.percentile(n, [5, 50, 95]).round(4).tolist(),
+            "copies_p5_p50_p95": np.percentile(p, [5, 50, 95]).round(4).tolist(),
+        }
 
     cm = thresholds(cm_neg, cm_pos, higher_is_worse=True)
     # pHash / ORB / copy score only apply to one-off artworks (collection members are excluded
@@ -145,18 +161,31 @@ def main():
     per_domain = {}
     for dom, sl in (("nft", slice(0, half)), ("painting", slice(half, None))):
         n_, p_ = neg_clip[sl], pos_clip[sl]
-        per_domain[dom] = {"auc": auc(n_, p_, True),
-                           "genuine_flagged_at_review": round(float((n_ >= clip_review).mean()), 4),
-                           "copies_caught_at_review": round(float((p_ >= clip_review).mean()), 4),
-                           "copies_failed": round(float((p_ >= clip_fail).mean()), 4)}
+        per_domain[dom] = {
+            "auc": auc(n_, p_, True),
+            "genuine_flagged_at_review": round(float((n_ >= clip_review).mean()), 4),
+            "copies_caught_at_review": round(float((p_ >= clip_review).mean()), 4),
+            "copies_failed": round(float((p_ >= clip_fail).mean()), 4),
+        }
     th = {
         "copy_move": {"review": round(cm["review"], 2), "fail": round(cm["fail"], 2)},
-        "clip": {"review": clip_review, "fail": clip_fail,
-                 "label": "CLIP copy score vs protected collection (density-relative)"},
-        "phash": {"review": int(ph["review"]), "fail": int(ph["fail"]), "advisory": False,
-                  "label": "pHash distance to nearest protected work (sparse references)"},
-        "orb": {"review": int(np.ceil(ob["review"])), "fail": int(np.ceil(ob["fail"])) + 1, "advisory": False,
-                "label": "ORB geometric inliers vs nearest protected work (sparse references)"},
+        "clip": {
+            "review": clip_review,
+            "fail": clip_fail,
+            "label": "CLIP copy score vs protected collection (density-relative)",
+        },
+        "phash": {
+            "review": int(ph["review"]),
+            "fail": int(ph["fail"]),
+            "advisory": False,
+            "label": "pHash distance to nearest protected work (sparse references)",
+        },
+        "orb": {
+            "review": int(np.ceil(ob["review"])),
+            "fail": int(np.ceil(ob["fail"])) + 1,
+            "advisory": False,
+            "label": "ORB geometric inliers vs nearest protected work (sparse references)",
+        },
         **{k: {"review": v["review"], "fail": v["fail"]} for k, v in det_th.items()},
     }
     cal = {
@@ -173,8 +202,14 @@ def main():
         policy["checks"][name].update(t)
     # Weights reflect the out-of-source check (training/independent_check.py): the CLIP-probe
     # AI detector generalises to unseen collections/generators, the ResNet-18 does not.
-    policy["weights"] = {"resnet": 0.15, "ai_detector": 0.40, "copy_move": 0.15,
-                         "clip": 0.15, "phash": 0.10, "orb": 0.05}
+    policy["weights"] = {
+        "resnet": 0.15,
+        "ai_detector": 0.40,
+        "copy_move": 0.15,
+        "clip": 0.15,
+        "phash": 0.10,
+        "orb": 0.05,
+    }
     policy["checks"]["resnet"]["max_status"] = "REVIEW"
     policy["version"] = "3.1.0"
     policy["calibration"] = {"n": args.n, "results": cal}
@@ -183,10 +218,12 @@ def main():
 
     # Figure for the report
     fig, axes = plt.subplots(1, 4, figsize=(18, 3.8))
-    series = [("phash", neg["phash"], pos["phash"], "pHash distance (lower = copy)"),
-              ("clip", neg["clip"], pos["clip"], "CLIP copy score (density-relative)"),
-              ("orb", neg["orb"], pos["orb"], "ORB RANSAC inliers"),
-              ("copy_move", cm_neg, cm_pos, "Copy-move peak ratio")]
+    series = [
+        ("phash", neg["phash"], pos["phash"], "pHash distance (lower = copy)"),
+        ("clip", neg["clip"], pos["clip"], "CLIP copy score (density-relative)"),
+        ("orb", neg["orb"], pos["orb"], "ORB RANSAC inliers"),
+        ("copy_move", cm_neg, cm_pos, "Copy-move peak ratio"),
+    ]
     for ax, (name, n, p, title) in zip(axes, series):
         allv = np.concatenate([n, p]).astype(float)
         if name == "copy_move":  # heavy right tail -> log axis

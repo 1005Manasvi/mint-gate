@@ -5,6 +5,7 @@ local corners). Requiring the matches to agree on a single homography makes
 the count meaningful: many RANSAC inliers means one image is a geometric
 transform (crop / resize / rotation) of the other.
 """
+
 import base64
 
 import cv2
@@ -51,8 +52,15 @@ def draw(query, ref, inliers, limit=60) -> str:
     """Side-by-side visualisation of inlier matches as a base64 PNG."""
     g1, kp1, _ = query
     g2, kp2, _ = ref
-    vis = cv2.drawMatches(g1, kp1, g2, kp2, inliers[:limit], None,
-                          matchColor=(0, 200, 255),
-                          flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+    vis = cv2.drawMatches(
+        g1,
+        kp1,
+        g2,
+        kp2,
+        inliers[:limit],
+        None,
+        matchColor=(0, 200, 255),
+        flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
+    )
     ok, png = cv2.imencode(".png", vis)
     return base64.b64encode(png.tobytes()).decode() if ok else ""

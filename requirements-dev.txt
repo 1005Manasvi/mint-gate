@@ -1,0 +1,4 @@
+# Test and lint tools (local + CI). Runtime deps: requirements.txt / deploy/requirements-deploy.txt.
+pytest==9.2.0
+ruff==0.17.3
+pre-commit==4.7.0

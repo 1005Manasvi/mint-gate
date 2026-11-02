@@ -14,12 +14,12 @@ Name prefixes:  "<file>"  seed NFT collection (REFERENCE_DIR)
                 "art/<file>"     protected artworks (REFERENCE_ART_DIR)
                 "minted/<file>"  minted through Mint-Gate (UPLOADS_DIR)
 """
+
 import json
 
 import numpy as np
 
-from config import (INDEX_CLIP, INDEX_FILES, INDEX_NN, INDEX_PHASH, ORIGINALS_DIR,
-                    REFERENCE_ART_DIR, UPLOADS_DIR)
+from config import INDEX_CLIP, INDEX_FILES, INDEX_NN, INDEX_PHASH, ORIGINALS_DIR, REFERENCE_ART_DIR, UPLOADS_DIR
 from detection.hashing import hamming_to_all
 
 MINTED_PREFIX = "minted/"
@@ -36,10 +36,10 @@ def nearest_neighbour_sims(emb: np.ndarray, chunk=2048) -> np.ndarray:
     """For every row, the cosine similarity of its most similar *other* row."""
     out = np.empty(len(emb), dtype=np.float32)
     for s in range(0, len(emb), chunk):
-        sims = emb[s:s + chunk] @ emb.T
+        sims = emb[s : s + chunk] @ emb.T
         idx = np.arange(s, min(s + chunk, len(emb)))
         sims[idx - s, idx] = -1.0  # ignore self
-        out[s:s + chunk] = sims.max(axis=1)
+        out[s : s + chunk] = sims.max(axis=1)
     return out
 
 
@@ -58,9 +58,9 @@ class ReferenceIndex:
     def path(self, i):
         name = self.files[i]
         if name.startswith(MINTED_PREFIX):
-            return UPLOADS_DIR / name[len(MINTED_PREFIX):]
+            return UPLOADS_DIR / name[len(MINTED_PREFIX) :]
         if name.startswith(ART_PREFIX):
-            return REFERENCE_ART_DIR / name[len(ART_PREFIX):]
+            return REFERENCE_ART_DIR / name[len(ART_PREFIX) :]
         return ORIGINALS_DIR / name
 
     def add(self, name: str, phash: int, emb: np.ndarray):

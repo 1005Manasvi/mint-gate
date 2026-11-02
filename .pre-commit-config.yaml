@@ -1,0 +1,28 @@
+# pip install pre-commit && pre-commit install      (runs on every `git commit`)
+# pre-commit run --all-files                         (the CI `lint` job runs this)
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.3
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier (JS / Solidity)
+        # Uses Blockchain's own Prettier + Solidity plugin (run `npm ci` in Blockchain/ first):
+        # Prettier 3 resolves plugins from the working directory, not from a hook env.
+        language: system
+        entry: node Blockchain/node_modules/prettier/bin/prettier.cjs --write --ignore-unknown
+        files: ^(Blockchain/(contracts|scripts|test)/|Blockchain/(hardhat\.config|\.solcover)\.js$|frontend/.*\.js$)
+        types_or: [javascript, solidity]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=60000]   # the ResNet-18 weights (45 MB) are committed on purpose
+      - id: detect-private-key

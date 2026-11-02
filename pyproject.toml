@@ -1,0 +1,25 @@
+# Tool configuration only (the backend is run as scripts from backend/, not installed).
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+addopts = "-ra --strict-markers"
+markers = ["slow: needs the real models (CLIP download / GPU); CI skips these"]
+filterwarnings = ["ignore::PIL.Image.DecompressionBombWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["backend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = [
+    "E501",  # long lines are left to the formatter
+    "E731",  # named lambdas are used deliberately for short metric helpers
+    "E741",  # `l, t` = left / top in crop arithmetic
+    "B905",  # zip() runs over arrays of equal length by construction
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "detection", "chain", "training", "server", "wsgi", "tests"]

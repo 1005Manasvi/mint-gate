@@ -4,6 +4,7 @@ Uploaded bytes are decoded exactly once, validated, flattened to RGB and
 re-encoded as PNG so that all checks operate on identical pixels and the
 SHA-256 we put on-chain identifies the *pixels*, not the container metadata.
 """
+
 import hashlib
 import io
 from dataclasses import dataclass
@@ -24,9 +25,9 @@ class InvalidImage(ValueError):
 
 @dataclass
 class PreparedImage:
-    rgb: Image.Image          # RGB, EXIF orientation applied
-    png_bytes: bytes          # canonical PNG encoding of `rgb`
-    sha256: str               # hex digest of the RGB pixel buffer + size
+    rgb: Image.Image  # RGB, EXIF orientation applied
+    png_bytes: bytes  # canonical PNG encoding of `rgb`
+    sha256: str  # hex digest of the RGB pixel buffer + size
     width: int
     height: int
     source_format: str

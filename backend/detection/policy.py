@@ -18,6 +18,7 @@ trigger REVIEW/FAIL on their own (status "INFO"). Calibration showed pHash and
 ORB cannot separate genuine siblings from copies in a generative collection
 (ROC-AUC < 0.5), so letting them block mints would reject genuine art.
 """
+
 import hashlib
 import json
 
@@ -53,18 +54,27 @@ class Policy:
 
     def describe(self):
         """Public view of the policy for the API (no internal calibration data)."""
-        return {"version": self.version, "sha256": self.sha256, "checks": self.checks,
-                "weights": self.weights, "score": self.data["score"]}
+        return {
+            "version": self.version,
+            "sha256": self.sha256,
+            "checks": self.checks,
+            "weights": self.weights,
+            "score": self.data["score"],
+        }
 
     def decide(self, values: dict):
         """values: {check_name: measurement}. Returns (decision, score, per_check, reasons)."""
         per_check, reasons = {}, []
         for name, v in values.items():
             r = self.risk(name, v)
-            per_check[name] = {"value": v, "risk": round(r, 4), "status": self.status(name, r),
-                               "advisory": bool(self.checks[name].get("advisory")),
-                               "review_at": self.checks[name]["review"],
-                               "fail_at": self.checks[name]["fail"]}
+            per_check[name] = {
+                "value": v,
+                "risk": round(r, 4),
+                "status": self.status(name, r),
+                "advisory": bool(self.checks[name].get("advisory")),
+                "review_at": self.checks[name]["review"],
+                "fail_at": self.checks[name]["fail"],
+            }
         score = 100.0 * (1.0 - sum(self.weights[n] * c["risk"] for n, c in per_check.items()))
         score = int(round(max(0.0, min(100.0, score))))
 

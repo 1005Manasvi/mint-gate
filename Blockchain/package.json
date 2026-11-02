@@ -7,12 +7,15 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "node": "hardhat node",
-    "deploy:local": "hardhat run scripts/deploy.js --network localhost"
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "format": "prettier --write --config ../.prettierrc.json --ignore-path ../.prettierignore contracts scripts test hardhat.config.js .solcover.js ../frontend/*.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts": "^5.1.0",
     "dotenv": "^16.4.5",
-    "hardhat": "^2.22.17"
+    "hardhat": "^2.22.17",
+    "prettier": "^3.9.10",
+    "prettier-plugin-solidity": "^1.4.3"
   }
 }

@@ -1,13 +1,14 @@
 """Mint-Gate pipeline: preprocessing -> six authenticity checks -> policy verdict.
 
-    upload bytes
-      -> preprocessing (validate, RGB, canonical PNG, SHA-256)
-      -> detector view (same resize + JPEG normalisation as the training data)
-      -> ResNet-18 | AI ensemble (spectral + CLIP probe) | copy-move   (image-only checks)
-      -> pHash + CLIP search over the minted-NFT index         (plagiarism checks)
-      -> ORB + RANSAC on the shortlisted candidates
-      -> policy engine -> PASS / REVIEW / FAIL + authenticity score
+upload bytes
+  -> preprocessing (validate, RGB, canonical PNG, SHA-256)
+  -> detector view (same resize + JPEG normalisation as the training data)
+  -> ResNet-18 | AI ensemble (spectral + CLIP probe) | copy-move   (image-only checks)
+  -> pHash + CLIP search over the minted-NFT index         (plagiarism checks)
+  -> ORB + RANSAC on the shortlisted candidates
+  -> policy engine -> PASS / REVIEW / FAIL + authenticity score
 """
+
 import hashlib
 import json
 import threading
@@ -24,8 +25,17 @@ from detection.preprocessing import detector_view, load_path, prepare
 from detection.reference_index import ReferenceIndex
 from detection.resnet_classifier import ResNetClassifier
 
-ATTESTED_FIELDS = ("report_id", "created_at", "image_sha256", "decision", "score",
-                   "policy_version", "policy_sha256", "models", "checks")
+ATTESTED_FIELDS = (
+    "report_id",
+    "created_at",
+    "image_sha256",
+    "decision",
+    "score",
+    "policy_version",
+    "policy_sha256",
+    "models",
+    "checks",
+)
 
 
 def canonical_hash(report: dict) -> str:
@@ -44,8 +54,10 @@ class MintGatePipeline:
         self.ai = AIDetector()
         self.clip = ClipEncoder()
         self._lock = threading.Lock()  # models are not re-entrant on one GPU
-        print(f"[pipeline] ready in {time.time() - t:.1f}s - {len(self.index)} reference NFTs, "
-              f"policy {self.policy.version}")
+        print(
+            f"[pipeline] ready in {time.time() - t:.1f}s - {len(self.index)} reference NFTs, "
+            f"policy {self.policy.version}"
+        )
 
     def register_minted(self, report_id: str, img=None):
         """Add a minted artwork to the reference index (duplicate protection).
@@ -101,8 +113,14 @@ class MintGatePipeline:
         for i in cand:
             ref = feature_match.describe(load_path(self.index.path(i)))
             inl, good, inliers = feature_match.match(q, ref)
-            matches.append({"filename": self.index.files[i], "clip_similarity": round(float(sims[i]), 4),
-                            "phash_distance": int(dists[i]), "orb_inliers": inl})
+            matches.append(
+                {
+                    "filename": self.index.files[i],
+                    "clip_similarity": round(float(sims[i]), 4),
+                    "phash_distance": int(dists[i]),
+                    "orb_inliers": inl,
+                }
+            )
             # Keypoint matches only count as copy evidence against sparse references.
             if sparse[i] and inl > best_orb[0]:
                 best_orb = (inl, i, (ref, inliers))
@@ -125,11 +143,15 @@ class MintGatePipeline:
             orb_vis = feature_match.draw(q, ref, inliers)
 
         details = {
-            "phash": {"nearest": self.index.files[hash_ref] if hash_ref is not None else None,
-                      "uploaded_phash": f"{ph:016x}"},
-            "clip": {"nearest": self.index.files[copy_ref],
-                     "similarity": round(float(sims[copy_ref]), 4),
-                     "reference_neighbour_similarity": round(float(self.index.nn_sim[copy_ref]), 4)},
+            "phash": {
+                "nearest": self.index.files[hash_ref] if hash_ref is not None else None,
+                "uploaded_phash": f"{ph:016x}",
+            },
+            "clip": {
+                "nearest": self.index.files[copy_ref],
+                "similarity": round(float(sims[copy_ref]), 4),
+                "reference_neighbour_similarity": round(float(self.index.nn_sim[copy_ref]), 4),
+            },
             "orb": {"nearest": self.index.files[best_orb[1]] if best_orb[1] is not None else None},
             "copy_move": {"votes": cm["votes"], "shift": cm["shift"]},
             "ai_detector": {"spectral": ai["spectral"], "clip_probe": ai["clip_probe"]},
@@ -150,8 +172,11 @@ class MintGatePipeline:
             "reasons": reasons,
             "policy_version": self.policy.version,
             "policy_sha256": self.policy.sha256,
-            "models": {"resnet18": self.resnet.version, "clip": "openai/clip-vit-base-patch32",
-                       "ai_detector": getattr(self.ai, "version", "none")},
+            "models": {
+                "resnet18": self.resnet.version,
+                "clip": "openai/clip-vit-base-patch32",
+                "ai_detector": getattr(self.ai, "version", "none"),
+            },
             "checks": checks,
             "similar_nfts": matches[:5],
             "evidence": {"copy_move_heatmap": copy_move.heatmap(img.rgb, cm), "orb_matches": orb_vis},

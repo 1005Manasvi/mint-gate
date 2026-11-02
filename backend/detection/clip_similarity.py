@@ -4,6 +4,7 @@ CLIP captures *content* rather than pixels, so it finds plagiarised copies
 that survive heavy edits (recolouring, re-drawing, style transfer) that
 defeat pHash and ORB.
 """
+
 import numpy as np
 import torch
 from PIL import Image

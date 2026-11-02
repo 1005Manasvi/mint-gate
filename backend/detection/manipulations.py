@@ -6,6 +6,7 @@ Used in three places:
   * calibrating the duplicate / copy-move thresholds,
   * producing the demo samples.
 """
+
 import io
 import random
 
@@ -21,7 +22,7 @@ def _textured_box(arr, rng, frac_lo, frac_hi, min_std=12.0, tries=25):
         bh = int(h * rng.uniform(frac_lo, frac_hi))
         x = rng.randint(0, w - bw)
         y = rng.randint(0, h - bh)
-        if arr[y:y + bh, x:x + bw].std() >= min_std:
+        if arr[y : y + bh, x : x + bw].std() >= min_std:
             return x, y, bw, bh
     return None
 
@@ -34,13 +35,13 @@ def copy_move(img: Image.Image, rng: random.Random) -> Image.Image:
     if box is None:
         box = (w // 8, h // 8, w // 4, h // 4)
     x, y, bw, bh = box
-    patch = arr[y:y + bh, x:x + bw].copy()
+    patch = arr[y : y + bh, x : x + bw].copy()
     for _ in range(25):
         nx, ny = rng.randint(0, w - bw), rng.randint(0, h - bh)
         far = abs(nx - x) > bw * 0.6 or abs(ny - y) > bh * 0.6
-        if far and np.abs(arr[ny:ny + bh, nx:nx + bw].astype(int) - patch).mean() > 10:
+        if far and np.abs(arr[ny : ny + bh, nx : nx + bw].astype(int) - patch).mean() > 10:
             break
-    arr[ny:ny + bh, nx:nx + bw] = patch
+    arr[ny : ny + bh, nx : nx + bw] = patch
     return Image.fromarray(arr)
 
 
@@ -62,6 +63,7 @@ def random_forgery(img, donor, rng):
 
 
 # ---- Near-duplicate transforms (plagiarism attempts) ----------------------
+
 
 def jpeg(img, quality):
     buf = io.BytesIO()

@@ -23,6 +23,7 @@ split 80/10/10 at random.
 
 Run from backend/:   python -m training.fetch_realworld
 """
+
 import hashlib
 import io
 import json
@@ -105,16 +106,25 @@ def parquet_rows(path, columns):
 
 def fetch_genimage(w):
     repo = "TheKernel01/Tiny-GenImage"
-    files = ["data/train-00000-of-00014.parquet", "data/train-00001-of-00014.parquet",
-             "data/train-00002-of-00014.parquet", "data/validation-00000-of-00004.parquet"]
+    files = [
+        "data/train-00000-of-00014.parquet",
+        "data/train-00001-of-00014.parquet",
+        "data/train-00002-of-00014.parquet",
+        "data/validation-00000-of-00004.parquet",
+    ]
     for f in files:
         local = download(repo, f)
         stem = Path(f).stem
         for i, row in enumerate(tqdm(parquet_rows(local, ["image", "label", "generator"]), desc=stem)):
             gen = GENIMAGE_NAMES[row["generator"]]
             label = "authentic" if row["label"] == 0 else "ai"
-            w.add(f"genimage_{stem}_{i}", row["image"]["bytes"], label, "genimage",
-                  "real_photo" if label == "authentic" else gen)
+            w.add(
+                f"genimage_{stem}_{i}",
+                row["image"]["bytes"],
+                label,
+                "genimage",
+                "real_photo" if label == "authentic" else gen,
+            )
         w.save()
 
 
@@ -123,9 +133,13 @@ def fetch_art_images(w):
     # Streamed straight into memory (16 parallel connections): some file names
     # exceed Windows' 260-character path limit once placed in the HF cache.
     fs = HfFileSystem()
-    files = [f for f in list_repo_files(repo, repo_type="dataset")
-             if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
-             and f.split("/")[-2] in ("real", "fake") and "ela_output" not in f]
+    files = [
+        f
+        for f in list_repo_files(repo, repo_type="dataset")
+        if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
+        and f.split("/")[-2] in ("real", "fake")
+        and "ela_output" not in f
+    ]
 
     def key_of(f):
         return "artimg_" + hashlib.sha1(f.encode()).hexdigest()[:16]
@@ -146,8 +160,7 @@ def fetch_art_images(w):
                 print("failed", f)
                 continue
             label = "authentic" if f.split("/")[-2] == "real" else "ai"
-            w.add(key_of(f), data, label, "art_images",
-                  "human_art" if label == "authentic" else "mixed_art_generators")
+            w.add(key_of(f), data, label, "art_images", "human_art" if label == "authentic" else "mixed_art_generators")
     w.save()
 
 
@@ -158,8 +171,13 @@ def fetch_omalve(w):
         stem = Path(f).stem
         for i, row in enumerate(tqdm(parquet_rows(local, ["image", "label"]), desc=stem)):
             label = "ai" if row["label"] == 0 else "authentic"  # 0 = AI_Art, 1 = Real_Art
-            w.add(f"realvsai_{stem}_{i}", row["image"]["bytes"], label, "real_vs_ai_art",
-                  "human_art" if label == "authentic" else "mixed_art_generators")
+            w.add(
+                f"realvsai_{stem}_{i}",
+                row["image"]["bytes"],
+                label,
+                "real_vs_ai_art",
+                "human_art" if label == "authentic" else "mixed_art_generators",
+            )
     w.save()
 
 
@@ -194,6 +212,7 @@ def main():
     fetch_genimage(w)
     assign_splits(w)
     from collections import Counter
+
     print(Counter((r["split"], r["label"]) for r in w.records))
     print(Counter((r["label"], r["generator"]) for r in w.records))
 

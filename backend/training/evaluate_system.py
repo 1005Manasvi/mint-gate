@@ -18,6 +18,7 @@ Forged / plagiarised uploads (should NOT pass):
 
 Run from backend/:   python -m training.evaluate_system --n 50
 """
+
 import argparse
 import io
 import json
@@ -25,6 +26,7 @@ import random
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -63,13 +65,15 @@ def main():
     ai_modern = pick(lambda r: r["split"] == "test" and r["generator"] in ("dalle3", "midjourney", "sd3", "sdxl"))
     nft_art = pick(lambda r: r["split"] == "test" and r["generator"].startswith("nft_"))
     unseen = pick(lambda r: r["split"] == "test_unseen")
-    used_punks = {r["file"].removeprefix("local_authentic_").removesuffix(".jpg") for r in man
-                  if r["generator"] == "cryptopunk"}
+    used_punks = {
+        r["file"].removeprefix("local_authentic_").removesuffix(".jpg") for r in man if r["generator"] == "cryptopunk"
+    }
     new_punks = [p for p in paths(load_split(), "authentic", "test") if p.stem not in used_punks]
     minted = range(len(pipe.index))
     art_refs = [i for i, f in enumerate(pipe.index.files) if f.startswith("art/") and not f.startswith("art/nft_")]
-    nft_refs = [i for i, f in enumerate(pipe.index.files)
-                if f.startswith("art/nft_") or not f.startswith(("art/", "minted/"))]
+    nft_refs = [
+        i for i, f in enumerate(pipe.index.files) if f.startswith("art/nft_") or not f.startswith(("art/", "minted/"))
+    ]
     n = args.n
 
     gens = {
@@ -85,8 +89,9 @@ def main():
         "edited_copy_nft": lambda: near_duplicate(load_path(pipe.index.path(rng.choice(nft_refs))), rng),
         "edited_copy_painting": lambda: near_duplicate(load_path(pipe.index.path(rng.choice(art_refs))), rng),
         "copy_move_human_art": lambda: copy_move(open_image(rng.choice(human_art)), rng),
-        "splice_human_art": lambda: splice(open_image(rng.choice(human_art)),
-                                           open_image(rng.choice(human_art + photos)), rng),
+        "splice_human_art": lambda: splice(
+            open_image(rng.choice(human_art)), open_image(rng.choice(human_art + photos)), rng
+        ),
     }
 
     results = {}
@@ -99,8 +104,12 @@ def main():
             scores.append(report["score"])
         results[cat] = {d: round(counts[d] / n, 3) for d in DECISIONS}
         results[cat]["mean_score"] = round(sum(scores) / n, 1)
-        print(f"{cat:22s} " + "  ".join(f"{d} {results[cat][d]:6.1%}" for d in DECISIONS)
-              + f"  mean score {results[cat]['mean_score']}", flush=True)
+        print(
+            f"{cat:22s} "
+            + "  ".join(f"{d} {results[cat][d]:6.1%}" for d in DECISIONS)
+            + f"  mean score {results[cat]['mean_score']}",
+            flush=True,
+        )
 
     forged = [c for c in gens if c not in GENUINE]
     summary = {

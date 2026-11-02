@@ -4,6 +4,7 @@ The class order is read from `model_meta.json` written at training time,
 instead of being hard-coded; a hard-coded index is what caused the old
 "AI probability" to be reported inverted.
 """
+
 import json
 
 import torch
@@ -17,12 +18,14 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 IMG_SIZE = 224
 MEAN, STD = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
 
-eval_transform = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(IMG_SIZE),
-    transforms.ToTensor(),
-    transforms.Normalize(MEAN, STD),
-])
+eval_transform = transforms.Compose(
+    [
+        transforms.Resize(256),
+        transforms.CenterCrop(IMG_SIZE),
+        transforms.ToTensor(),
+        transforms.Normalize(MEAN, STD),
+    ]
+)
 
 
 def build_model(num_classes=2, pretrained=False):

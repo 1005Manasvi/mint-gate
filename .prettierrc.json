@@ -1,0 +1,6 @@
+{
+  "printWidth": 120,
+  "endOfLine": "auto",
+  "plugins": ["./Blockchain/node_modules/prettier-plugin-solidity/src/index.js"],
+  "overrides": [{ "files": "*.sol", "options": { "tabWidth": 4 } }]
+}

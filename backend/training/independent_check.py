@@ -15,6 +15,7 @@ Results -> model/independent_check.json
 
 Run from backend/:   python -m training.independent_check --per-collection 120 --flux 200
 """
+
 import argparse
 import io
 import json
@@ -91,11 +92,13 @@ def main():
         for g in sorted({s[0] for s in samples}):
             m = np.array([s[0] == g for s in samples])
             groups[g] = round(float((pred[m] == y[m]).mean()), 4)
-        out[name] = {"accuracy": round(float((pred == y).mean()), 4),
-                     "roc_auc": round(float(roc_auc_score(y, p)), 4),
-                     "genuine_nft_correct": round(float((pred[y == 0] == 0).mean()), 4),
-                     "flux_detected": round(float((pred[y == 1] == 1).mean()), 4),
-                     "by_group": groups}
+        out[name] = {
+            "accuracy": round(float((pred == y).mean()), 4),
+            "roc_auc": round(float(roc_auc_score(y, p)), 4),
+            "genuine_nft_correct": round(float((pred[y == 0] == 0).mean()), 4),
+            "flux_detected": round(float((pred[y == 1] == 1).mean()), 4),
+            "by_group": groups,
+        }
     out["n_authentic"], out["n_ai"] = int((y == 0).sum()), int((y == 1).sum())
     print(json.dumps(out, indent=2))
     (MODEL_DIR / "independent_check.json").write_text(json.dumps(out, indent=2))

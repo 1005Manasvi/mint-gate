@@ -21,17 +21,24 @@ async function main() {
   const artifact = await hre.artifacts.readArtifact("MintGateNFT");
   const out = path.join(__dirname, "..", "..", "backend", "chain", "deployment.json");
   fs.mkdirSync(path.dirname(out), { recursive: true });
-  fs.writeFileSync(out, JSON.stringify({
-    network: hre.network.name,
-    chainId: Number(chainId),
-    address,
-    deployBlock: receipt.blockNumber,
-    deployTx: receipt.hash,
-    deployer: deployer.address,
-    verifier,
-    reviewer,
-    abi: artifact.abi,
-  }, null, 2));
+  fs.writeFileSync(
+    out,
+    JSON.stringify(
+      {
+        network: hre.network.name,
+        chainId: Number(chainId),
+        address,
+        deployBlock: receipt.blockNumber,
+        deployTx: receipt.hash,
+        deployer: deployer.address,
+        verifier,
+        reviewer,
+        abi: artifact.abi,
+      },
+      null,
+      2,
+    ),
+  );
 
   console.log(`MintGateNFT deployed to ${address} on ${hre.network.name} (chainId ${chainId})`);
   console.log(`deployment written to ${out}`);

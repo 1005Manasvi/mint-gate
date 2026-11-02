@@ -16,6 +16,7 @@ Evaluation (written to model/model_meta.json and model/metrics.json):
 
 Run from backend/:   python -m training.train_cnn --epochs 8
 """
+
 import argparse
 import io
 import json
@@ -27,8 +28,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image, ImageFilter
-from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
-                             precision_score, recall_score, roc_auc_score)
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
@@ -58,13 +58,15 @@ class RandomRecompress:
         return img
 
 
-train_transform = transforms.Compose([
-    RandomRecompress(),
-    transforms.RandomResizedCrop(IMG_SIZE, scale=(0.4, 1.0), ratio=(0.75, 1.33)),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize(MEAN, STD),
-])
+train_transform = transforms.Compose(
+    [
+        RandomRecompress(),
+        transforms.RandomResizedCrop(IMG_SIZE, scale=(0.4, 1.0), ratio=(0.75, 1.33)),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(MEAN, STD),
+    ]
+)
 
 
 class Degraded:
@@ -137,8 +139,7 @@ def main():
     unseen_ds = ForgeryDataset(["test_unseen"], eval_transform, train=False, manip_fraction=0)
     print(f"train {len(train_ds)} | val {len(val_ds)} | test {len(test_ds)} | unseen {len(unseen_ds)}", flush=True)
 
-    kw = dict(batch_size=args.batch, num_workers=args.workers, pin_memory=True,
-              persistent_workers=args.workers > 0)
+    kw = dict(batch_size=args.batch, num_workers=args.workers, pin_memory=True, persistent_workers=args.workers > 0)
     train_dl = DataLoader(train_ds, shuffle=True, drop_last=True, **kw)
 
     model = build_model(2, pretrained=True).to(device)
@@ -179,8 +180,14 @@ def main():
 
         vp, vy = predict(model, val_ds, device, args.batch, args.workers)
         vm = metrics(vp, vy)
-        row = {"epoch": epoch, "train_loss": round(loss_sum / seen, 4), "train_acc": round(correct / seen, 4),
-               "val_acc": vm["accuracy"], "val_auc": vm["roc_auc"], "sec": int(time.time() - t)}
+        row = {
+            "epoch": epoch,
+            "train_loss": round(loss_sum / seen, 4),
+            "train_acc": round(correct / seen, 4),
+            "val_acc": vm["accuracy"],
+            "val_auc": vm["roc_auc"],
+            "sec": int(time.time() - t),
+        }
         history.append(row)
         print(f"epoch {epoch}: {row}", flush=True)
         if vm["roc_auc"] > best_auc:
@@ -202,12 +209,22 @@ def main():
         results[f"robust_{kind}"] = metrics(p, y)
     print("RESULTS:", json.dumps(results, indent=2), flush=True)
 
-    meta = {"version": time.strftime("resnet18-realworld-%Y%m%d-%H%M"), "classes": CLASSES,
-            "img_size": IMG_SIZE, "epochs": args.epochs, "batch": args.batch, "lr": args.lr,
-            "optimizer": "AdamW + OneCycle, label smoothing 0.05", "device": device.type,
-            "fine_tuned": "layer4+fc" if args.freeze else "all layers",
-            "train_size": len(train_ds), "dataset": "realworld manifest (see training/fetch_realworld.py)",
-            "test_metrics": results["test"], "results": results, "best_val_auc": best_auc}
+    meta = {
+        "version": time.strftime("resnet18-realworld-%Y%m%d-%H%M"),
+        "classes": CLASSES,
+        "img_size": IMG_SIZE,
+        "epochs": args.epochs,
+        "batch": args.batch,
+        "lr": args.lr,
+        "optimizer": "AdamW + OneCycle, label smoothing 0.05",
+        "device": device.type,
+        "fine_tuned": "layer4+fc" if args.freeze else "all layers",
+        "train_size": len(train_ds),
+        "dataset": "realworld manifest (see training/fetch_realworld.py)",
+        "test_metrics": results["test"],
+        "results": results,
+        "best_val_auc": best_auc,
+    }
     RESNET_META.write_text(json.dumps(meta, indent=2))
     (MODEL_DIR / "metrics.json").write_text(json.dumps({"history": history, **results}, indent=2))
 
