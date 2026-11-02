@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            deploy/requirements-deploy.txt
+            requirements-dev.txt
+      - name: Install (CPU PyTorch + pinned runtime deps)
+        run: |
+          pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r deploy/requirements-deploy.txt -r requirements-dev.txt
+      - name: pytest (fast tests; slow ones need the real models)
+        run: pytest -m "not slow"
+
+  contracts:
+    name: Contracts (Hardhat tests + coverage)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Blockchain
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Blockchain/package-lock.json
+      - run: npm ci
+      - run: npx hardhat test
+      - name: Coverage (fails below 95 % lines / branches)
+        run: npm run coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: contract-coverage
+          path: Blockchain/coverage/
+
+  slither:
+    name: Slither static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Blockchain/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+        working-directory: Blockchain
+      - run: pip install slither-analyzer==0.11.6
+      # Our own code only (OpenZeppelin findings are excluded); low / informational findings
+      # are reported but accepted with a justification in docs/security.md.
+      - name: slither
+        working-directory: Blockchain
+        run: slither . --fail-medium
+
+  lint:
+    name: Lint (pre-commit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Blockchain/package-lock.json
+      - run: npm ci
+        working-directory: Blockchain
+      - uses: pre-commit/action@v3.0.1
