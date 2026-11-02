@@ -12,7 +12,7 @@ and anything the next phase must know. Keep entries brief: this file is read at 
 - Accounts ready: HF (token in backend/.env), Pinata JWT, Sepolia wallet funded with 0.05 ETH.
 - Pending owner actions: create GitHub repo `1005Manasvi/mint-gate`; sign up for Azure for Students.
 
-## Phase 0: Foundation (done locally, 2026-11-02; push pending)
+## Phase 0: Foundation (done, 2026-11-02)
 - **pytest** `backend/tests/`: 72 fast tests (~30 s, ~20 s of it is the torch/transformers import)
   + 3 `slow` (real CLIP / probe / ResNet). API tests use fake models, a 2-image fixture index and
   an in-memory `FakeChain` that enforces the contract rules (`tests/conftest.py`). conftest pins
@@ -26,9 +26,8 @@ and anything the next phase must know. Keep entries brief: this file is read at 
   `.pre-commit-config.yaml`; whole codebase formatted (commit in `.git-blame-ignore-revs`).
   CI `.github/workflows/ci.yml`: jobs python, contracts, slither, lint. MIT LICENSE,
   CONTRIBUTING.md, README badges.
-- **Not done (owner):** repo `1005Manasvi/mint-gate` did not exist yet (404), and adding the remote
-  needs your approval. To finish: create it (Public, no README), then
-  `git remote add origin https://github.com/1005Manasvi/mint-gate.git; git push -u origin main`,
-  and confirm CI is green. **CI has not run on GitHub yet.**
+- **Pushed** to https://github.com/1005Manasvi/mint-gate (public). First CI run on `85b905f`:
+  all 4 jobs green (python 84 s, contracts 34 s, slither 31 s, lint 31 s).
+- Wallet `0xeed8…eD7F`: ~0.036 Sepolia ETH, 0.0002 Base Sepolia ETH (faucet, 2026-11-02).
 - **For Phase 1:** v2 must follow checks-effects-interactions (set URI + emit before `_safeMint`)
   and pin `pragma solidity 0.8.24;`, so Slither is fully clean. Format v2 with Prettier (v1 is in `.prettierignore`).
