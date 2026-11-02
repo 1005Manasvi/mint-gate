@@ -14,8 +14,8 @@ Alchemy/Pinata free tiers, GitHub Actions.
 | [1](phase-1-contracts-v2.md) | **Blockchain core** | Contract v2: EIP-712 attestations, artist self-mint, disputes, revocation, pause, multisig-ready, Foundry fuzz tests, Sepolia + Base Sepolia | 1–2 chats |
 | [2](phase-2-database-backend.md) | Database + backend | PostgreSQL + pgvector + Redis, job queue, attestation signer, on-chain event indexer | 1–2 chats |
 | [3](phase-3-wallet-minting.md) | **Wallet UX** | Sign-In with Ethereum, artist-signed submissions, mint from the artist's own wallet, tx tracking | 1 chat |
-| [4](phase-4-onchain-index.md) | **On-chain plagiarism DB** | Ingest real NFTs (Ethereum + Base) via Alchemy, SSCD copy embeddings, vector search at scale, live sync of new mints | 1–2 chats |
-| [5](phase-5-provenance-signals.md) | Provenance + ML | C2PA, AI-watermark detection, reverse image search, real forgery datasets, recalibration with confidence intervals | 1–2 chats |
+| [4](phase-4-onchain-index.md) | **Modern plagiarism engine + on-chain DB** | Copy-detection benchmark; PDQ + SSCD/DINOv2 fusion + ALIKED/LightGlue verification; ~200k real NFTs (Ethereum + Base) in pgvector; live sync; trait duplicates | 2 chats |
+| [5](phase-5-provenance-signals.md) | Modern AI detection + forensics | SigLIP 2 probe (benchmark-gated), TruFor manipulation localisation, C2PA, AI watermarks, reverse search, real forgery datasets, 95 % CIs | 2 chats |
 | [6](phase-6-disputes-governance.md) | **Disputes + governance** | Report → evidence on IPFS → reviewer bond → on-chain resolution; Safe multisig admin; public provenance explorer | 1–2 chats |
 | [7](phase-7-deploy-ops.md) | Production | Azure Container Apps + Azure Postgres + Key Vault, monitoring, load test, docs, demo video | 1 chat |
 
@@ -31,7 +31,8 @@ Alchemy/Pinata free tiers, GitHub Actions.
 | Synchronous 1–3 s analysis, single worker | 2 (Redis job queue) |
 | Recipient address not proven, no artist identity | 3 (SIWE + signed submission) |
 | Plagiarism search only covers 15k local images | 4 (real on-chain NFTs + vector DB) |
-| Weak copy detection on edited copies | 4 (SSCD) |
+| Weak copy detection on edited copies; 2000s-era techniques (pHash, ORB, block matching) | 4 (PDQ, SSCD + DINOv2, LightGlue; benchmark-gated) |
+| Old ResNet-18 forgery model, weak generalisation | 5 (TruFor + SigLIP 2 probe; ResNet retired if covered) |
 | Art stolen from the web (not on-chain) is undetectable | 5 (reverse image search) |
 | New AI generators appear monthly | 5 (watermark/C2PA + retraining gate) |
 | Synthetic-only forgery evaluation, small samples | 5 (real forgery datasets, n ≥ 300, 95 % CIs) |

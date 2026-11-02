@@ -54,6 +54,20 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
   (Azure CLI installed at `C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd`).
 - Long jobs: run in the background with a log file in `backend/storage/`, never block.
 
+## Model-selection rules (apply in every phase)
+1. **Benchmark before adopting.** A new model replaces the current one only if it wins on the task's
+   benchmark: copy detection → `backend/benchmark/copydet.py` (micro-AP, TPR at 1 % FPR, per domain);
+   AI detection → out-of-source protocol (`training/independent_check.py`). "Newer" alone is not a reason.
+2. **Generalisation over in-distribution accuracy.** v1 lesson: ResNet-18 scored 0.974 AUC in-distribution
+   but only 64 % on unseen NFT collections; the frozen CLIP probe scored 100 %. Always test out-of-source.
+3. **Domain-aware evaluation.** Report paintings / one-off art, generative-collection NFTs, photos and
+   pixel art separately. Collection siblings are not copies.
+4. **Hardware budget.** Training ≤ 4 GB VRAM (base/small backbones, AMP, frozen features + probes or LoRA).
+   Deployed inference: CPU, ≤ 1.5 s per upload (export to ONNX, fp16/int8 when accuracy holds).
+5. **Licences.** Record every model's weight licence in `docs/models.md`; prefer permissive (Apache/MIT/BSD).
+   Mark research-only weights clearly, and keep a permissive-only configuration working.
+6. **Fewer models wins ties.** Retire a model when a better one covers its role.
+
 ## Conventions
 - Honest metrics only: held-out data, out-of-source checks, report limitations.
 - Every new on-chain feature needs Hardhat tests (and fuzz tests from Phase 1 on).
