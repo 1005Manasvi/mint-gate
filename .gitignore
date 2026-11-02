@@ -22,3 +22,6 @@ backend/chain/deployment.local.json
 backend/storage/
 .vscode/
 *.pyc
+# test / lint caches
+.pytest_cache/
+.ruff_cache/
