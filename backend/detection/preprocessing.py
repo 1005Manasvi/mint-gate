@@ -45,7 +45,12 @@ def prepare(raw: bytes) -> PreparedImage:
     try:
         with Image.open(io.BytesIO(raw)) as probe:
             fmt = probe.format
+            pixels = probe.width * probe.height
             probe.verify()  # structural check before full decode
+        # Pillow only raises above 2x MAX_IMAGE_PIXELS (it merely warns between 1x and 2x),
+        # so enforce the limit ourselves before decoding the pixels.
+        if pixels > MAX_IMAGE_PIXELS:
+            raise InvalidImage(f"image has {pixels} pixels, limit is {MAX_IMAGE_PIXELS}")
         img = Image.open(io.BytesIO(raw))
         img.load()
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
