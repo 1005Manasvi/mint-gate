@@ -5,22 +5,10 @@ The unit tests compare against a vector produced by ethers.js (an independent im
 submits a Python-signed verdict; it needs `npm ci && npx hardhat compile` in Blockchain/.
 """
 
-import json
-import os
-import shutil
-import signal
-import socket
-import subprocess
-import time
-from pathlib import Path
-
 import pytest
-from web3 import Web3
 
 from chain.eip712 import MAX_VALIDITY, Verdict, recover_signer, sign_verdict, verdict_digest
-
-ROOT = Path(__file__).resolve().parents[2]
-ARTIFACT = ROOT / "Blockchain" / "artifacts" / "contracts" / "v2" / "MintGateRegistry.sol" / "MintGateRegistry.json"
+from tests.conftest import artifact
 
 # Hardhat's public dev accounts #1 (verifier) and #3 (artist). Never used outside local chains.
 VERIFIER_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
@@ -103,6 +91,7 @@ def test_from_report():
     assert v.nonce != Verdict.from_report(report, ARTIST, now=1_000).nonce  # random nonces
     assert v.to_json()["nonce"] == str(v.nonce)
     assert Verdict.from_report(report | {"decision": "REVIEW"}, ARTIST).decision == 2
+    assert Verdict.from_json(v.to_json()) == v
 
 
 @pytest.mark.parametrize(
@@ -123,51 +112,14 @@ def test_invalid_verdicts_rejected(change):
         Verdict(**(VECTOR.__dict__ | change))
 
 
-# ---- on chain -------------------------------------------------------------------------------
-
-
-def _free_port():
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
-@pytest.fixture
-def hardhat_node():
-    npx = shutil.which("npx")
-    if not npx or not ARTIFACT.exists():
-        pytest.skip("needs Node and compiled contracts (cd Blockchain; npm ci; npx hardhat compile)")
-    port = _free_port()
-    kwargs = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True}
-    proc = subprocess.Popen(
-        [npx, "hardhat", "node", "--port", str(port)],
-        cwd=ROOT / "Blockchain",
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        **kwargs,
-    )
-    w3 = Web3(Web3.HTTPProvider(f"http://127.0.0.1:{port}"))
-    try:
-        for _ in range(120):
-            if w3.is_connected():
-                break
-            time.sleep(0.5)
-        else:
-            pytest.fail("hardhat node did not start")
-        yield w3
-    finally:
-        if os.name == "nt":  # npx spawns node as a child: kill the whole tree
-            subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True)
-        else:
-            os.killpg(proc.pid, signal.SIGTERM)
-        proc.wait(timeout=30)
+# ---- on chain (hardhat_node: tests/conftest.py) ---------------------------------------------
 
 
 @pytest.mark.chain
 def test_signature_verifies_on_chain(hardhat_node):
     w3 = hardhat_node
     admin, _, relayer = w3.eth.accounts[:3]
-    art = json.loads(ARTIFACT.read_text())
+    art = artifact("MintGateRegistry")
     factory = w3.eth.contract(abi=art["abi"], bytecode=art["bytecode"])
     tx = factory.constructor(3600, admin, VERIFIER, admin, admin, admin, 10**15).transact({"from": admin})
     registry = w3.eth.contract(address=w3.eth.get_transaction_receipt(tx).contractAddress, abi=art["abi"])

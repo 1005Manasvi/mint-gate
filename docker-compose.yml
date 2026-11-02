@@ -1,0 +1,42 @@
+# Local data services for Mint-Gate (Phase 2). The API, workers and indexer run from the venv
+# (the worker needs the GPU / models); only Postgres and Redis run in containers.
+#   docker compose up -d        then   cd backend; ..\venv\Scripts\python.exe -m alembic upgrade head
+# Default credentials are for local development only; production uses Azure (Phase 7).
+name: mintgate
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: mintgate
+      POSTGRES_PASSWORD: mintgate
+      POSTGRES_DB: mintgate
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Creates the separate test database on first start (tests truncate it freely).
+      - ./deploy/postgres-init.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mintgate -d mintgate"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    # AOF persistence: queued jobs and rate-limit counters survive a container restart.
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:
+  redisdata:

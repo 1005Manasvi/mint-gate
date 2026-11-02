@@ -84,15 +84,38 @@ Excluded from the CI gate. To see them, set `"exclude_dependencies": false` in
   to 50 MP (150 MB of RGB) was accepted. `preprocessing.prepare` now checks the pixel count from
   the header before decoding (`tests/test_preprocessing.py::test_decompression_bomb_rejected`).
 
+## Backend data layer (Phase 2)
+
+- **Stateless API.** Reports, attestations and the audit log live in Postgres; the job queue and
+  the rate-limit counters in Redis (shared by every API instance). The API holds no keys except
+  the verifier key it signs PASS attestations with, and sends no transactions.
+- **Attestations.** Bound to the artist wallet given at upload (EIP-712 `artist`; the contract
+  checks `msg.sender`), valid 24 h, random 256-bit nonce, unique per chain + registry (DB
+  constraint). An unexpired attestation is reused rather than re-signed.
+- **Backend transactions** (REVIEW / FAIL `submitVerdict`, `resolveReview`) run only in chain
+  workers, each under a Redis lock per sender address, so concurrent workers never reuse a nonce.
+  The tip is capped (`PRIORITY_FEE_GWEI`, default 0.01 gwei; see the Sepolia gas lesson).
+- **Append-only audit log.** A trigger rejects `UPDATE` / `DELETE` on `audit_log`
+  (`tests/test_repo.py`). The database owner can still drop the trigger: this protects against
+  application bugs, not against a compromised DB superuser.
+- **Indexer.** Only events `CONFIRMATIONS_<NETWORK>` blocks deep are indexed (Base Sepolia 5,
+  Sepolia 3); deeper reorgs are detected by the stored block hash and rolled back 64 blocks.
+  Projections (`tokens`, `disputes`) are rebuilt from `chain_events`, never edited by hand.
+- **Crash recovery.** A worker killed mid-job leaves an abandoned RQ job; it is retried within
+  ~4 min. RQ's built-in scheduler (a child process) outlived hard-killed workers on Windows and
+  blocked all retries with its lock; the worker runs the scheduler in a daemon thread instead.
+
 ## Known limitations (trust model)
 
 These are design limits, not bugs; the roadmap addresses them.
 
-- **One hot wallet (v1, still used by the app).** The backend's verifier key records verdicts *and*
-  mints. If it leaks, an attacker can record PASS verdicts for anything. v2 (deployed in Phase 1)
-  replaces this: the backend only signs EIP-712 verdicts, the artist submits and mints, and a
-  leaked key is handled by pause → role rotation → `voidVerdict` → dispute (playbook tested in
-  `test/v2/MintGateRegistry.test.js`). The app switches to v2 in Phases 2–3.
+- **Artist wallet is not proven yet (Phase 2).** The upload names the artist's address; the
+  attestation can only be used by that wallet, but nothing proves the uploader controls it, so
+  someone could claim another wallet's address first. Phase 3 adds SIWE + a signed submission.
+- **v1 hot wallet (retired from the app in Phase 2).** v1's verifier key recorded verdicts *and*
+  minted. The app now uses v2 only: the backend signs EIP-712 verdicts, the artist submits and
+  mints, and a leaked key is handled by pause → role rotation → `voidVerdict` → dispute
+  (playbook tested in `test/v2/MintGateRegistry.test.js`).
 - **v2 signing key is still a hot key.** A leaked verifier key can sign PASS verdicts until it is
   revoked; signatures are valid for at most 30 days. Phase 7 moves the key to Azure Key Vault.
 - **v2 disputes have no timeout.** A dispute nobody resolves keeps its bond locked (Phase 6).

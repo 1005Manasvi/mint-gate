@@ -55,18 +55,43 @@ CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
 
 # ---- Runtime storage -------------------------------------------------------------
 STORAGE_DIR = Path(env("STORAGE_DIR", str(BACKEND_DIR / "storage")))
-UPLOADS_DIR = STORAGE_DIR / "uploads"
-REPORTS_DIR = STORAGE_DIR / "reports"
+UPLOADS_DIR = STORAGE_DIR / "uploads"  # canonical PNGs, <report_id>.png
+INCOMING_DIR = STORAGE_DIR / "incoming"  # raw uploads waiting for a worker, <submission_id>
+EVIDENCE_DIR = STORAGE_DIR / "evidence"  # heatmaps / match images, <report_id>.json
+REPORTS_DIR = STORAGE_DIR / "reports"  # legacy v1 JSON reports (imported by db.migrate_json)
 METADATA_DIR = STORAGE_DIR / "metadata"
 DEMO_DIR = BACKEND_DIR / "demo_samples"
 
-# ---- Blockchain -------------------------------------------------------------------
-DEPLOYMENT_FILE = Path(env("DEPLOYMENT_FILE", str(BACKEND_DIR / "chain" / "deployment.json")))
-RPC_URL = env("RPC_URL", "http://127.0.0.1:8545")
-EXPLORER_URL = env("EXPLORER_URL", "")  # e.g. https://sepolia.etherscan.io
+# ---- Database + queue ---------------------------------------------------------------
+# docker-compose.yml provides both locally.
+DATABASE_URL = env("DATABASE_URL", "postgresql+psycopg://mintgate:mintgate@127.0.0.1:5432/mintgate")
+REDIS_URL = env("REDIS_URL", "redis://127.0.0.1:6379/0")
+JOB_TIMEOUT_S = int(env("JOB_TIMEOUT_S", "120"))  # analysis; also the crash-detection delay (+60 s)
+
+# ---- Blockchain (contracts v2) -----------------------------------------------------
+# One deployments/<network>.json per network (written by Blockchain/scripts/deploy-v2.js).
+DEPLOYMENTS_DIR = Path(env("DEPLOYMENTS_DIR", str(BACKEND_DIR / "chain" / "deployments")))
+# Networks the indexer follows, and the one used for backend-submitted (REVIEW / FAIL) verdicts.
+CHAIN_NETWORKS = [n.strip() for n in env("CHAIN_NETWORKS", "baseSepolia").split(",") if n.strip()]
+DEFAULT_NETWORK = env("DEFAULT_NETWORK", CHAIN_NETWORKS[0] if CHAIN_NETWORKS else "baseSepolia")
+# Per-network overrides: RPC_URL_BASESEPOLIA, CONFIRMATIONS_SEPOLIA, ...
+DEFAULT_RPC = {
+    "localhost": "http://127.0.0.1:8545",
+    "sepolia": "https://ethereum-sepolia-rpc.publicnode.com",
+    "baseSepolia": "https://sepolia.base.org",
+}
+DEFAULT_CONFIRMATIONS = {"localhost": 0, "sepolia": 3, "baseSepolia": 5}
+EXPLORERS = {"sepolia": "https://sepolia.etherscan.io", "baseSepolia": "https://sepolia.basescan.org"}
+# Anchor FAIL verdicts on chain too (costs gas per failed upload; REVIEW is always anchored).
+ANCHOR_FAILED_VERDICTS = env("ANCHOR_FAILED_VERDICTS", "1") == "1"
 # Hardhat's account #0 key is public test data; only used on the local chain (chainId 31337).
 HARDHAT_DEV_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 VERIFIER_PRIVATE_KEY = env("VERIFIER_PRIVATE_KEY", "")
+
+
+def network_setting(prefix: str, network: str, default):
+    return env(f"{prefix}_{network.upper()}", default)
+
 
 # ---- IPFS (Pinata) -----------------------------------------------------------------
 PINATA_JWT = env("PINATA_JWT", "")
@@ -79,7 +104,9 @@ REVIEWER_KEY = env("REVIEWER_KEY", "reviewer-demo-key")
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_IMAGE_PIXELS = 40_000_000  # decompression-bomb guard
 RATE_ANALYZE_PER_HOUR = int(env("RATE_ANALYZE_PER_HOUR", "60"))  # per client IP
-RATE_MINT_PER_DAY = int(env("RATE_MINT_PER_DAY", "5"))  # per client IP (mints cost gas)
+RATE_ATTEST_PER_DAY = int(env("RATE_ATTEST_PER_DAY", "20"))  # per client IP (attestations pin to IPFS)
+# Flask-Limiter storage; shared by every API instance. "memory://" only for tests.
+RATELIMIT_STORAGE_URI = env("RATELIMIT_STORAGE_URI", REDIS_URL)
 TRUSTED_PROXIES = int(env("TRUSTED_PROXIES", "0"))  # 1 behind HF Spaces / nginx
 
 if IS_PRODUCTION:
@@ -91,5 +118,5 @@ if IS_PRODUCTION:
     if _problems:
         raise RuntimeError("insecure production configuration: " + "; ".join(_problems))
 
-for _d in (MODEL_DIR, INDEX_DIR, UPLOADS_DIR, REPORTS_DIR, METADATA_DIR):
+for _d in (MODEL_DIR, INDEX_DIR, UPLOADS_DIR, INCOMING_DIR, EVIDENCE_DIR, REPORTS_DIR, METADATA_DIR):
     _d.mkdir(parents=True, exist_ok=True)

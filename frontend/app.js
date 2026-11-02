@@ -91,7 +91,7 @@ function setAccount(account) {
   btn.textContent = short(account, 6);
   btn.title = account;
   btn.classList.add("connected");
-  $("recipient").value = account;
+  $("artist").value = account;
 }
 
 $("walletBtn").addEventListener("click", connectWallet);
@@ -223,21 +223,41 @@ function finishPipeline(report) {
     const k = li.dataset.step;
     if (report.checks[k]) li.className = `s-${report.checks[k].status}`;
     else if (k === "policy") li.className = `s-${report.decision}`;
-    else if (k === "chain") li.className = report.chain?.anchored ? "s-DONE" : "s-REVIEW";
+    else if (k === "chain") li.className = "s-DONE";
     else li.className = "s-DONE";
   }
 }
 
-// ---------------- analyze ----------------
+// ---------------- analyze (async: submit -> job id -> poll) ----------------
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function waitForJob(statusUrl) {
+  for (let i = 0; i < 600; i++) {
+    const job = await api(statusUrl);
+    if (job.status === "done") return job.report;
+    if (job.status === "error") throw new Error(job.error || "analysis failed");
+    $("analyzeBtn").textContent = job.status === "queued" ? "Queued…" : "Analyzing…";
+    await sleep(i < 10 ? 500 : 1500);
+  }
+  throw new Error("analysis is taking too long - open the report later from the review queue");
+}
+
 $("analyzeBtn").addEventListener("click", async () => {
   if (!selectedFile) return;
+  const artist = $("artist").value.trim();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(artist)) {
+    alert("Enter the artist wallet address (or connect MetaMask) first: the verdict is bound to it.");
+    return;
+  }
   $("analyzeBtn").disabled = true;
-  $("analyzeBtn").textContent = "Analyzing…";
+  $("analyzeBtn").textContent = "Uploading…";
   animatePipeline();
   try {
     const fd = new FormData();
     fd.append("image", selectedFile);
-    const { report } = await api("/api/analyze", { method: "POST", body: fd });
+    fd.append("artist", artist);
+    const job = await api("/api/analyze", { method: "POST", body: fd });
+    const report = await waitForJob(job.status_url);
     finishPipeline(report);
     render(report);
     loadStatus();
@@ -351,44 +371,41 @@ function renderEvidence(ev) {
 
 function renderProvenance(r) {
   const span = (...parts) => el("span", {}, ...parts);
+  const onChain = (r.attestations || []).find((a) => a.submitted_tx);
   const rows = [
     ["Report hash", r.report_hash],
     ["Image SHA-256", r.image_sha256],
     ["Policy", `${r.policy_version} · ${short(r.policy_sha256)}`],
+    ["Artist", r.artist ? explorer("address", r.artist, r.artist) : "–"],
     [
-      "Anchored",
-      r.chain?.anchored
-        ? span("tx ", explorer("tx", r.chain.tx_hash), ` · block ${r.chain.block}`)
-        : `no (${r.chain?.error || "pending"})`,
+      "Verdict on chain",
+      onChain
+        ? span("tx ", explorer("tx", onChain.submitted_tx))
+        : r.status === "PASS"
+          ? "submitted by the artist when minting"
+          : "pending",
     ],
   ];
   if (r.review)
     rows.push([
       "Review",
-      span(r.review.approved ? "approved" : "rejected", " · tx ", explorer("tx", r.review.tx_hash)),
-    ]);
-  if (r.mint) {
-    rows.push([
-      "Token",
       span(
-        explorer("token", String(r.mint.token_id), `#${r.mint.token_id}`),
-        " → ",
-        explorer("address", r.mint.recipient),
-        " · tx ",
-        explorer("tx", r.mint.tx_hash),
+        r.review.approved ? "approved" : "rejected",
+        ...(r.review.tx_hash ? [" · tx ", explorer("tx", r.review.tx_hash)] : [" · on-chain update pending"]),
       ),
     ]);
-    rows.push(["Token URI", link(short(r.mint.token_uri, 22), httpUri(r.mint.token_uri))]);
-    if (r.mint.links)
-      rows.push([
-        "IPFS",
-        span(
-          link("image", httpUri(r.mint.links.image)),
-          " · ",
-          link("verification report", httpUri(r.mint.links.report)),
-        ),
-      ]);
+  if (r.publication) {
+    rows.push(["Token URI", link(short(r.publication.token_uri, 22), httpUri(r.publication.token_uri))]);
+    rows.push([
+      "Files",
+      span(
+        link("image", httpUri(r.publication.image)),
+        " · ",
+        link("verification report", httpUri(r.publication.report)),
+      ),
+    ]);
   }
+  if (r.legacy_v1?.mint) rows.push(["v1 token", `#${r.legacy_v1.mint.token_id} (MintGateNFT v1)`]);
   $("prov").replaceChildren(...rows.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]));
 }
 
@@ -404,20 +421,9 @@ function renderActions(r) {
       REVIEW_APPROVED: "Approved by a human reviewer — minting allowed.",
       FAIL: "Blocked by Mint-Gate policy. The failed verdict is recorded on-chain.",
       REVIEW_REJECTED: "Rejected by reviewer. Minting blocked.",
-      MINTED: "Already minted.",
+      MINTED: "Already minted (seen on chain by the indexer).",
     }[status] || "";
   $("txOut").replaceChildren();
-  if (r.mint) {
-    msg(
-      $("txOut"),
-      "ok",
-      "Minted token ",
-      explorer("token", String(r.mint.token_id), `#${r.mint.token_id}`),
-      " · tx ",
-      explorer("tx", r.mint.tx_hash),
-      ` · block ${r.mint.block}`,
-    );
-  }
 }
 
 function render(r) {
@@ -433,21 +439,47 @@ function render(r) {
   $("verdict").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// ---------------- mint / review / verify ----------------
+// ---------------- attestation / review / verify ----------------
+function renderAttestation(a) {
+  const args =
+    a.call === "submitAndMint"
+      ? { verdict: a.verdict, signature: a.signature, uri: a.token_uri, royaltyBps: 500 }
+      : { imageHash: a.image_hash, uri: a.token_uri, royaltyBps: 500 };
+  const json = JSON.stringify(
+    { network: a.network, chainId: a.chain_id, contract: a.nft, method: a.call, args },
+    null,
+    2,
+  );
+  const copy = el("button", { className: "btn btn-ghost" }, "Copy");
+  copy.addEventListener("click", () => navigator.clipboard?.writeText(json));
+  msg(
+    $("txOut"),
+    a.ready ? "ok" : "warn",
+    a.ready
+      ? `Ready: call ${a.call} on MintGateNFTV2 `
+      : "The approval is being recorded on chain; try again in a minute. Then call mint on MintGateNFTV2 ",
+    explorer("address", a.nft),
+    ` (${a.network}) from ${short(a.artist, 6)}.`,
+    a.expires_at ? ` Signature valid until ${new Date(a.expires_at * 1000).toLocaleString()}.` : "",
+    el("pre", { className: "mono attestation" }, json),
+    copy,
+  );
+}
+
 $("mintBtn").addEventListener("click", async () => {
   if (!current) return;
   $("mintBtn").disabled = true;
-  msg($("txOut"), "warn", "Sending mint transaction…");
+  msg($("txOut"), "warn", "Preparing the attestation…");
   try {
-    await api(`/api/mint/${current.report_id}`, {
+    const a = await api(`/api/attest/${current.report_id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recipient: $("recipient").value.trim() }),
+      body: JSON.stringify({ network: chainInfo.network }),
     });
-    render(await api(`/api/report/${current.report_id}`));
-    loadStatus();
+    renderAttestation(a);
   } catch (e) {
     msg($("txOut"), "err", e.message);
+  } finally {
     $("mintBtn").disabled = false;
   }
 });
@@ -477,10 +509,10 @@ $("verifyBtn").addEventListener("click", async () => {
       good ? "ok" : "err",
       good ? "✓ Report is untampered and matches the on-chain record. " : "✕ Mismatch between report and chain! ",
       el("br"),
-      `on-chain: ${v.on_chain.decision}, score ${v.on_chain.score}, policy ${v.on_chain.policy_version}`,
+      `on-chain (${v.network}): ${v.on_chain.decision}, score ${v.on_chain.score}`,
       el("br"),
-      `recorded at ${new Date(v.on_chain.timestamp * 1000).toLocaleString()} by `,
-      el("code", {}, v.on_chain.verifier),
+      `issued ${new Date(v.on_chain.issued_at * 1000).toLocaleString()}, signed by `,
+      el("code", {}, v.on_chain.signer),
     );
   } catch (e) {
     msg($("verifyOut"), "err", e.message);
@@ -531,15 +563,17 @@ $("lookupBtn").addEventListener("click", async () => {
         { className: "kv", style: "margin-top:16px" },
         ...[
           ["Token", explorer("token", String(t.token_id), `#${t.token_id}`)],
+          ["Network", t.network],
+          ["Status", t.status],
           ["Owner", explorer("address", t.owner, t.owner)],
-          ["Token URI", link(t.token_uri, t.token_uri_http)],
+          ["Artist", explorer("address", t.artist, t.artist)],
+          ["Token URI", t.token_uri ? link(t.token_uri, t.token_uri_http) : "–"],
           ["Report hash", t.report_hash],
-          ["Image SHA-256", v.image_sha256],
-          ["Decision", v.decision],
-          ["Score", v.score],
-          ["Policy", v.policy_version],
-          ["Verified at", new Date(v.timestamp * 1000).toLocaleString()],
-          ["Verifier", v.verifier],
+          ["Image SHA-256", t.image_sha256],
+          ["Decision", v ? v.decision : "–"],
+          ["Score", v ? v.score : "–"],
+          ["Policy", v ? v.policy_version : "–"],
+          ["Mint tx", explorer("tx", t.minted_tx)],
         ].flatMap(([k, val]) => [el("dt", {}, k), el("dd", {}, val)]),
       ),
     );

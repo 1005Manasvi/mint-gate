@@ -1,5 +1,8 @@
 """Build and deploy Mint-Gate to a Hugging Face Space (Docker SDK).
 
+OBSOLETE since Phase 2: the app now needs Postgres + Redis + workers (and HF Docker Spaces need
+PRO). Kept for the v1 history; Phase 7 replaces it with Azure Container Apps. It will not build.
+
     python deploy/hf_space.py --space <hf-username>/mint-gate            # build + upload
     python deploy/hf_space.py --space <hf-username>/mint-gate --build-only
 

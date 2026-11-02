@@ -42,6 +42,8 @@
           <img id="preview" alt="" hidden>
           <span id="dropText">Drop an image here or <u>browse</u><br><small>PNG · JPG · WEBP, max 10 MB</small></span>
         </label>
+        <label class="lbl" for="artist">Artist wallet (connect MetaMask or paste your address)</label>
+        <input id="artist" class="input mono" placeholder="0x…" spellcheck="false">
         <div class="row">
           <button id="analyzeBtn" class="btn btn-primary" disabled>Analyze artwork</button>
           <button id="clearBtn" class="btn btn-ghost">Clear</button>
@@ -61,7 +63,7 @@
           <li data-step="clip">CLIP semantic similarity</li>
           <li data-step="orb">ORB feature matching <small>RANSAC verified</small></li>
           <li data-step="policy">Mint-Gate policy engine</li>
-          <li data-step="chain">Anchor verdict on blockchain</li>
+          <li data-step="chain">Verdict attestation <small>EIP-712, signed for your wallet</small></li>
         </ol>
       </div>
     </div>
@@ -99,9 +101,8 @@
         <div class="card" id="actionCard">
           <h2>3 · Mint</h2>
           <div id="mintBox">
-            <label class="lbl" for="recipient">Recipient wallet (connect MetaMask or paste an address)</label>
-            <input id="recipient" class="input mono" placeholder="0x…" spellcheck="false">
-            <button id="mintBtn" class="btn btn-primary" disabled>Mint NFT</button>
+            <p class="hint">Mint-Gate signs the verdict for the artist wallet; the artist mints (and pays gas) from that wallet.</p>
+            <button id="mintBtn" class="btn btn-primary" disabled>Get mint attestation</button>
             <p id="mintHint" class="hint"></p>
           </div>
           <div id="reviewBox" hidden>

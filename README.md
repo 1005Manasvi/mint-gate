@@ -97,8 +97,12 @@ upload ─▶ preprocessing ─▶ ┌ CLIP-probe AI detector   (decides on AI c
   normalisation to         │ CLIP copy score ┐ vs protected collection:        │   risk + score   FAIL ─▶ blocked
   the training data)       │ pHash, ORB      ┘ 15,037 works + all minted here  ┘          │
                                                                                           ▼
-     MintGateNFT.sol (Sepolia): recordVerification · resolveReview · mintVerified (one token per image)
-     IPFS: artwork + ERC-721 metadata + full verification report
+   API (stateless, N instances) ─▶ Postgres (submissions, reports, attestations, audit log) + Redis/RQ jobs
+   analysis worker (models loaded once) ─▶ verdict ─▶ PASS: EIP-712 attestation for the artist's wallet
+   chain worker: submits REVIEW / FAIL verdicts, mirrors reviewer decisions (resolveReview)
+   artist wallet: MintGateNFTV2.submitAndMint ─▶ MintGateRegistry (one mint per image, disputes, revocation)
+   indexer: registry + NFT events ─▶ chain_events ─▶ tokens / disputes (reorg-safe, rebuildable)
+   IPFS: artwork + ERC-721 metadata + full verification report
 ```
 
 Engineering decisions worth knowing:
@@ -113,10 +117,15 @@ Engineering decisions worth knowing:
   Collection members are protected against exact copies.
 - **Data-driven thresholds.** REVIEW/FAIL thresholds sit at measured 5 % / 1 % false-alarm
   rates on genuine validation art. The policy file's SHA-256 is stored on-chain with every verdict.
-- **The chain is the source of truth.** On start-up the server rebuilds the set of minted
-  artworks from `VerifiedMint` events plus IPFS, so ephemeral hosting loses nothing.
-- **Defence in depth.** The mint rule is enforced by the API and again by the contract
-  (`NotMintable`, `ImageAlreadyMinted`).
+- **The chain is the source of truth.** An indexer follows the registry and NFT events
+  (`--from-block` re-derives everything from scratch; reorgs deeper than the confirmation depth
+  are rolled back). Every minted artwork becomes a reference item that all workers compare
+  new uploads against.
+- **The server never mints.** It signs an EIP-712 verdict bound to the artist's wallet; the
+  artist submits it and mints (and pays gas). The contract enforces the rule again
+  (`NotMintable`, `ImageAlreadyMinted`, `ArtistMismatch`).
+- **Asynchronous and stateless.** Uploads return `202 {job_id}` in ~50 ms; RQ workers run the
+  models. A killed worker's job is retried automatically; API restarts lose nothing.
 
 ## Repository layout
 
@@ -124,13 +133,16 @@ Engineering decisions worth knowing:
 |---|---|
 | `backend/detection/` | preprocessing, ResNet-18, AI detector, copy-move, pHash, CLIP, ORB, reference index, policy, pipeline |
 | `backend/training/` | dataset build (`fetch_realworld`, `fetch_v2`), training, index, calibration, evaluation, independent check |
-| `backend/chain/` | web3.py contract client, EIP-712 verdict signer (`eip712.py`), IPFS pinning, `deployments/<network>.json` (v2 addresses) |
-| `backend/server.py`, `wsgi.py` | Flask API (rate limits, CSP, proxy-aware), gunicorn entry point |
+| `backend/chain/` | v2 registry client (`registry.py`, Redis nonce lock), networks, EIP-712 verdict signer (`eip712.py`), IPFS + metadata, `deployments/<network>.json` |
+| `backend/db/`, `backend/migrations/` | SQLAlchemy 2 models + repository layer, Alembic migrations, legacy JSON import (`db.migrate_json`) |
+| `backend/jobs/` | Redis + RQ queues, tasks (analysis, verdict anchoring, review mirroring), Windows-safe worker |
+| `backend/indexer/` | chain indexer: events → `chain_events` → `tokens` / `disputes`, block cursor in Postgres |
+| `backend/server.py`, `wsgi.py` | stateless Flask API (Redis rate limits, CSP, proxy-aware), gunicorn entry point |
 | `Blockchain/contracts/MintGateNFT.sol` | v1: ERC-721 + AccessControl provenance contract |
 | `Blockchain/contracts/v2/` | v2: `MintGateRegistry` (EIP-712 verdicts, disputes, revocation, pause), `MintGateNFTV2` (artist self-mint, ERC-2981), `MintGated` / `IMintGate` (reuse by other collections) |
 | `Blockchain/test/` | Hardhat unit tests (v1 + v2, 100 % coverage) and Foundry fuzz / invariant suites (`test/foundry/`) |
 | `docs/contracts.md` | v2 state machines, interface, roles, upgrade strategy, threat model, gas |
-| `backend/tests/` | pytest suite: policy, preprocessing, reference index, copy-move, API with a mocked chain |
+| `backend/tests/` | pytest suite: policy, preprocessing, reference index, copy-move, repository layer, API + job flow, indexer on a Hardhat node |
 | `docs/security.md` | Slither results, coverage, known limitations |
 | `frontend/` | web UI (MetaMask connect, Etherscan/IPFS links) |
 | `deploy/` | production Dockerfile and deploy tooling |
@@ -143,14 +155,20 @@ py -3.12 -m venv venv
 .\venv\Scripts\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
 cd Blockchain; npm ci; npx hardhat test; cd ..
-powershell -ExecutionPolicy Bypass -File .\run_local.ps1     # local chain + server -> http://127.0.0.1:5000
+docker compose up -d                                          # Postgres 16 + pgvector, Redis 7
+powershell -ExecutionPolicy Bypass -File .\run_local.ps1     # migrations, local chain, v2 deploy, indexer,
+                                                              # workers, server -> http://127.0.0.1:5000
 ```
+
+Separately (from `backend/`): `python -m alembic upgrade head`, `python -m jobs.worker analysis`,
+`python -m jobs.worker chain`, `python -m indexer [--from-deploy] [--once]`, `python server.py`.
 
 Tests (CI runs the fast suite, Hardhat tests + coverage, Slither and the pre-commit hooks):
 
 ```powershell
 .\venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\venv\Scripts\python.exe -m pytest -m "not slow"     # ~75 tests, fake models + in-memory chain
+.\venv\Scripts\python.exe -m pytest -m "not slow"     # ~110 tests: test Postgres (docker compose), fakeredis,
+                                                       # fake models; chain tests start a Hardhat node
 cd Blockchain; npm run coverage; cd ..
 ```
 
@@ -163,8 +181,11 @@ Secrets live in `backend/.env` and `Blockchain/.env` (templates: `.env.example`)
 ## Security
 
 - Uploads: 10 MB limit, format allow-list, `verify()` before decode, decompression-bomb guard.
-- Per-IP rate limits. Strict Content-Security-Policy. No third-party scripts; the wallet uses
-  `window.ethereum`.
+- Per-IP rate limits shared by all API instances (Flask-Limiter on Redis). Strict
+  Content-Security-Policy. No third-party scripts; the wallet uses `window.ethereum`.
+- Attestations are bound to the artist wallet given at upload and expire after 24 h; nonces
+  are random 256-bit and unique per chain (DB constraint). Append-only `audit_log` (a trigger
+  rejects UPDATE / DELETE). Backend transactions take a Redis lock per sender (no nonce races).
 - All data rendered with `textContent`. Errors to clients are generic.
 - In production the server refuses to start without a strong reviewer key and a verifier key.
   The reviewer key is checked in constant time.

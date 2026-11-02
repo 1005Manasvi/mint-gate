@@ -19,6 +19,7 @@ backend/model/ai_features.npz
 !**/.env.example
 # local-only artefacts
 backend/chain/deployment.local.json
+backend/chain/deployments/localhost.json
 backend/storage/
 .vscode/
 *.pyc

@@ -140,6 +140,7 @@ figcaption { font-size: .75rem; color: var(--muted); margin-top: 4px; }
 .txout .ok { background: var(--pass-bg); color: #14532d; padding: 10px; border-radius: 10px; }
 .txout .err { background: var(--fail-bg); color: #7f1d1d; padding: 10px; border-radius: 10px; }
 .txout .warn { background: var(--review-bg); color: #78350f; padding: 10px; border-radius: 10px; }
+.txout .attestation { margin: 8px 0; max-height: 260px; overflow: auto; font-size: .72rem; background: var(--card); color: var(--ink); padding: 8px; border-radius: 8px; border: 1px solid var(--line); }
 .txout code { font-family: "JetBrains Mono", monospace; word-break: break-all; }
 
 /* queue */

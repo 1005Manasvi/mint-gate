@@ -67,3 +67,55 @@ and anything the next phase must know. Keep entries brief: this file is read at 
   and return `verdict.to_json()` + signature; it submits FAIL / REVIEW itself (`submitVerdict`).
   Index `VerdictSubmitted`, `ImageMinted`, `DisputeOpened/Resolved`, `ImageRevoked` from the registry
   (the NFT's own event is only `VerifiedMint`). Prefer Base Sepolia for frequent transactions.
+
+## Phase 2: Database, job queue, backend on contracts v2 (done, 2026-11-03)
+- **Infra:** `docker-compose.yml` = `pgvector/pgvector:pg16` (pgvector 0.8.7) + `redis:7-alpine` (AOF),
+  bound to 127.0.0.1; `deploy/postgres-init.sql` creates `mintgate_test`. Config: `DATABASE_URL`,
+  `REDIS_URL`, `CHAIN_NETWORKS` (default `baseSepolia`), `DEFAULT_NETWORK`, per-network
+  `RPC_URL_<NET>` / `CONFIRMATIONS_<NET>` / `PRIORITY_FEE_GWEI_<NET>` / `VERIFIER_PRIVATE_KEY_<NET>`.
+- **Schema** (SQLAlchemy 2 + Alembic `0001`, hand-written, up/down tested, ORM drift test): artists,
+  submissions (id = RQ job id = report id), reports (checks + body JSONB, evidence in
+  `storage/evidence/`), attestations (uint256 nonce NUMERIC(78), unique per chain + registry),
+  indexer_cursors, chain_events (unique chain_id+tx+log_index), tokens, disputes, audit_log
+  (**trigger makes it append-only**), reference_items (signed-BIGINT pHash, `vector(512)` + HNSW cosine).
+- **Async API:** `POST /api/analyze` (now needs `artist` wallet) → `202 {job_id}`; `GET /api/jobs/<id>`;
+  frontend polls. API imports no torch and sends no transactions (`wsgi.py`: any number of
+  gunicorn workers). Rate limits: Flask-Limiter on Redis. `/api/mint` is gone →
+  `POST /api/attest/<id>`: PASS = EIP-712 verdict bound to the artist (24 h, reused while
+  valid) + token URI → artist calls `submitAndMint`; REVIEW_APPROVED → `mint(imageHash, …)`.
+- **Workers** (`python -m jobs.worker analysis|chain`, RQ 3 `SimpleWorker`: no fork, models loaded once):
+  analysis queue runs the pipeline and syncs new `reference_items` into its index before each job;
+  chain queue submits REVIEW / FAIL verdicts (`ANCHOR_FAILED_VERDICTS=1`) and mirrors reviews
+  (`resolveReview`), under a **Redis nonce lock per sender**, retried with back-off.
+- **Indexer** (`python -m indexer [--network N] [--from-block B | --from-deploy] [--once]`):
+  registry + NFT events → chain_events → tokens / disputes projections (rebuildable); cursor +
+  block hash in Postgres; N confirmations; reorg → rewind 64 blocks + rebuild. Marks
+  attestations submitted, submissions MINTED, adds minted art to reference_items. Replaces the
+  startup sync; `chain/client.py` (v1) deleted. **The app no longer uses v1.**
+- **Legacy import:** `python -m db.migrate_json` (idempotent, `--dry-run`): 31 v1 reports imported
+  into the dev DB (8 minted → `reference_items` source `mintgate-v1`, fingerprinted by the worker).
+- **Tests:** 110 pytest (5 `chain`): repo layer 9, API + job flow 19, jobs 2, indexer on a Hardhat
+  node 4 (projection, `--from-deploy` and empty-DB rebuild reproduce identical state,
+  confirmations, `evm_revert` reorg, chain worker anchors + resolves a REVIEW). fakeredis[lua] for RQ.
+  CI: Postgres service in `python` + `contracts` jobs, `REQUIRE_DB=1` (DB tests may not skip);
+  indexer tests run in `contracts` (compiled artifacts).
+- **Measured on the live local stack** (Hardhat + v2, 2 API instances, real-model GPU worker,
+  chain worker, indexer): 40 concurrent submits over both APIs → all done, no conflicts; submit
+  latency median 76 / **p95 195 ms** under load (8 clients, Flask dev servers, GPU busy),
+  **42 / 55 ms** uncontended; artist minted with the attestation and paid gas (~493k gas);
+  indexer → MINTED; re-upload from another wallet → FAIL vs `minted/<id>`; `/verify` matches
+  chain; `--from-deploy` re-index → identical tokens (md5). **Worker killed mid-job → re-run
+  automatically after 210 s.**
+- **Bugs found + fixed:** (1) RQ's scheduler child process **outlives a hard-killed worker on Windows**
+  and holds the scheduler lock forever, so retries never ran → scheduler runs in a daemon thread
+  (`jobs/worker.py`); (2) idle RQ workers only run maintenance every ~7–10 min → `maintenance_interval=60`,
+  `worker_ttl=75` (recovery went from 14.5 min to 3.5 min); (3) an idempotent `resolve_review` re-run
+  erased the stored tx hash.
+- **Not verified live:** a REVIEW verdict through the real models (no demo sample scores REVIEW);
+  covered by API tests (fake registry) and the Hardhat chain-worker test. Nothing was sent to
+  Sepolia / Base Sepolia in this phase (no testnet gas spent).
+- **For Phase 3:** the artist address is still *claimed*, not proven: add SIWE + signed submission and
+  bind `submissions.artist_id` to the session wallet; mint from the wallet with vendored viem
+  (`/api/attest` already returns `call` + args); "My artworks" can query submissions / tokens by
+  wallet (indexes exist). `deploy/Dockerfile` + `hf_space.py` are obsolete (Phase 7 rebuilds deploy
+  as api / worker / indexer). Run the indexer for `baseSepolia,sepolia` once real mints start.

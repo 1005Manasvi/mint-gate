@@ -83,6 +83,21 @@ class Verdict:
             nonce=secrets.randbits(256),
         )
 
+    @classmethod
+    def from_json(cls, d: dict):
+        """Inverse of `to_json` (attestations are stored in that form)."""
+        return cls(
+            image_hash=d["imageHash"],
+            report_hash=d["reportHash"],
+            policy_hash=d["policyHash"],
+            score=int(d["score"]),
+            decision=int(d["decision"]),
+            artist=d["artist"],
+            issued_at=int(d["issuedAt"]),
+            expires_at=int(d["expiresAt"]),
+            nonce=int(d["nonce"]),
+        )
+
     def message(self) -> dict:
         """The EIP-712 message (field names as in Solidity)."""
         return {

@@ -9,13 +9,10 @@ upload bytes
   -> policy engine -> PASS / REVIEW / FAIL + authenticity score
 """
 
-import hashlib
-import json
 import threading
 import time
 import uuid
 
-import config
 from detection import copy_move, feature_match
 from detection.ai_detector import AIDetector
 from detection.clip_similarity import ClipEncoder
@@ -23,26 +20,8 @@ from detection.hashing import phash_int
 from detection.policy import Policy
 from detection.preprocessing import detector_view, load_path, prepare
 from detection.reference_index import ReferenceIndex
+from detection.report_hash import canonical_hash
 from detection.resnet_classifier import ResNetClassifier
-
-ATTESTED_FIELDS = (
-    "report_id",
-    "created_at",
-    "image_sha256",
-    "decision",
-    "score",
-    "policy_version",
-    "policy_sha256",
-    "models",
-    "checks",
-)
-
-
-def canonical_hash(report: dict) -> str:
-    """SHA-256 over the attested subset of the report (this goes on-chain)."""
-    body = {k: report[k] for k in ATTESTED_FIELDS}
-    blob = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
-    return hashlib.sha256(blob.encode()).hexdigest()
 
 
 class MintGatePipeline:
@@ -59,41 +38,24 @@ class MintGatePipeline:
             f"policy {self.policy.version}"
         )
 
-    def register_minted(self, report_id: str, img=None):
-        """Add a minted artwork to the reference index (duplicate protection).
+    def fingerprint(self, img):
+        """(pHash, CLIP embedding) of an image, as stored in `reference_items`."""
+        with self._lock:
+            return phash_int(img), self.clip.encode_one(img)
 
-        The image is stored as uploads/<report_id>.png so it can be shown and ORB-matched.
+    def add_reference(self, report_id: str, phash: int, emb) -> bool:
+        """Add a minted artwork (uploads/<report_id>.png) to the in-memory reference index.
+
+        Workers call this for every new `reference_items` row (see jobs.tasks.sync_references),
+        so duplicate protection is shared by all workers and survives restarts.
         """
-        path = config.UPLOADS_DIR / f"{report_id}.png"
-        if img is None:
-            img = load_path(path)
-        elif not path.exists():
-            img.save(path)
         with self._lock:
             if f"minted/{report_id}.png" in self.index.files:
-                return
-            emb = self.clip.encode_one(img)
-            self.index.add(f"{report_id}.png", phash_int(img), emb)
+                return False
+            self.index.add(f"{report_id}.png", phash, emb)
+            return True
 
-    def sync_minted_from_chain(self, chain, fetch_image):
-        """Rebuild minted-artwork entries from on-chain VerifiedMint events.
-
-        Hosting disks can be wiped on restart; the blockchain (+ IPFS) is the
-        durable source of truth, so duplicate protection survives redeploys.
-        `fetch_image(token)` returns (report_id, PIL image) or None.
-        """
-        added = 0
-        for token in chain.minted_tokens():
-            try:
-                got = fetch_image(token)
-                if got:
-                    self.register_minted(*got)
-                    added += 1
-            except Exception as exc:  # one unreachable IPFS object must not stop the rest
-                print(f"[sync] token {token.get('token_id')}: {exc}")
-        print(f"[sync] {added} minted artworks restored from chain")
-
-    def analyse(self, raw: bytes, filename: str = "") -> dict:
+    def analyse(self, raw: bytes, filename: str = "", report_id: str | None = None) -> dict:
         img = prepare(raw)
         t0 = time.time()
         view = detector_view(img.rgb)  # same normalisation as the training data
@@ -162,7 +124,7 @@ class MintGatePipeline:
             c["label"] = self.policy.checks[name]["label"]
 
         report = {
-            "report_id": uuid.uuid4().hex,
+            "report_id": report_id or uuid.uuid4().hex,
             "created_at": int(time.time()),
             "filename": filename[:200],
             "image_sha256": img.sha256,
