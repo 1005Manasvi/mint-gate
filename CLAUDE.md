@@ -28,7 +28,7 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - Training: `backend/training/` (fetch_realworld, fetch_v2, train_cnn, train_ai_detector,
   build_index, calibrate, evaluate_system, independent_check). Data in
   `backend/data/realworld/` (20,309 images, manifest.json); held-out generator = Flux.
-- Results: README.md and PROJECT_REPORT.md. Policy v3.1.0.
+- Results: README.md and PROJECT_REPORT.md. Policy v3.1.0. Tests: `backend/tests/` (pytest), `Blockchain/test/`; security review: `docs/security.md`.
 
 ## Commands (Windows; venv = Python 3.12 + CUDA torch 2.6)
 - Python: `venv\Scripts\python.exe` (run from `backend/` as `-m training.xxx`).
@@ -37,6 +37,11 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
   `npx hardhat run scripts/deploy.js --network sepolia`.
   Source verification: Sourcify **v2 API** (Hardhat's sourcify plugin uses the removed v1 API).
 - Local dev chain + server: `powershell -ExecutionPolicy Bypass -File .\run_local.ps1`.
+- Tests (repo root): `venv\Scripts\python.exe -m pytest -m "not slow"` (`-m slow` = real models).
+  Contracts: `cd Blockchain; npm run coverage` (gate >= 95 %). Lint: `venv\Scripts\pre-commit run --all-files`.
+- Slither: install it in a **separate venv** (scratchpad), not the app venv; run `slither . --fail-medium`
+  in `Blockchain/` (`slither.config.json` excludes OpenZeppelin). It runs `hardhat clean --global`.
+- CI: `.github/workflows/ci.yml` (python, contracts, slither, lint). Accepted findings: `docs/security.md`.
 
 ## Hard-won gotchas (do not relearn these)
 - **Secrets**: `backend/.env`, `Blockchain/.env`. **Never print or read their values**; check
@@ -53,6 +58,11 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - **Hugging Face Docker Spaces now need PRO.** Free hosting plan = **Azure for Students**
   (Azure CLI installed at `C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd`).
 - Long jobs: run in the background with a log file in `backend/storage/`, never block.
+- **Never reformat or edit `Blockchain/contracts/MintGateNFT.sol`** (v1): it must stay byte-identical
+  to the Sourcify-verified deployment (it is in `.prettierignore`). New contracts go in `contracts/v2/`.
+- Git history stores files with CRLF; ruff and prettier keep line endings as they are. Do not mass-normalise.
+- `server.py` builds the pipeline and starts a chain-sync thread **at import**; tests patch
+  `MintGatePipeline` / `ChainClient` before importing it (`backend/tests/conftest.py`).
 
 ## Model-selection rules (apply in every phase)
 1. **Benchmark before adopting.** A new model replaces the current one only if it wins on the task's
