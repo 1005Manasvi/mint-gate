@@ -1,0 +1,3 @@
+# Formatting-only commits (git blame --ignore-revs-file .git-blame-ignore-revs; GitHub uses it automatically)
+# ruff + prettier, Phase 0
+89575fa5a9499999221084b0eadeff0fb53ee4c2

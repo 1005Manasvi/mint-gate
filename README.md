@@ -1,5 +1,10 @@
 # Mint-Gate: AI forensics that verifies artwork *before* it becomes an NFT
 
+[![CI](https://github.com/1005Manasvi/mint-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/1005Manasvi/mint-gate/actions/workflows/ci.yml)
+[![Contract coverage](https://img.shields.io/badge/contract%20coverage-100%25-brightgreen)](docs/security.md)
+[![Slither](https://img.shields.io/badge/slither-0%20high%20%2F%200%20medium-brightgreen)](docs/security.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 A blockchain proves who owns an NFT. It cannot tell whether the image is original: a
 plagiarised, edited or AI-generated picture mints as easily as real art. **Mint-Gate** sits in
 front of the mint. Six forensic checks score every upload, and a calibrated policy engine
@@ -111,7 +116,9 @@ Engineering decisions worth knowing:
 | `backend/training/` | dataset build (`fetch_realworld`, `fetch_v2`), training, index, calibration, evaluation, independent check |
 | `backend/chain/` | web3.py contract client, IPFS pinning |
 | `backend/server.py`, `wsgi.py` | Flask API (rate limits, CSP, proxy-aware), gunicorn entry point |
-| `Blockchain/contracts/MintGateNFT.sol` | ERC-721 + AccessControl provenance contract (7 tests) |
+| `Blockchain/contracts/MintGateNFT.sol` | ERC-721 + AccessControl provenance contract (13 tests, 100 % coverage) |
+| `backend/tests/` | pytest suite: policy, preprocessing, reference index, copy-move, API with a mocked chain |
+| `docs/security.md` | Slither results, coverage, known limitations |
 | `frontend/` | web UI (MetaMask connect, Etherscan/IPFS links) |
 | `deploy/` | production Dockerfile and deploy tooling |
 | `PROJECT_REPORT.md` | full methodology and results |
@@ -122,8 +129,16 @@ Engineering decisions worth knowing:
 py -3.12 -m venv venv
 .\venv\Scripts\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
-cd Blockchain; npm install; npx hardhat test; cd ..
+cd Blockchain; npm ci; npx hardhat test; cd ..
 powershell -ExecutionPolicy Bypass -File .\run_local.ps1     # local chain + server -> http://127.0.0.1:5000
+```
+
+Tests (CI runs the fast suite, Hardhat tests + coverage, Slither and the pre-commit hooks):
+
+```powershell
+.\venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\venv\Scripts\python.exe -m pytest -m "not slow"     # ~75 tests, fake models + in-memory chain
+cd Blockchain; npm run coverage; cd ..
 ```
 
 Reproduce the models from `backend/`:
@@ -141,6 +156,8 @@ Secrets live in `backend/.env` and `Blockchain/.env` (templates: `.env.example`)
 - In production the server refuses to start without a strong reviewer key and a verifier key.
   The reviewer key is checked in constant time.
 - Model weights load with `torch.load(weights_only=True)`. Classical models are stored as JSON, never pickle.
+- Contract: Slither (0 high / 0 medium; the 2 low findings are justified), 100 % test coverage.
+  Details and the trust model's known limits: [docs/security.md](docs/security.md).
 
 ## Data and licences
 
@@ -148,3 +165,5 @@ NFT collections (huggingnft, MIT), Rapidata FLUX/SD3/MJ/DALL·E 3 (CDLA-Permissi
 (MIT), WikiArt, Tiny-GenImage (CC BY-NC-SA 4.0), AI Art & Real Art / Real-VS-AI-Art (research
 use). This is a **non-commercial portfolio project**. Automated detection is probabilistic: a
 PASS is evidence, not a legal guarantee of authorship.
+
+Code: [MIT](LICENSE). The data licences above still apply to the datasets and to model weights trained on them.
