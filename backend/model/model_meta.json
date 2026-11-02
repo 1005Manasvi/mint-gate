@@ -1,0 +1,155 @@
+{
+  "version": "resnet18-realworld-20261102-0259",
+  "classes": [
+    "authentic",
+    "forged"
+  ],
+  "img_size": 224,
+  "epochs": 10,
+  "batch": 48,
+  "lr": 0.0003,
+  "optimizer": "AdamW + OneCycle, label smoothing 0.05",
+  "device": "cuda",
+  "fine_tuned": "all layers",
+  "train_size": 17851,
+  "dataset": "realworld manifest (see training/fetch_realworld.py)",
+  "test_metrics": {
+    "n": 2212,
+    "accuracy": 0.9105,
+    "precision_forged": 0.9531,
+    "recall_forged": 0.8962,
+    "f1_forged": 0.9238,
+    "roc_auc": 0.974,
+    "confusion_matrix [[TN,FP],[FN,TP]]": [
+      [
+        814,
+        59
+      ],
+      [
+        139,
+        1200
+      ]
+    ],
+    "accuracy_by_group": {
+      "ADM": 0.6071,
+      "GLIDE": 0.9048,
+      "Midjourney": 0.9062,
+      "SD15": 0.9545,
+      "VQDM": 0.5455,
+      "Wukong": 0.7727,
+      "cryptopunk": 1.0,
+      "dalle3": 1.0,
+      "human_art": 0.8983,
+      "local_ai_art": 0.6209,
+      "manipulated": 0.941,
+      "midjourney": 0.979,
+      "mixed_art_generators": 0.9015,
+      "nft_azuki": 1.0,
+      "nft_boredapeyachtclub": 1.0,
+      "nft_cryptoskulls": 1.0,
+      "nft_dooggies": 1.0,
+      "nft_mutant-ape-yacht-club": 1.0,
+      "nft_nftrex": 1.0,
+      "nft_trippytoadznft": 1.0,
+      "real_photo": 0.7752,
+      "sd3": 1.0,
+      "sdxl": 0.9531
+    }
+  },
+  "results": {
+    "test": {
+      "n": 2212,
+      "accuracy": 0.9105,
+      "precision_forged": 0.9531,
+      "recall_forged": 0.8962,
+      "f1_forged": 0.9238,
+      "roc_auc": 0.974,
+      "confusion_matrix [[TN,FP],[FN,TP]]": [
+        [
+          814,
+          59
+        ],
+        [
+          139,
+          1200
+        ]
+      ],
+      "accuracy_by_group": {
+        "ADM": 0.6071,
+        "GLIDE": 0.9048,
+        "Midjourney": 0.9062,
+        "SD15": 0.9545,
+        "VQDM": 0.5455,
+        "Wukong": 0.7727,
+        "cryptopunk": 1.0,
+        "dalle3": 1.0,
+        "human_art": 0.8983,
+        "local_ai_art": 0.6209,
+        "manipulated": 0.941,
+        "midjourney": 0.979,
+        "mixed_art_generators": 0.9015,
+        "nft_azuki": 1.0,
+        "nft_boredapeyachtclub": 1.0,
+        "nft_cryptoskulls": 1.0,
+        "nft_dooggies": 1.0,
+        "nft_mutant-ape-yacht-club": 1.0,
+        "nft_nftrex": 1.0,
+        "nft_trippytoadznft": 1.0,
+        "real_photo": 0.7752,
+        "sd3": 1.0,
+        "sdxl": 0.9531
+      }
+    },
+    "test_by_source": {
+      "art_images": 0.9344,
+      "genimage": 0.7879,
+      "local": 0.79,
+      "nft_collections": 0.9897,
+      "rapidata": 0.9934,
+      "real_vs_ai_art": 0.8175,
+      "sdxl": 0.9531,
+      "wikiart": 0.9054
+    },
+    "test_unseen": {
+      "n": 1000,
+      "recall_forged": 0.953
+    },
+    "robust_jpeg70": {
+      "n": 2212,
+      "accuracy": 0.9159,
+      "precision_forged": 0.9358,
+      "recall_forged": 0.9246,
+      "f1_forged": 0.9301,
+      "roc_auc": 0.97,
+      "confusion_matrix [[TN,FP],[FN,TP]]": [
+        [
+          788,
+          85
+        ],
+        [
+          101,
+          1238
+        ]
+      ]
+    },
+    "robust_half": {
+      "n": 2212,
+      "accuracy": 0.8942,
+      "precision_forged": 0.8834,
+      "recall_forged": 0.9507,
+      "f1_forged": 0.9158,
+      "roc_auc": 0.9587,
+      "confusion_matrix [[TN,FP],[FN,TP]]": [
+        [
+          705,
+          168
+        ],
+        [
+          66,
+          1273
+        ]
+      ]
+    }
+  },
+  "best_val_auc": 0.9722
+}

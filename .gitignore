@@ -1,0 +1,24 @@
+venv/
+.venv/
+__pycache__/
+backend/storage/
+backend/data/
+*.log
+Blockchain/node_modules/
+Blockchain/artifacts/
+Blockchain/cache/
+Blockchain/.env
+Blockchain/scripts/.env
+backend/.env
+deploy/dist/
+.wheels/
+backend/model/ai_features.npz
+# any secret file, anywhere
+**/.env
+.env.*
+!**/.env.example
+# local-only artefacts
+backend/chain/deployment.local.json
+backend/storage/
+.vscode/
+*.pyc

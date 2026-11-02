@@ -1,0 +1,30 @@
+{
+  "resnet18": {
+    "accuracy": 0.6779,
+    "roc_auc": 0.7935,
+    "genuine_nft_correct": 0.6396,
+    "flux_detected": 0.77,
+    "by_group": {
+      "flux_independent": 0.77,
+      "nft_cryptoadz-by-gremplin": 0.5417,
+      "nft_cyberkongz": 0.425,
+      "nft_etherbears": 0.6917,
+      "nft_theshiboshis": 0.9
+    }
+  },
+  "ai_detector": {
+    "accuracy": 0.9824,
+    "roc_auc": 0.9998,
+    "genuine_nft_correct": 1.0,
+    "flux_detected": 0.94,
+    "by_group": {
+      "flux_independent": 0.94,
+      "nft_cryptoadz-by-gremplin": 1.0,
+      "nft_cyberkongz": 1.0,
+      "nft_etherbears": 1.0,
+      "nft_theshiboshis": 1.0
+    }
+  },
+  "n_authentic": 480,
+  "n_ai": 200
+}

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mint-Gate · NFT Authenticity Verification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span class="brand-mark">◆</span> Mint-Gate</div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-view="verify">Verify &amp; Mint</button>
+      <button class="tab" data-view="queue">Review queue</button>
+      <button class="tab" data-view="lookup">Provenance lookup</button>
+      <button class="tab" data-view="about">How it works</button>
+    </nav>
+    <div id="chainPill" class="pill pill-muted" title="Blockchain status">chain: checking…</div>
+    <button id="walletBtn" class="btn btn-wallet">Connect wallet</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ============ VERIFY & MINT ============ -->
+  <section id="view-verify" class="view active">
+    <div class="intro">
+      <h1>Verify artwork <em>before</em> it reaches the blockchain</h1>
+      <p>Six independent forensic checks produce an authenticity score. The Mint-Gate policy decides
+        <b class="t-pass">PASS</b>, <b class="t-review">REVIEW</b> or <b class="t-fail">FAIL</b>;
+        only verified artwork can be minted, and every verdict is anchored on-chain.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>1 · Upload artwork</h2>
+        <label id="dropzone" class="dropzone">
+          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/bmp,image/gif" hidden>
+          <img id="preview" alt="" hidden>
+          <span id="dropText">Drop an image here or <u>browse</u><br><small>PNG · JPG · WEBP, max 10 MB</small></span>
+        </label>
+        <div class="row">
+          <button id="analyzeBtn" class="btn btn-primary" disabled>Analyze artwork</button>
+          <button id="clearBtn" class="btn btn-ghost">Clear</button>
+        </div>
+        <h3 class="mt">Try an example</h3>
+        <div id="samples" class="samples"></div>
+      </div>
+
+      <div class="card">
+        <h2>2 · Pipeline</h2>
+        <ol id="pipeline" class="pipeline">
+          <li data-step="pre">Image preprocessing <small>validate · RGB · SHA-256</small></li>
+          <li data-step="resnet">ResNet-18 classification</li>
+          <li data-step="ai_detector">GAN / AI-generated detection <small>CLIP probe + spectrum</small></li>
+          <li data-step="copy_move">Copy-move detection</li>
+          <li data-step="phash">Perceptual hashing</li>
+          <li data-step="clip">CLIP semantic similarity</li>
+          <li data-step="orb">ORB feature matching <small>RANSAC verified</small></li>
+          <li data-step="policy">Mint-Gate policy engine</li>
+          <li data-step="chain">Anchor verdict on blockchain</li>
+        </ol>
+      </div>
+    </div>
+
+    <div id="results" hidden>
+      <div id="verdict" class="card verdict">
+        <div class="score-ring"><svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle id="ringFg" class="ring-fg" cx="60" cy="60" r="52"/></svg>
+          <div class="score-num"><span id="scoreVal">–</span><small>/100</small></div></div>
+        <div class="verdict-body">
+          <div class="verdict-label">Mint-Gate decision</div>
+          <div id="decision" class="decision">–</div>
+          <ul id="reasons" class="reasons"></ul>
+          <div class="meta mono" id="metaLine"></div>
+        </div>
+      </div>
+
+      <h2 class="section-title">Authenticity checks</h2>
+      <div id="checks" class="checks"></div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2>Most similar protected works</h2>
+          <div id="similar" class="similar"></div>
+        </div>
+        <div class="card">
+          <h2>Visual evidence</h2>
+          <div class="evidence">
+            <figure><img id="cmHeat" alt="copy-move heatmap"><figcaption>Copy-move heatmap (cloned blocks in red)</figcaption></figure>
+            <figure id="orbFig" hidden><img id="orbImg" alt="ORB matches"><figcaption>ORB inlier matches vs nearest minted NFT</figcaption></figure>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card" id="actionCard">
+          <h2>3 · Mint</h2>
+          <div id="mintBox">
+            <label class="lbl" for="recipient">Recipient wallet (connect MetaMask or paste an address)</label>
+            <input id="recipient" class="input mono" placeholder="0x…" spellcheck="false">
+            <button id="mintBtn" class="btn btn-primary" disabled>Mint NFT</button>
+            <p id="mintHint" class="hint"></p>
+          </div>
+          <div id="reviewBox" hidden>
+            <p class="hint">This artwork needs human verification before it may be minted.</p>
+            <label class="lbl" for="reviewerKey">Reviewer key</label>
+            <input id="reviewerKey" type="password" class="input" placeholder="reviewer key">
+            <label class="lbl" for="reviewNote">Note</label>
+            <input id="reviewNote" class="input" placeholder="optional justification">
+            <div class="row">
+              <button id="approveBtn" class="btn btn-pass">Approve</button>
+              <button id="rejectBtn" class="btn btn-fail">Reject</button>
+            </div>
+          </div>
+          <div id="txOut" class="txout"></div>
+        </div>
+        <div class="card">
+          <h2>On-chain provenance</h2>
+          <dl id="prov" class="kv"></dl>
+          <button id="verifyBtn" class="btn btn-ghost">Verify report integrity against chain</button>
+          <div id="verifyOut" class="txout"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REVIEW QUEUE ============ -->
+  <section id="view-queue" class="view">
+    <div class="card">
+      <h2>Reports awaiting human review</h2>
+      <p class="hint">Open a report to approve or reject it.</p>
+      <div id="queue" class="queue"></div>
+    </div>
+  </section>
+
+  <!-- ============ LOOKUP ============ -->
+  <section id="view-lookup" class="view">
+    <div class="card">
+      <h2>Look up a minted token</h2>
+      <div class="row">
+        <input id="tokenId" class="input" type="number" min="1" placeholder="token id, e.g. 1">
+        <button id="lookupBtn" class="btn btn-primary">Look up</button>
+      </div>
+      <div id="lookupOut"></div>
+    </div>
+  </section>
+
+  <!-- ============ ABOUT ============ -->
+  <section id="view-about" class="view">
+    <div class="card prose">
+      <h2>Architecture</h2>
+      <p><b>Principle:</b> the blockchain does not detect forgery. AI / image forensics verify the artwork first;
+        the smart contract only stores a tamper-proof record of the verdict and refuses to mint without a passing one.</p>
+      <ol>
+        <li><b>Preprocessing</b> – validation, decompression-bomb guard, RGB normalisation, SHA-256 of the pixels.</li>
+        <li><b>ResNet-18</b> – fully fine-tuned on 17k real-world images: authentic vs forged (AI-generated + manipulated).</li>
+        <li><b>GAN / AI detector</b> – linear probe on frozen CLIP features (generalises to unseen generators) + power-spectrum fingerprint.</li>
+        <li><b>Copy-move</b> – block matching with shift-vector voting; score = dominance of one displacement.</li>
+        <li><b>Perceptual hash</b> – 64-bit pHash, Hamming distance to every minted NFT.</li>
+        <li><b>CLIP copy score</b> – similarity to the protected collection, relative to each work's own nearest neighbour.</li>
+        <li><b>ORB</b> – keypoint matching with RANSAC homography on the CLIP/pHash shortlist.</li>
+        <li><b>Policy engine</b> – data-calibrated thresholds → per-check risk → weighted score → PASS / REVIEW / FAIL.</li>
+        <li><b>MintGateNFT.sol</b> – records every verdict (incl. failures), reviewer resolution, one token per image.</li>
+      </ol>
+      <h2>Current policy &amp; models</h2>
+      <pre id="statusDump" class="mono small-pre">loading…</pre>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  Mint-Gate · AI forensics + blockchain provenance ·
+  <span id="footContract"></span>
+  <span class="foot-note">Automated detection is probabilistic: a PASS is not a legal guarantee of authorship.</span>
+</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>

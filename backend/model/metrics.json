@@ -1,0 +1,177 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.5126,
+      "train_acc": 0.762,
+      "val_acc": 0.8076,
+      "val_auc": 0.9167,
+      "sec": 164
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.4096,
+      "train_acc": 0.8423,
+      "val_acc": 0.802,
+      "val_auc": 0.9222,
+      "sec": 97
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.3825,
+      "train_acc": 0.8569,
+      "val_acc": 0.8768,
+      "val_auc": 0.9479,
+      "sec": 104
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.3603,
+      "train_acc": 0.8687,
+      "val_acc": 0.8513,
+      "val_auc": 0.9469,
+      "sec": 99
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.3372,
+      "train_acc": 0.8842,
+      "val_acc": 0.8709,
+      "val_auc": 0.96,
+      "sec": 98
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.3161,
+      "train_acc": 0.8957,
+      "val_acc": 0.8653,
+      "val_auc": 0.9583,
+      "sec": 107
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.2824,
+      "train_acc": 0.9173,
+      "val_acc": 0.8602,
+      "val_auc": 0.9623,
+      "sec": 105
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.2514,
+      "train_acc": 0.9364,
+      "val_acc": 0.898,
+      "val_auc": 0.9682,
+      "sec": 97
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.2262,
+      "train_acc": 0.9508,
+      "val_acc": 0.9057,
+      "val_auc": 0.9715,
+      "sec": 89
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.2111,
+      "train_acc": 0.9596,
+      "val_acc": 0.9125,
+      "val_auc": 0.9722,
+      "sec": 117
+    }
+  ],
+  "test": {
+    "n": 2212,
+    "accuracy": 0.9105,
+    "precision_forged": 0.9531,
+    "recall_forged": 0.8962,
+    "f1_forged": 0.9238,
+    "roc_auc": 0.974,
+    "confusion_matrix [[TN,FP],[FN,TP]]": [
+      [
+        814,
+        59
+      ],
+      [
+        139,
+        1200
+      ]
+    ],
+    "accuracy_by_group": {
+      "ADM": 0.6071,
+      "GLIDE": 0.9048,
+      "Midjourney": 0.9062,
+      "SD15": 0.9545,
+      "VQDM": 0.5455,
+      "Wukong": 0.7727,
+      "cryptopunk": 1.0,
+      "dalle3": 1.0,
+      "human_art": 0.8983,
+      "local_ai_art": 0.6209,
+      "manipulated": 0.941,
+      "midjourney": 0.979,
+      "mixed_art_generators": 0.9015,
+      "nft_azuki": 1.0,
+      "nft_boredapeyachtclub": 1.0,
+      "nft_cryptoskulls": 1.0,
+      "nft_dooggies": 1.0,
+      "nft_mutant-ape-yacht-club": 1.0,
+      "nft_nftrex": 1.0,
+      "nft_trippytoadznft": 1.0,
+      "real_photo": 0.7752,
+      "sd3": 1.0,
+      "sdxl": 0.9531
+    }
+  },
+  "test_by_source": {
+    "art_images": 0.9344,
+    "genimage": 0.7879,
+    "local": 0.79,
+    "nft_collections": 0.9897,
+    "rapidata": 0.9934,
+    "real_vs_ai_art": 0.8175,
+    "sdxl": 0.9531,
+    "wikiart": 0.9054
+  },
+  "test_unseen": {
+    "n": 1000,
+    "recall_forged": 0.953
+  },
+  "robust_jpeg70": {
+    "n": 2212,
+    "accuracy": 0.9159,
+    "precision_forged": 0.9358,
+    "recall_forged": 0.9246,
+    "f1_forged": 0.9301,
+    "roc_auc": 0.97,
+    "confusion_matrix [[TN,FP],[FN,TP]]": [
+      [
+        788,
+        85
+      ],
+      [
+        101,
+        1238
+      ]
+    ]
+  },
+  "robust_half": {
+    "n": 2212,
+    "accuracy": 0.8942,
+    "precision_forged": 0.8834,
+    "recall_forged": 0.9507,
+    "f1_forged": 0.9158,
+    "roc_auc": 0.9587,
+    "confusion_matrix [[TN,FP],[FN,TP]]": [
+      [
+        705,
+        168
+      ],
+      [
+        66,
+        1273
+      ]
+    ]
+  }
+}
