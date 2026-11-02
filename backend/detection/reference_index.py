@@ -75,7 +75,27 @@ class ReferenceIndex:
 
     @property
     def sparse(self) -> np.ndarray:
-        return self.nn_sim < DENSE_NN
+        """References against which pHash / ORB matches count as copy evidence.
+
+        Excluded: dense regions (nn_sim >= DENSE_NN) and every member of a generative
+        NFT collection (seed collection and "art/nft_*"). Collection items share traits
+        by design, so a new genuine item matches its siblings' hashes and keypoints;
+        for them only exact copies (copy score 1.0 + on-chain ImageAlreadyMinted) count.
+        """
+        self._refresh_masks()
+        return self._sparse
+
+    @property
+    def collection(self) -> np.ndarray:
+        """Members of a generative NFT collection (seed collection or "art/nft_*")."""
+        self._refresh_masks()
+        return self._collection
+
+    def _refresh_masks(self):
+        if getattr(self, "_masks_n", None) != len(self.files):
+            self._collection = np.array([("/" not in f) or f.startswith(ART_PREFIX + "nft_") for f in self.files])
+            self._sparse = (self.nn_sim < DENSE_NN) & ~self._collection
+            self._masks_n = len(self.files)
 
     def search(self, phash: int, emb: np.ndarray, k=5):
         """Return (clip_sims, phash_dists, candidate_indices).
@@ -105,9 +125,13 @@ class ReferenceIndex:
         """(score, index): how far the upload stands out above each reference's own nearest
         neighbour, maximised over the top candidates. Identical images score 1.0."""
         top = np.argsort(-sims)[:10]
-        margins = sims[top] - self.nn_sim[top]
-        j = int(top[int(np.argmax(margins))])
-        score = float(margins.max())
         if sims[top[0]] >= EXACT_SIM:
             return 1.0, int(top[0])
-        return score, j
+        # Generative-collection members only count when copied exactly (handled above);
+        # their near-identical siblings are genuine by design.
+        candidates = top[~self.collection[top]]
+        if not len(candidates):
+            return 0.0, int(top[0])
+        margins = sims[candidates] - self.nn_sim[candidates]
+        k = int(np.argmax(margins))
+        return float(margins[k]), int(candidates[k])

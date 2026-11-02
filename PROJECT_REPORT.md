@@ -1,175 +1,173 @@
 # Mint-Gate: AI Image Forensics as a Gate Before NFT Minting
 
-**Project report**: Manasvi Patil · October 2026
+**Project report**: Manasvi Patil · November 2026
 
 ## 1. Problem
 
-An NFT proves *who owns* a token and *where it came from*; it proves nothing about the artwork.
+An NFT proves *ownership and provenance* of a token, not the originality of its artwork.
 Plagiarised, edited, cloned or AI-generated images mint as easily as originals, and a smart
-contract cannot inspect an image. Mint-Gate runs AI image forensics **off-chain, before minting**,
-and uses the blockchain only for what it is good at: a public, tamper-evident record of every
-verdict, plus an on-chain rule that refuses to mint without a passing one.
+contract cannot inspect pixels. Mint-Gate runs image forensics **off-chain before minting**.
+It uses the blockchain for what it does well: a public, tamper-evident record of every verdict,
+plus an on-chain rule that refuses to mint without a passing one.
 
 ## 2. System
 
-| Stage | Technique | Detects |
+| Stage | Technique | Role in policy v3.1.0 |
 |---|---|---|
-| Preprocessing | format allow-list, decompression-bomb guard, RGB, SHA-256 of pixels, *detector view* (same resize + JPEG as the training data) | malformed uploads; stable image identity |
-| ResNet-18 | ImageNet-pretrained, fully fine-tuned on GPU | AI-generated and manipulated images |
-| AI-content detector | CLIP ViT-B/32 linear probe (Ojha et al., CVPR 2023) + spectral fingerprint (Durall et al., CVPR 2020) | AI generators, including unseen ones |
-| Copy-move | 16×16 block matching, shift-vector voting; score = dominance of one displacement | cloned regions |
-| CLIP copy score | similarity to the protected collection, relative to each reference's own nearest neighbour | semantic copies |
-| pHash / ORB | 64-bit DCT hash; ORB keypoints + RANSAC homography, against *sparse* references | near-exact and geometric copies |
-| Policy engine | per-check risk (0.5 at REVIEW, 1.0 at FAIL), weighted 0–100 score | PASS / REVIEW / FAIL |
+| Preprocessing | format allow-list, decompression-bomb guard, RGB, SHA-256; *detector view* (same 256 px + JPEG normalisation as the training data) | — |
+| AI detector | linear probe on frozen CLIP ViT-B/32 features (Ojha et al., CVPR 2023); spectral fingerprint kept as an informational signal | weight 0.40, can FAIL |
+| ResNet-18 | ImageNet-pretrained, fully fine-tuned (GPU) on authentic vs AI + manipulated | weight 0.15, **REVIEW only** |
+| Copy-move | 16×16 block matching, shift-vector voting; score = dominance of one displacement | weight 0.15 |
+| CLIP copy score | similarity to the protected collection minus each reference's own nearest-neighbour similarity | weight 0.15 |
+| pHash / ORB | 64-bit DCT hash; ORB + RANSAC homography; one-off artworks only | weights 0.10 / 0.05 |
 
-**Protected reference collection:** 9,000 CryptoPunks, 1,657 museum/WikiArt paintings, and
-every artwork minted through Mint-Gate.
+Each check's value maps to a risk (0.5 at REVIEW, 1.0 at FAIL). The score is
+`100·(1 − Σ wᵢ·riskᵢ)`. Any FAIL-level check gives FAIL; any REVIEW-level check or a score
+below 70 gives REVIEW.
 
-## 3. Data and methodology
+The **protected collection** has 15,037 works: 9,000 CryptoPunks, 3,347 items from real NFT
+collections, 2,690 museum/WikiArt paintings, plus everything minted through Mint-Gate.
 
-**Dataset (17,086 images),** normalised identically for both classes:
+## 3. Data
 
-| Class | Sources |
-|---|---|
-| Authentic (7,728) | 3,875 photographs (ImageNet via Tiny-GenImage), 1,853 human paintings/drawings (WikiArt, The Met, Unsplash), 2,000 CryptoPunks |
-| AI-generated (9,358) | ADM, BigGAN, GLIDE, SD 1.5, VQDM, Wukong (Tiny-GenImage); Ideogram, SDXL, Civitai, Copilot, OpenArt; local AI-art set; **Midjourney (held out)** |
+| Version | Content | Result |
+|---|---|---|
+| v0 (original) | 10k CryptoPunks vs 8.6k AI paintings | 99.75 % accuracy, but it learned "pixel art vs painting" (domain shortcut) |
+| v1 | + ImageNet photos, 7 GenImage generators, museum art | 85 % accuracy; mostly photos and 2022-era generators, little NFT art |
+| **v2 (final)** | rebalanced towards what is minted | below |
 
-- **Splits.** Random 80/10/10 train/val/test. Midjourney (554 images) is reserved as `test_unseen`.
-- **Bias control.** In GenImage the real images are JPEG and the fakes PNG, a known shortcut
-  ("Fake or JPEG?", Grommelt et al. 2024). Every image is resized to a 256 px short side and
-  re-encoded as JPEG (quality 88–96), so format and resolution carry no label.
-- **Synthetic manipulations.** 35 % of authentic training images also appear with an on-the-fly
-  copy-move or splice, labelled *forged*.
-- **Robustness augmentation.** Random JPEG (q 60–95), down/up-scaling and blur.
-- **ResNet-18 training.** All layers, AdamW + OneCycle (max LR 3e-4), label smoothing 0.05,
-  mixed precision, batch 48, 10 epochs on an RTX 3050 Laptop GPU (about 90 s/epoch). The best
-  epoch is selected by validation ROC-AUC.
-- **AI detector.** Logistic regressions on CLIP embeddings and on spectral features, with C chosen
-  on validation. The ensemble weight was also chosen on validation and came out at 1.0: the
-  spectral model adds nothing on real-world data.
+**Dataset v2 (20,309 images):**
+- Authentic (8,885): 3,700 real-NFT-collection images (BAYC, MAYC, Azuki, Trippy Toadz,
+  CryptoSkulls, nftrex, Dooggies; all pre-2022, so human-made), 2,985 paintings
+  (WikiArt / museums), 1,000 CryptoPunks, 1,200 photos.
+- AI (10,424): DALL·E 3, Midjourney and SD3 (1,500 each), SDXL (666), AI-art generators
+  (3,458), older generators (300 each).
+
+**Splits:** random 80/10/10. **Flux (1,000 images) is held out completely** as `test_unseen`.
+
+**Bias control.** In GenImage the real images are JPEG and the fakes PNG ("Fake or JPEG?",
+Grommelt et al. 2024). Every image in both classes is resized to a 256 px short side and
+re-encoded as JPEG (quality 88–96), and uploads get the same treatment at inference.
+
+**Augmentation.** 35 % of authentic training images also appear with a synthetic copy-move or
+splice, labelled *forged*. Robustness augmentations: random JPEG (q 60–95), rescaling, blur.
+
+**Training.** ResNet-18, all layers, AdamW + OneCycle (max LR 3e-4), label smoothing 0.05,
+mixed precision, batch 48, 10 epochs on an RTX 3050 Laptop GPU (~100 s/epoch). The best epoch
+is chosen by validation ROC-AUC. The AI detector is a logistic regression on CLIP embeddings,
+with C and the ensemble weight chosen on validation; the spectral model's weight came out at 0.
 
 ## 4. Results
 
-### 4.1 ResNet-18 (test, n = 1,891)
+### 4.1 In-distribution test (n = 2,212) and unseen generator (Flux, n = 1,000)
 
-| Metric | Value |
-|---|---|
-| Accuracy | **85.1 %** |
-| ROC-AUC | **0.941** |
-| Precision / recall (forged) | 92.7 % / 81.3 % |
-| Confusion [[TN, FP], [FN, TP]] | [[701, 72], [209, 909]] |
-| After JPEG q=70 | 87.1 % accuracy, AUC 0.945 |
-| After 50 % downscaling | 82.3 % accuracy, AUC 0.921 |
-| Unseen Midjourney detected | 45.5 % |
-
-Accuracy by group:
-- Genuine: paintings 85.7 %, photos 88.9 %, pixel art 99.5 %.
-- Manipulated: 93.3 %.
-- Generators: SD 1.5 85.7 %, Wukong 83.6 %, BigGAN 83.1 %, art generators 82.2 %, GLIDE 79.5 %,
-  VQDM 52.4 %, ADM 45.8 %.
-
-### 4.2 AI-generated content detector
-
-| Model | Test AUC (n = 1,621) | Unseen Midjourney vs genuine, AUC (n = 1,327) |
+| Metric | ResNet-18 | CLIP-probe AI detector |
 |---|---|---|
-| Spectral fingerprint | 0.761 | 0.752 |
-| **CLIP linear probe** | **0.966** (90.6 % acc.) | **0.926** (85.2 % acc.; 77 % of Midjourney detected) |
+| Accuracy | 91.1 % | **92.8 %** |
+| ROC-AUC | 0.974 | **0.982** |
+| Precision / recall (forged) | 95.3 % / 89.6 % | — |
+| Flux (unseen) caught | 95.3 % | **97.9 %** (AUC vs genuine 0.990) |
+| After JPEG q=70 | 91.6 % (AUC 0.970) | — |
+| After 50 % downscale | 89.4 % (AUC 0.959) | — |
 
-The fine-tuned CNN catches only 45.5 % of an unseen generator. The frozen-CLIP probe catches
-77 %, which replicates the finding of Ojha et al. that CLIP features generalise better to new
-generators.
+ResNet per group: DALL·E 3 100 %, SD3 100 %, Midjourney 97.9 %, SDXL 95.3 %, manipulated 94.1 %,
+paintings 89.8 %, photos 77.5 %; weakest on old generators (ADM 61 %, VQDM 55 %).
 
-### 4.3 Calibration
+### 4.2 Out-of-source check
 
-All REVIEW/FAIL thresholds are percentiles of the scores of *genuine* validation/test art:
+The test split shares *sources* with the training data: the same NFT collections, and the same
+Rapidata compression pipeline as the held-out Flux images. So we also evaluated on 480 artworks
+from **4 NFT collections never used in training** and **200 Flux images from a different
+publisher**:
 
-| Check | REVIEW / FAIL | Genuine flagged | Forgeries caught (REVIEW) | AUC |
-|---|---|---|---|---|
-| ResNet-18 | 0.621 / 0.901 | 5.1 % / 1.0 % | — | 0.941 |
-| AI detector | 0.737 / 0.977 | 5.1 % / 1.0 % | — | 0.966 |
-| Copy-move | 3.07 / 4.26 | 5 % / 1.25 % | 68.8 % | 0.90 |
-| CLIP copy score: paintings | 0.049 / 0.119 | 10 % | 61.7 % | 0.81 |
-| CLIP copy score: pixel-art NFTs | same | 0 % | 0 % | 0.08 |
+| | Genuine NFTs correct | Flux caught | ROC-AUC |
+|---|---|---|---|
+| **CLIP-probe AI detector** | **100 %** | **94 %** | **0.9998** |
+| ResNet-18 | 64 % (CyberKongz 43 %) | 77 % | 0.79 |
+
+**Finding.** The fine-tuned CNN partly memorised the collections it saw. Frozen CLIP features
+generalise to new art styles and generators, replicating Ojha et al. The policy was redesigned
+accordingly: the CLIP probe makes the AI decision, and the ResNet can only request human review.
+
+### 4.3 Calibration (policy v3.1.0)
+
+| Check | REVIEW / FAIL | Genuine flagged | AUC |
+|---|---|---|---|
+| AI detector | 0.675 / 0.925 | 5.1 % / 1.0 % (val) | 0.982 |
+| ResNet-18 (REVIEW only) | 0.517 / — | 5.1 % (val) | 0.974 |
+| Copy-move | 3.8 / 6.0 | 5 % | 0.90 (64 % of clones caught at 5 % false alarms) |
+| CLIP copy score (paintings) | 0.059 / 0.088 | 5 % | **0.91** (60 % of edited copies caught at REVIEW) |
 
 ![Calibration](assets/calibration.png)
 
-**Finding: similarity depends on collection density.** In a generative collection, a genuine new
-item differs from existing ones by 0.1–3 % of pixels. Its nearest neighbour is 0.99 similar
-(median), compared with 0.88 for paintings. Edited copies end up *less* similar to the collection
-than genuine siblings, which inverts the ROC-AUC (0.08). Mint-Gate therefore:
-1. measures copy evidence relative to each reference's own neighbourhood;
-2. evaluates pHash and ORB only against references in sparse regions (nearest-neighbour
-   similarity < 0.95);
-3. relies on exact-match blocking (off-chain, plus `ImageAlreadyMinted` on-chain) for dense
-   collections.
+**Finding: collection density.** Genuine items of a generative collection are near-identical to
+existing ones: CryptoPunk nearest-neighbour similarity is 0.99, Bored-Ape-type collections 0.94,
+paintings 0.88. Applying pHash/ORB to collection members rejected 26 % of genuine Bored Apes in
+an intermediate version. Those checks now apply only to one-off artworks, and collection members
+are protected against exact copies.
 
-### 4.4 End-to-end evaluation (pipeline + policy v2.2.0, n = 50 per category)
+### 4.4 End-to-end evaluation (n = 50 per category)
 
 ![System evaluation](assets/system_evaluation.png)
 
 | Upload | PASS | REVIEW | FAIL |
 |---|---|---|---|
-| Genuine painting / drawing | 84 % | 6 % | 10 % |
-| Genuine photograph | 82 % | 18 % | 0 % |
-| Genuine new pixel-art NFT | 62 % | 32 % | 6 % |
-| AI art generators | 6 % | 32 % | 62 % |
-| AI photo generators | 16 % | 34 % | 50 % |
-| Midjourney (unseen) | 32 % | 46 % | 22 % |
+| Genuine NFT-collection art | 88 % | 12 % | 0 % |
+| Genuine pixel-art NFT | 82 % | 18 % | 0 % |
+| Genuine painting | 76 % | 12 % | 12 % (6.7 % at n = 120; 2 of 8 are dataset duplicates) |
+| Genuine photo | 62 % | 38 % | 0 % |
+| Modern AI (DALL·E 3, MJ, SD3, SDXL) | 0 % | 12 % | 88 % |
+| Unseen Flux | 0 % | 24 % | 76 % |
+| AI-art generators / older generators | 12 % / 16 % | 42 % / 52 % | 46 % / 32 % |
 | Exact copy of a protected work | 0 % | 0 % | 100 % |
-| Edited copy of a protected painting | 0 % | 56 % | 44 % |
-| Edited copy of a pixel-art NFT | 90 % | 10 % | 0 % |
-| Copy-move forgery | 0 % | 0 % | 100 % |
-| Spliced forgery | 2 % | 8 % | 90 % |
+| Edited copy of a protected painting | 4 % | 6 % | 90 % |
+| Copy-move / splice forgery | 2 % / 0 % | 20 % / 84 % | 78 % / 16 % |
+| Edited copy of a generative-collection NFT | 94 % | 6 % | 0 % |
 
 Summary:
-- Genuine uploads: 76 % PASS, 5.3 % wrongly FAILed.
-- Forgeries: **81.8 % stopped** (REVIEW or FAIL), 58.5 % rejected automatically.
-- Analysis takes about 0.5–1.7 s per image (GPU).
+- Genuine uploads: 77 % PASS, **3 % wrongly FAILed**.
+- Forgeries: **85.8 % stopped**, 58.4 % rejected automatically.
+- **No modern-AI or Flux image passes.**
 
 ## 5. Blockchain layer
 
-`MintGateNFT.sol` is ERC-721 + OpenZeppelin AccessControl, Solidity 0.8.24, deployed on Ethereum Sepolia.
+`MintGateNFT.sol`: ERC-721 + OpenZeppelin AccessControl, Solidity 0.8.24. Deployed on
+**Ethereum Sepolia** at `0xae989b374DF85a942b4caE07940713Ff89418F32` (block 12,044,379);
+source verified on Sourcify (exact match).
 
 | Function | Role | Behaviour |
 |---|---|---|
 | `recordVerification` | VERIFIER | Stores every verdict immutably: report hash, image hash, score, decision, policy hash and version. Failures included. |
 | `resolveReview` | REVIEWER | Human decision on REVIEW verdicts only. |
-| `mintVerified` | VERIFIER | Reverts unless PASS or REVIEW_APPROVED. One token per report and one per image hash. |
-| `getVerification`, `tokenOfImage`, `reportOfToken` | public | Provenance queries. |
+| `mintVerified` | VERIFIER | Reverts unless PASS / REVIEW_APPROVED. One token per report and one per image hash. |
 
-- **IPFS.** The artwork, ERC-721 metadata and full verification report are pinned to IPFS. The
-  report hash on-chain lets anyone check the pinned report.
-- **Tamper evidence.** `/api/verify` recomputes the report hash and compares it with the chain.
-  In testing, editing a stored report to read "PASS, 99" was detected, and the contract still
-  refused the mint.
-- **Durability.** On start-up the server rebuilds its list of minted artworks from
-  `VerifiedMint` events plus IPFS. Duplicate protection therefore survives restarts on ephemeral
-  hosting; this was verified by restarting the server and re-uploading a minted image.
-- **Tests.** Contract 7/7. The end-to-end API flow (analyse → review → mint → verify → restart
-  sync) was tested on a local chain, and the deploy package was tested in production mode.
+- The artwork, ERC-721 metadata and full verification report are pinned to IPFS.
+- `/api/verify` recomputes the report hash and compares it with the chain. A tampered report
+  ("FAIL" edited to "PASS, 99") is detected, and the contract still refuses the mint.
+- On start-up the server rebuilds its minted-artwork list from `VerifiedMint` events.
+- Contract tests pass 7/7. The end-to-end flow (analyse → review → mint → verify → restart sync)
+  was tested, and the production package was tested in production mode.
 
 ## 6. Limitations and future work
 
-1. **Error rates.** About 5 % of genuine art is wrongly rejected and about 20 % goes to review.
-   18 % of forgeries pass. Each check is calibrated to a 5 % false-alarm rate, so the union over
-   six checks is higher.
-2. **Generalisation.** The CNN generalises poorly to unseen generators (45.5 % on Midjourney)
-   and to ADM/VQDM. Newer generators (Flux, DALL·E 3, SD 3) are not covered. Future work:
-   larger and more recent training data, and fine-tuning CLIP with LoRA.
-3. **Generative collections.** Edited copies of items from a self-similar collection cannot be
-   distinguished from genuine siblings by appearance alone. Collection-aware trait parsing is
-   needed.
-4. **Trust model.** The platform's verifier key mints on artists' behalf (gas is sponsored).
-   Production would use separate verifier/reviewer keys behind a multisig, plus EIP-712 signed
+1. **Error rates.** About 5 % of genuine paintings are wrongly rejected, and 12–38 % of genuine
+   uploads go to human review (photos most often). 14 % of forgeries pass, mainly older-generator
+   images and edited copies of collection NFTs.
+2. **Generative collections.** Edited copies of collection items are indistinguishable from new
+   siblings by appearance alone. Collection-aware trait parsing is future work.
+3. **Generators.** Coverage is 2024-era. New generators need periodic retraining; the
+   out-of-source protocol in `training/independent_check.py` is designed for exactly that.
+4. **Trust model.** The platform's verifier key mints on artists' behalf (sponsored gas).
+   Production would use separate verifier/reviewer keys behind a multisig, and EIP-712
    attestations so artists can mint from their own wallets.
-5. **Data licensing.** Training data includes CC BY-NC-SA and research-use sets, so the project
-   is non-commercial.
+5. **Data licensing.** Some training data is non-commercial (CC BY-NC-SA, research-use), so the
+   project is non-commercial.
 
 ## 7. Reproducibility
 
 From `backend/`:
-`training.fetch_realworld` → `train_cnn --epochs 10` → `train_ai_detector` → `build_index` →
-`calibrate --n 240` → `evaluate_system --n 50`.
+`training.fetch_realworld` → `training.fetch_v2` → `train_cnn --epochs 10` → `train_ai_detector`
+→ `build_index` → `calibrate --n 240` → `evaluate_system --n 50` → `independent_check`.
 
 Outputs are in `backend/model/` (`model_meta.json`, `metrics.json`, `ai_detector.json`,
-`system_eval.json`) and `backend/policy.json` (`calibration`).
+`system_eval.json`, `independent_check.json`) and `backend/policy.json`.

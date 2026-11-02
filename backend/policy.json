@@ -1,5 +1,5 @@
 {
-  "version": "3.0.0",
+  "version": "3.1.0",
   "weights": {
     "resnet": 0.15,
     "ai_detector": 0.4,
@@ -22,14 +22,14 @@
     },
     "phash": {
       "label": "pHash distance to nearest protected work (sparse references)",
-      "review": 10,
-      "fail": 6,
+      "review": 12,
+      "fail": 4,
       "advisory": false
     },
     "orb": {
       "label": "ORB geometric inliers vs nearest protected work (sparse references)",
-      "review": 273,
-      "fail": 583,
+      "review": 13,
+      "fail": 481,
       "advisory": false
     },
     "copy_move": {
@@ -39,8 +39,8 @@
     },
     "clip": {
       "label": "CLIP copy score vs protected collection (density-relative)",
-      "review": 0.0399,
-      "fail": 0.0818
+      "review": 0.0586,
+      "fail": 0.0883
     }
   },
   "score": {
@@ -51,94 +51,94 @@
     "n": 240,
     "results": {
       "copy_move": {
-        "auc": 0.8976,
+        "auc": 0.8985,
         "genuine_p5_p50_p95": [
-          0.0,
-          1.232,
+          1.0,
+          1.2505,
           3.7994
         ],
         "copies_p5_p50_p95": [
-          1.2096,
-          9.7285,
-          205.0036
+          1.19,
+          6.93,
+          151.1967
         ],
         "review": 3.79945,
         "fail": 6.0,
-        "tpr_at_review": 0.675,
+        "tpr_at_review": 0.6438,
         "fpr_at_review": 0.05,
-        "tpr_at_fail": 0.575,
+        "tpr_at_fail": 0.5312,
         "fpr_at_fail": 0.0156
       },
       "clip": {
-        "auc": 0.4175,
+        "auc": 0.7196,
         "genuine_p5_p50_p95": [
           -0.0322,
-          0.0024,
+          0.0,
           0.0399
         ],
         "copies_p5_p50_p95": [
-          -0.0671,
-          -0.0136,
-          0.1147
+          0.0,
+          0.0,
+          0.146
         ],
-        "review": 0.03986569344997401,
-        "fail": 0.08178057432174679,
-        "tpr_at_review": 0.225,
+        "review": 0.05859095156192779,
+        "fail": 0.08825466871261599,
+        "tpr_at_review": 0.6,
         "fpr_at_review": 0.05,
-        "tpr_at_fail": 0.0917,
-        "fpr_at_fail": 0.0125,
+        "tpr_at_fail": 0.375,
+        "fpr_at_fail": 0.0167,
         "per_domain": {
           "nft": {
-            "auc": 0.0817,
+            "auc": 0.5,
             "genuine_flagged_at_review": 0.0,
             "copies_caught_at_review": 0.0,
             "copies_failed": 0.0
           },
           "painting": {
-            "auc": 0.6918,
-            "genuine_flagged_at_review": 0.1,
-            "copies_caught_at_review": 0.45,
-            "copies_failed": 0.1833
+            "auc": 0.9117,
+            "genuine_flagged_at_review": 0.05,
+            "copies_caught_at_review": 0.6,
+            "copies_failed": 0.375
           }
         }
       },
       "phash": {
-        "auc": 0.6785,
+        "auc": 0.6932,
         "genuine_p5_p50_p95": [
-          10.0,
+          14.0,
+          18.0,
+          20.0
+        ],
+        "copies_p5_p50_p95": [
+          0.0,
           16.0,
           18.0
         ],
-        "copies_p5_p50_p95": [
-          0.0,
-          14.0,
-          18.0
-        ],
-        "review": 10.0,
-        "fail": 6.0,
-        "tpr_at_review": 0.325,
-        "fpr_at_review": 0.0792,
-        "tpr_at_fail": 0.1875,
+        "review": 12.0,
+        "fail": 4.38,
+        "tpr_at_review": 0.65,
+        "fpr_at_review": 0.0667,
+        "tpr_at_fail": 0.3417,
         "fpr_at_fail": 0.0167
       },
       "orb": {
-        "auc": 0.7461,
+        "auc": 0.6893,
         "genuine_p5_p50_p95": [
           0.0,
-          27.0,
-          272.9
+          6.0,
+          21.1
         ],
         "copies_p5_p50_p95": [
-          11.0,
-          114.5,
-          1116.25
+          0.0,
+          9.0,
+          1101.45
         ],
-        "review": 272.89999999999935,
-        "fail": 581.8299999999999,
-        "tpr_at_review": 0.4042,
+        "review": 12.549999999999969,
+        "fail": 479.3800000000009,
+        "tpr_at_review": 0.9667,
         "fpr_at_review": 0.05,
-        "tpr_at_fail": 0.3625,
-        "fpr_at_fail": 0.0125
+        "tpr_at_fail": 0.8333,
+        "fpr_at_fail": 0.0167
       },
       "resnet": {
         "review": 0.517,

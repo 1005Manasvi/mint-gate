@@ -86,7 +86,7 @@ def main():
     new_paintings = rng.sample([r for r in records("test") if r["generator"] == "human_art"], args.n // 2)
     genuine = [load_path(p) for p in new_art[: args.n // 2]] + [open_image(r) for r in new_paintings]
     # Plagiarised copies of protected works: half NFTs, half paintings.
-    is_art = np.array([f.startswith("art/") for f in idx.files])
+    is_art = np.array([f.startswith("art/") and not f.startswith("art/nft_") for f in idx.files])
     minted = (rng.sample(list(np.flatnonzero(~is_art)), args.n // 2)
               + rng.sample(list(np.flatnonzero(is_art)), args.n // 2))
 
@@ -133,9 +133,13 @@ def main():
                 "copies_p5_p50_p95": np.percentile(p, [5, 50, 95]).round(4).tolist()}
 
     cm = thresholds(cm_neg, cm_pos, higher_is_worse=True)
-    cs = thresholds(neg["clip"], pos["clip"], higher_is_worse=True)  # density-relative copy score
-    ph = thresholds(neg["phash"], pos["phash"], higher_is_worse=False)
-    ob = thresholds(neg["orb"], pos["orb"], higher_is_worse=True)
+    # pHash / ORB / copy score only apply to one-off artworks (collection members are excluded
+    # from these checks), so their thresholds are calibrated on the painting half only.
+    art_neg = {k: v[half:] for k, v in neg.items()}
+    art_pos = {k: v[half:] for k, v in pos.items()}
+    cs = thresholds(art_neg["clip"], art_pos["clip"], higher_is_worse=True)  # density-relative copy score
+    ph = thresholds(art_neg["phash"], art_pos["phash"], higher_is_worse=False)
+    ob = thresholds(art_neg["orb"], art_pos["orb"], higher_is_worse=True)
     neg_clip, pos_clip = np.array(neg["clip"]), np.array(pos["clip"])
     clip_review, clip_fail = round(cs["review"], 4), round(max(cs["fail"], cs["review"] + 0.01), 4)
     per_domain = {}
@@ -172,7 +176,7 @@ def main():
     policy["weights"] = {"resnet": 0.15, "ai_detector": 0.40, "copy_move": 0.15,
                          "clip": 0.15, "phash": 0.10, "orb": 0.05}
     policy["checks"]["resnet"]["max_status"] = "REVIEW"
-    policy["version"] = "3.0.0"
+    policy["version"] = "3.1.0"
     policy["calibration"] = {"n": args.n, "results": cal}
     POLICY_FILE.write_text(json.dumps(policy, indent=2))
     print("updated", POLICY_FILE)
