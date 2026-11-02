@@ -56,7 +56,10 @@ and anything the next phase must know. Keep entries brief: this file is read at 
   Etherscan/Basescan not verified (no API key). Deployer holds all roles on testnets.
 - **Gas:** submitAndMint ~410k (artist pays), submitVerdict ~189k. **Sepolia surprise:** deploy used
   35.2M gas (7× Hardhat/Base), and ethers' default 1 gwei tip made it cost **0.035 ETH**; the wallet
-  now has ~0.0007 Sepolia ETH (Base Sepolia ~0.00017). `deploy-v2.js` now caps the tip.
+  then had ~0.0007 Sepolia ETH; topped up to **0.2209 Sepolia ETH** via the PoW faucet on 2026-11-03
+  (Base Sepolia **0.0051**, Coinbase faucet). `deploy-v2.js` now caps the tip.
+  Sepolia calls cost ~3–7× the Hardhat gas too. Target balances: **0.05 Sepolia ETH** (min 0.01),
+  **0.01 Base Sepolia ETH** (min 0.003; each dispute locks a 0.001 ETH bond).
 - CI: new `foundry` job (forge 1.8.7, `FOUNDRY_PROFILE=ci`, ~2 min) and the chain pytest in `contracts`.
 - **Owner actions:** top up Sepolia ETH (faucet) before Phase 2 sends transactions there; optional
   Etherscan API key (one v2 key covers Basescan) for explorer verification.

@@ -271,7 +271,9 @@ record, signature check), and the server pays nothing for PASS verdicts. On Base
 the registry and 12,081,157 for the NFT, about 7× the Hardhat / Base Sepolia figures (3,355,855 and
 1,743,111). The cause was not investigated (most likely newer L1 gas rules for contract creation on
 Sepolia). Plan L1 deployments with that in mind and cap the priority fee (`PRIORITY_FEE_GWEI` in
-`scripts/deploy-v2.js`).
+`scripts/deploy-v2.js`). Ordinary calls are inflated too: `eth_estimateGas` for `cancelNonce`
+(2026-11-03) gave 128,620 gas on Sepolia vs 45,892 on Base Sepolia (2.8×). Budget Sepolia calls at
+3–7× the table above.
 
 ## 10. Deployments
 
