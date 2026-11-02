@@ -4,7 +4,10 @@
 testpaths = ["backend/tests"]
 pythonpath = ["backend"]
 addopts = "-ra --strict-markers"
-markers = ["slow: needs the real models (CLIP download / GPU); CI skips these"]
+markers = [
+    "slow: needs the real models (CLIP download / GPU); CI skips these",
+    "chain: starts a local Hardhat node (needs Node + compiled contracts); skipped without them",
+]
 filterwarnings = ["ignore::PIL.Image.DecompressionBombWarning"]
 
 [tool.ruff]

@@ -1,4 +1,6 @@
 {
   "exclude_dependencies": true,
-  "hardhat_ignore_compile": false
+  "hardhat_ignore_compile": false,
+  "compile_force_framework": "hardhat",
+  "filter_paths": "contracts/mocks"
 }

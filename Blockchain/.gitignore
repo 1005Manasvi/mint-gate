@@ -6,3 +6,6 @@ coverage/
 .env
 scripts/.env
 coverage.json
+forge-out/
+forge-cache/
+gas-report.txt

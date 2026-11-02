@@ -54,6 +54,38 @@ jobs:
         with:
           name: contract-coverage
           path: Blockchain/coverage/
+      # The Python EIP-712 signer against the real contract on a local Hardhat node.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npx hardhat compile --force # coverage leaves instrumented artifacts behind
+      - name: EIP-712 signer verifies on chain (pytest -m chain)
+        working-directory: .
+        run: |
+          pip install web3==8.0.0 pytest==9.2.0 numpy==2.5.3 Pillow==12.3.0
+          pytest backend/tests/test_eip712.py
+
+  foundry:
+    name: Foundry fuzz + invariant tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Blockchain
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Blockchain/package-lock.json
+      - run: npm ci # OpenZeppelin + forge-std come from node_modules
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.7
+      - name: forge test (ci profile: 5000 fuzz runs, 512 x 256 invariant calls)
+        run: forge test
+        env:
+          FOUNDRY_PROFILE: ci
 
   slither:
     name: Slither static analysis

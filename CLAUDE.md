@@ -24,24 +24,40 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
   **Deployed on Sepolia `0xae989b374DF85a942b4caE07940713Ff89418F32`** (block 12044379),
   source verified on Sourcify. Verifier/deployer wallet `0xeed816c3F61fC7A7396159c267658010dB69eD7F`.
   `backend/chain/deployment.json` = Sepolia; `deployment.local.json` = old local copy.
+  **The app still uses v1** (switch to v2 in Phases 2–3).
+- **Contracts v2** (`Blockchain/contracts/v2/`, design + threat model in `docs/contracts.md`):
+  `MintGateRegistry` (EIP-712 verdicts submitted by anyone, review, `voidVerdict`, one mint per
+  image across collections via `consume` [COLLECTION_ROLE], disputes with bond + pull payments,
+  permanent revocation flag, pause, `AccessControlDefaultAdminRules` 1 h delay), `MintGateNFTV2`
+  (artist `mint` / `submitAndMint`, ERC-2981 ≤ 10 %, revoked → `REVOKED_URI`), `MintGated` + `IMintGate`.
+  Deployed (all Sourcify exact match), addresses + ABIs in `backend/chain/deployments/<network>.json`:
+  Sepolia registry `0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB`, NFT `0x59900d4F93fAb95F3B8aFBD4E9fEbF15Fa0F4f22`;
+  Base Sepolia registry `0xae989b374DF85a942b4caE07940713Ff89418F32` (= v1's Sepolia address!), NFT `0xf45c9cB2…49fB`.
+  Python signer: `backend/chain/eip712.py` (`Verdict.from_report`, `sign_verdict`).
 - `frontend/`: vanilla JS, strict CSP (script-src 'self': no CDN scripts, vendor libraries locally).
 - Training: `backend/training/` (fetch_realworld, fetch_v2, train_cnn, train_ai_detector,
   build_index, calibrate, evaluate_system, independent_check). Data in
   `backend/data/realworld/` (20,309 images, manifest.json); held-out generator = Flux.
-- Results: README.md and PROJECT_REPORT.md. Policy v3.1.0. Tests: `backend/tests/` (pytest), `Blockchain/test/`; security review: `docs/security.md`.
+- Results: README.md and PROJECT_REPORT.md. Policy v3.1.0. Tests: `backend/tests/` (pytest), `Blockchain/test/` (Hardhat) + `Blockchain/test/foundry/`; security review: `docs/security.md`.
 
 ## Commands (Windows; venv = Python 3.12 + CUDA torch 2.6)
 - Python: `venv\Scripts\python.exe` (run from `backend/` as `-m training.xxx`).
 - Server: `cd backend; ..\venv\Scripts\python.exe server.py` → http://127.0.0.1:5000
-- Contracts: `cd Blockchain; npx hardhat test`; deploy:
-  `npx hardhat run scripts/deploy.js --network sepolia`.
-  Source verification: Sourcify **v2 API** (Hardhat's sourcify plugin uses the removed v1 API).
+- Contracts: `cd Blockchain; npx hardhat test`; deploy v1: `npx hardhat run scripts/deploy.js --network sepolia`;
+  v2: `npx hardhat run scripts/deploy-v2.js --network <sepolia|baseSepolia>` then
+  `npx hardhat run scripts/verify-sourcify.js --network <...>` (Sourcify **v2 API**; Hardhat's
+  sourcify plugin uses the removed v1 API). Gas table: `REPORT_GAS=true npx hardhat test` → `gas-report.txt`.
+- Foundry: forge 1.8.7 is in `~/.foundry/bin` (not on PATH: `export PATH="$HOME/.foundry/bin:$PATH"`).
+  `cd Blockchain; forge test` (fuzz + invariants, `test/foundry/`; `FOUNDRY_PROFILE=ci` = CI depth).
+  forge-std comes from npm (`github:` dependency), remapped in `foundry.toml`; no git submodules.
 - Local dev chain + server: `powershell -ExecutionPolicy Bypass -File .\run_local.ps1`.
 - Tests (repo root): `venv\Scripts\python.exe -m pytest -m "not slow"` (`-m slow` = real models).
   Contracts: `cd Blockchain; npm run coverage` (gate >= 95 %). Lint: `venv\Scripts\pre-commit run --all-files`.
 - Slither: install it in a **separate venv** (scratchpad), not the app venv; run `slither . --fail-medium`
-  in `Blockchain/` (`slither.config.json` excludes OpenZeppelin). It runs `hardhat clean --global`.
-- CI: `.github/workflows/ci.yml` (python, contracts, slither, lint). Accepted findings: `docs/security.md`.
+  in `Blockchain/` (`slither.config.json` excludes OpenZeppelin + `contracts/mocks`, forces the
+  hardhat framework because `foundry.toml` exists). It runs `hardhat clean --global`.
+- Python tests marked `chain` start a local Hardhat node (`test_eip712.py`); they skip without compiled artifacts.
+- CI: `.github/workflows/ci.yml` (python, contracts [+ chain pytest], foundry, slither, lint). Accepted findings: `docs/security.md`.
 
 ## Hard-won gotchas (do not relearn these)
 - **Secrets**: `backend/.env`, `Blockchain/.env`. **Never print or read their values**; check
@@ -58,6 +74,10 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - **Hugging Face Docker Spaces now need PRO.** Free hosting plan = **Azure for Students**
   (Azure CLI installed at `C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd`).
 - Long jobs: run in the background with a log file in `backend/storage/`, never block.
+- **Sepolia deployments are expensive now**: v2 used ~35M gas there (7× Hardhat / Base) and ethers'
+  default 1 gwei tip cost 0.035 ETH. `deploy-v2.js` caps the tip (`PRIORITY_FEE_GWEI`, default 0.01).
+  Always estimate with `gasUsed × (baseFee + tip)` from a dry run, not `getFeeData()` alone.
+- Contract addresses repeat across chains (same deployer + nonce): always state the chain with an address.
 - **Never reformat or edit `Blockchain/contracts/MintGateNFT.sol`** (v1): it must stay byte-identical
   to the Sourcify-verified deployment (it is in `.prettierignore`). New contracts go in `contracts/v2/`.
 - Git history stores files with CRLF; ruff and prettier keep line endings as they are. Do not mass-normalise.

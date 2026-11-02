@@ -14,12 +14,22 @@ minted. Every verdict, including the rejections, is anchored on Ethereum.
 > The blockchain does not detect forgery. The AI verifies the artwork off-chain; the smart
 > contract stores the verdict and **refuses to mint** without a passing one.
 
-**Smart contract (Ethereum Sepolia, source verified):**
+**Contracts v2** ([design](docs/contracts.md)): the backend *signs* EIP-712 verdicts, the artist
+submits them and mints from their own wallet, minted art can be disputed and revoked, and any
+ERC-721 can reuse the registry through `MintGated`. All source-verified (Sourcify exact match):
+
+| Network | `MintGateRegistry` | `MintGateNFTV2` |
+|---|---|---|
+| Ethereum Sepolia | [`0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB`](https://sepolia.etherscan.io/address/0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB) | [`0x59900d4F93fAb95F3B8aFBD4E9fEbF15Fa0F4f22`](https://sepolia.etherscan.io/address/0x59900d4F93fAb95F3B8aFBD4E9fEbF15Fa0F4f22) |
+| Base Sepolia | [`0xae989b374DF85a942b4caE07940713Ff89418F32`](https://sepolia.basescan.org/address/0xae989b374DF85a942b4caE07940713Ff89418F32) | [`0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB`](https://sepolia.basescan.org/address/0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB) |
+
+v1 (`MintGateNFT`, which the current app still uses) stays on Ethereum Sepolia at
 [`0xae989b374DF85a942b4caE07940713Ff89418F32`](https://sepolia.etherscan.io/address/0xae989b374DF85a942b4caE07940713Ff89418F32)
-· [Sourcify exact match](https://sourcify.dev/#/lookup/0xae989b374DF85a942b4caE07940713Ff89418F32)
+· [Sourcify](https://sourcify.dev/#/lookup/0xae989b374DF85a942b4caE07940713Ff89418F32).
+Same deployer and nonce, so v1 on Sepolia and the v2 registry on Base Sepolia share an address.
 
 **Stack:** PyTorch (ResNet-18 fine-tuned on an RTX 3050) · CLIP ViT-B/32 · OpenCV ·
-scikit-learn · Flask + gunicorn · Solidity 0.8.24 / OpenZeppelin 5 / Hardhat · web3.py ·
+scikit-learn · Flask + gunicorn · Solidity 0.8.24 / OpenZeppelin 5 / Hardhat + Foundry · EIP-712 · web3.py ·
 IPFS (Pinata) · MetaMask · Docker
 
 ## Results
@@ -114,9 +124,12 @@ Engineering decisions worth knowing:
 |---|---|
 | `backend/detection/` | preprocessing, ResNet-18, AI detector, copy-move, pHash, CLIP, ORB, reference index, policy, pipeline |
 | `backend/training/` | dataset build (`fetch_realworld`, `fetch_v2`), training, index, calibration, evaluation, independent check |
-| `backend/chain/` | web3.py contract client, IPFS pinning |
+| `backend/chain/` | web3.py contract client, EIP-712 verdict signer (`eip712.py`), IPFS pinning, `deployments/<network>.json` (v2 addresses) |
 | `backend/server.py`, `wsgi.py` | Flask API (rate limits, CSP, proxy-aware), gunicorn entry point |
-| `Blockchain/contracts/MintGateNFT.sol` | ERC-721 + AccessControl provenance contract (13 tests, 100 % coverage) |
+| `Blockchain/contracts/MintGateNFT.sol` | v1: ERC-721 + AccessControl provenance contract |
+| `Blockchain/contracts/v2/` | v2: `MintGateRegistry` (EIP-712 verdicts, disputes, revocation, pause), `MintGateNFTV2` (artist self-mint, ERC-2981), `MintGated` / `IMintGate` (reuse by other collections) |
+| `Blockchain/test/` | Hardhat unit tests (v1 + v2, 100 % coverage) and Foundry fuzz / invariant suites (`test/foundry/`) |
+| `docs/contracts.md` | v2 state machines, interface, roles, upgrade strategy, threat model, gas |
 | `backend/tests/` | pytest suite: policy, preprocessing, reference index, copy-move, API with a mocked chain |
 | `docs/security.md` | Slither results, coverage, known limitations |
 | `frontend/` | web UI (MetaMask connect, Etherscan/IPFS links) |
@@ -156,8 +169,9 @@ Secrets live in `backend/.env` and `Blockchain/.env` (templates: `.env.example`)
 - In production the server refuses to start without a strong reviewer key and a verifier key.
   The reviewer key is checked in constant time.
 - Model weights load with `torch.load(weights_only=True)`. Classical models are stored as JSON, never pickle.
-- Contract: Slither (0 high / 0 medium; the 2 low findings are justified), 100 % test coverage.
-  Details and the trust model's known limits: [docs/security.md](docs/security.md).
+- Contracts: Slither 0 high / 0 medium (v2: no findings; v1: 2 justified lows), 100 % test
+  coverage (CI gate 95 %), Foundry fuzz + invariant suites in CI. Details and the trust model's
+  known limits: [docs/security.md](docs/security.md); v2 threat model: [docs/contracts.md](docs/contracts.md).
 
 ## Data and licences
 

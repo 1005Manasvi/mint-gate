@@ -1,19 +1,40 @@
 # Security review
 
 Static analysis, test coverage and known limitations of Mint-Gate. Updated every time a contract
-changes. Last review: **2026-11-02 (Phase 0)**, contract `MintGateNFT` v1
-(Sepolia `0xae989b374DF85a942b4caE07940713Ff89418F32`).
+changes. Last review: **2026-11-02 (Phase 1)**: `MintGateNFT` v1 (Ethereum Sepolia
+`0xae989b374DF85a942b4caE07940713Ff89418F32`) and contracts v2 (`MintGateRegistry`, `MintGateNFTV2`,
+`MintGated`, `IMintGate`; addresses in [contracts.md](contracts.md#10-deployments)). The v2 design,
+roles and threat model are in [contracts.md](contracts.md).
 
 ## Tools and how to reproduce
 
 | Check | Tool | Command (from `Blockchain/`) | Result |
 |---|---|---|---|
-| Unit tests | Hardhat 2.29, chai | `npx hardhat test` | 13 passing |
+| Unit tests | Hardhat 2.29, chai | `npx hardhat test` | 91 passing (13 v1, 78 v2) |
 | Coverage | solidity-coverage 0.8.17 | `npm run coverage` (fails below 95 %) | 100 % statements, branches, functions, lines |
-| Static analysis | Slither 0.11.6 | `slither . --fail-medium` (config: `slither.config.json`) | 0 high, 0 medium, 2 low, 1 informational |
+| Fuzz + invariants | Foundry (forge 1.8.7) | `forge test` (CI: `FOUNDRY_PROFILE=ci`) | 11 fuzz properties, 4 invariants, all passing |
+| Static analysis | Slither 0.11.6 | `slither . --fail-medium` (config: `slither.config.json`) | v2: no findings. v1: 0 high, 0 medium, 2 low |
 
-All three run in CI (`.github/workflows/ci.yml`). Slither analyses our own contracts only
-(`exclude_dependencies`); OpenZeppelin findings are listed separately below.
+All run in CI (`.github/workflows/ci.yml`). Slither analyses our own contracts only
+(`exclude_dependencies`; the test fixtures in `contracts/mocks/` are filtered out);
+OpenZeppelin findings are listed separately below.
+
+## Slither: contracts v2
+
+No findings. Four detector hits are suppressed inline (`// slither-disable-next-line`), each
+with the reason next to it in the source:
+
+| Where | Detector | Why it is safe |
+|---|---|---|
+| `MintGateRegistry.submitVerdict` (2 lines) | `timestamp` | Expiry and the 30-day / 15-minute windows are hours to days long; validators can move block time by seconds. |
+| `MintGateRegistry.withdraw` | `incorrect-equality`, `timestamp` | `amount == 0` compares a credit balance that only `resolveDispute` / `withdraw` change (not `address(this).balance`, which could be forced), so an exact comparison is correct. Slither links it to `timestamp` because the same struct stores `openedAt`. |
+| `MintGateNFTV2.submitAndMint` | `unused-return` | The returned signer is not needed: `submitVerdict` reverts unless the signer is a verifier. |
+
+The v2 mint follows checks-effects-interactions: all NFT state, the `Transfer` and `VerifiedMint`
+events are written first, then the registry is called (`consume`, which reverts the whole mint
+if the verdict does not allow it), and the ERC-721 receiver check
+(`ERC721Utils.checkOnERC721Received`) runs last. That is why v1's two reentrancy findings do not
+appear for v2. Bond payouts use pull payments with the credit zeroed before the transfer.
 
 ## Slither findings: MintGateNFT.sol
 
@@ -65,12 +86,20 @@ Excluded from the CI gate. To see them, set `"exclude_dependencies": false` in
 
 ## Known limitations (trust model)
 
-These are design limits of v1, not bugs; the roadmap addresses them.
+These are design limits, not bugs; the roadmap addresses them.
 
-- **One hot wallet.** The backend's verifier key records verdicts *and* mints. If it leaks, an
-  attacker can record PASS verdicts for anything. Phase 1 moves to EIP-712 verdicts signed by the
-  verifier and submitted by the artist, plus pause and key rotation.
-- **Admin is an EOA.** `DEFAULT_ADMIN_ROLE` sits on the deployer wallet; Phase 6 moves it to a Safe multisig.
+- **One hot wallet (v1, still used by the app).** The backend's verifier key records verdicts *and*
+  mints. If it leaks, an attacker can record PASS verdicts for anything. v2 (deployed in Phase 1)
+  replaces this: the backend only signs EIP-712 verdicts, the artist submits and mints, and a
+  leaked key is handled by pause → role rotation → `voidVerdict` → dispute (playbook tested in
+  `test/v2/MintGateRegistry.test.js`). The app switches to v2 in Phases 2–3.
+- **v2 signing key is still a hot key.** A leaked verifier key can sign PASS verdicts until it is
+  revoked; signatures are valid for at most 30 days. Phase 7 moves the key to Azure Key Vault.
+- **v2 disputes have no timeout.** A dispute nobody resolves keeps its bond locked (Phase 6).
+- **Admin is an EOA.** `DEFAULT_ADMIN_ROLE` sits on the deployer wallet; v2 uses a two-step admin
+  transfer with a delay, and Phase 6 moves admin to a Safe multisig.
+- **Testnet roles are all one wallet** (`0xeed8…eD7F`: admin, verifier, reviewer, pauser, treasury).
+  Production needs separate keys.
 - **The reviewer key is a shared secret** in the API (`REVIEWER_KEY`), compared in constant time
   and rate-limited. Phase 3 replaces it with wallet signatures from REVIEWER_ROLE holders.
 - **Detection is off-chain and probabilistic.** The contract proves which verdict and policy were
