@@ -5,3 +5,5 @@ Blockchain/coverage/
 # v1 is deployed on Sepolia with a Sourcify *exact* match: any byte change to the source
 # (even whitespace) breaks that match. Phase 1 adds v2 contracts, which are formatted.
 Blockchain/contracts/MintGateNFT.sol
+# Vendored third-party builds stay byte-identical to the upstream release.
+frontend/vendor/

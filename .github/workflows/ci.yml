@@ -135,6 +135,59 @@ jobs:
         working-directory: Blockchain
         run: slither . --fail-medium
 
+  e2e:
+    name: Browser E2E (Playwright + Hardhat)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: mintgate
+          POSTGRES_PASSWORD: mintgate
+          POSTGRES_DB: mintgate
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mintgate" --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # node --test with a glob
+          cache: npm
+          cache-dependency-path: |
+            Blockchain/package-lock.json
+            e2e/package-lock.json
+      - name: Frontend unit tests (report hash parity with Python)
+        run: node --test "frontend/tests/*.test.mjs"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            deploy/requirements-deploy.txt
+            requirements-dev.txt
+      - name: "Install Python stack (CPU PyTorch: the fake models still import the pipeline)"
+        run: |
+          pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r deploy/requirements-deploy.txt -r requirements-dev.txt
+      - run: npm ci && npx hardhat compile
+        working-directory: Blockchain
+      - run: npm ci && npx playwright install --with-deps chromium
+        working-directory: e2e
+      - name: Playwright (SIWE, signed upload, artist-paid mint, provenance page)
+        working-directory: e2e
+        run: npx playwright test
+        env:
+          E2E_PYTHON: python
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: e2e/test-results/
+
   lint:
     name: Lint (pre-commit)
     runs-on: ubuntu-latest

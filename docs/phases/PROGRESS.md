@@ -119,3 +119,50 @@ and anything the next phase must know. Keep entries brief: this file is read at 
   (`/api/attest` already returns `call` + args); "My artworks" can query submissions / tokens by
   wallet (indexes exist). `deploy/Dockerfile` + `hf_space.py` are obsolete (Phase 7 rebuilds deploy
   as api / worker / indexer). Run the indexer for `baseSepolia,sepolia` once real mints start.
+
+## Phase 3: Wallet identity and artist-side minting (done, 2026-11-03)
+- **SIWE (EIP-4361)** in `backend/auth.py` (own parser + `SiweMessage.text()`, no SIWE library):
+  `GET /api/auth/nonce` (Redis, 5 min, single use via `GETDEL` after all other checks),
+  `POST /api/auth/verify` (domain in `SIWE_DOMAINS`, URI on that domain, configured chain id, EIP-55,
+  issued ≤ 10 min / not future, exp / nbf, EIP-191 signer), `GET /api/auth/me`, `POST /api/auth/logout`.
+  Session: `__Host-mg_session` cookie (HttpOnly, Secure, SameSite=Strict, 1 h), Redis keeps only the
+  token's SHA-256. CSRF: `X-CSRF-Token` (per session) + Origin check on every state-changing call.
+- **Signed submission:** wallet personal_signs domain + address + SHA-256 of the exact file bytes +
+  time; `/api/analyze` requires a session and that signature (artist = session wallet; the `artist`
+  form field is gone). Alembic `0002` adds `submissions.file_sha256 / claim_message / claim_signature`;
+  `report.claim` is public via the API, excluded from the IPFS report. `/api/attest` only for the
+  artist's session wallet (403 otherwise).
+- **Frontend** rewritten as ES modules (`frontend/js/`), ethers **6.17.0** vendored (`frontend/vendor/`,
+  MIT). Network selector (Sepolia / Base Sepolia / local from `deployments/*.json`, switch + add via
+  `wallet_switchEthereumChain` / `wallet_addEthereumChain`), mint from the artist wallet: attestation →
+  gas estimate + max cost → wallet → pending (tx link) → confirmations n / N → token link; custom
+  errors of NFT **and** registry decoded into plain sentences. Royalty input (≤ 10 %). Raw call data
+  kept under "Advanced". **My artworks** tab (`GET /api/me/artworks`: submissions, verdicts, tokens,
+  disputes). **Public provenance page** `/token/<chain>/<contract>/<id>` (`token.html`): indexer view +
+  "Verify integrity" = 9 checks read from the chain (wallet if on that chain, else the public RPC) and
+  content (report hash recomputed in the browser, pixel hash of the image, registry from the NFT itself).
+- **CSP kept strict** (`script-src 'self'`); `connect-src` = self + configured chains' *public* RPC
+  (`PUBLIC_RPC_<NET>`, never `RPC_URL_<NET>`) + IPFS gateway; `img-src` gains `blob:`.
+- **Bugs found + fixed:** (1) upload preview was blocked by the CSP since Phase 0 (`blob:` URL), caught
+  by the E2E CSP watcher; (2) `pinJSONToIPFS` lets Pinata re-serialise JSON (`1.0` → `1`), so an IPFS
+  report could never be re-hashed: reports are now pinned as exact bytes (`pinFileToIPFS`); (3) mobile
+  layout hid the tabs completely (<900 px): now a scrollable tab bar; (4) Windows `.js` MIME type.
+- **Accessibility / mobile:** WAI-ARIA tabs with arrow keys, skip link, focus-visible outlines,
+  keyboard dropzone, live regions for job / mint / verification status, alerts instead of `alert()`,
+  reduced-motion, empty and error states (no wallet, not signed in, no artworks, not indexed), checked
+  at 390 px and 1280 px.
+- **Tests:** 127 fast pytest (+17: `test_auth.py` SIWE valid / expired / exp / nbf / future / wrong
+  domain / wrong URI / wrong signer / wrong chain / replayed + unknown nonce / parser round trip;
+  cookie flags, CSRF, Origin, logout, attest-by-other-wallet, my artworks, networks + CSP; signed-upload
+  tests in `test_api.py`; `test_canonical_vector.py`). Node: 5 (`frontend/tests/`, JS hash ==
+  Python hash on a shared tricky vector). **Playwright 2 tests, green** (bundled Chromium and Chrome):
+  no-session 401s; full journey on a Hardhat node (SIWE → signed upload → PASS → other wallet gets
+  403 → mint paid by the artist, 2 confirmations with 1 s interval mining → indexer → My artworks
+  "minted" → token page, all 9 checks ✓, zero CSP violations). New CI job `e2e`.
+- **Not done / for later:** no live testnet mint this phase (owner's choice: first real MetaMask mint on
+  Base Sepolia is a manual step); EIP-1271 (smart-contract wallets) not supported; reviewer still uses
+  `REVIEWER_KEY` (wallet-based reviewers → Phase 6); no negative E2E for a tampered report (covered by
+  the Node + pytest hash tests).
+- **For Phase 4:** `/api/token/<net>/<contract>/<id>` already accepts any collection address, and the
+  provenance page works for any `MintGated` collection (it reads the registry from the NFT). Run the
+  indexer for `baseSepolia,sepolia` once real mints start.

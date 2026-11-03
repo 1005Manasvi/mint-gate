@@ -1,13 +1,18 @@
 """Mint-Gate API server (stateless: Postgres + Redis + shared storage; run as many as needed).
 
-    POST /api/analyze              upload artwork + artist wallet -> 202 {job_id}
+    GET  /api/auth/nonce | POST /api/auth/verify | GET /api/auth/me | POST /api/auth/logout
+                                   Sign-In with Ethereum (auth.py): session cookie + CSRF token
+    POST /api/analyze              upload signed by the session wallet -> 202 {job_id}
     GET  /api/jobs/<id>            job status; the report once done
     GET  /api/report/<id>          stored report (+ evidence images)
     GET  /api/reports?status=      list reports (e.g. the REVIEW queue)
     POST /api/review/<id>          reviewer approves / rejects a REVIEW verdict (mirrored on chain)
-    POST /api/attest/<id>          EIP-712 verdict + token URI for the artist to mint with
+    POST /api/attest/<id>          EIP-712 verdict + token URI for the artist (session wallet) to mint with
+    GET  /api/me/artworks          the session wallet's submissions, verdicts, tokens and disputes
+    GET  /api/networks             chains the frontend may switch to (public RPC, addresses, ABIs)
     GET  /api/verify/<id>          compare the stored report with the on-chain verdict
-    GET  /api/token/[<net>/]<id>   indexed provenance of a minted token
+    GET  /api/token/[<net>/[<contract>/]]<id>   indexed provenance of a minted token
+    GET  /token/<net>/<contract>/<id>          public provenance page (checks the chain itself)
     GET  /api/status               policy, models, networks, indexer, queues
     GET  /healthz                  liveness probe
 
@@ -19,12 +24,13 @@ Development:  python server.py            Production:  gunicorn wsgi:app (see Do
 import hmac
 import json
 import logging
+import mimetypes
 import re
 import time
 import uuid
 from decimal import Decimal
 
-from flask import Flask, abort, jsonify, request, send_from_directory
+from flask import Flask, abort, g, jsonify, request, send_from_directory
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from redis.exceptions import RedisError
@@ -35,6 +41,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from web3 import Web3
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+import auth
 import config
 import db
 from chain import ipfs, metadata, networks, registry
@@ -45,6 +52,10 @@ from db.models import IndexerCursor, Token
 from detection.policy import Policy
 from detection.report_hash import canonical_hash
 from jobs import queue as jq
+
+# Windows can map .js to text/plain via the registry; with nosniff, browsers then refuse ES modules.
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/javascript", ".mjs")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mintgate")
@@ -65,6 +76,9 @@ limiter = Limiter(
     key_prefix="mintgate",
 )
 
+app.register_blueprint(auth.bp)
+limiter.limit("30/minute")(auth.bp)
+
 FRONTEND_DIR = config.PROJECT_DIR / "frontend"
 REPORT_ID = re.compile(r"^[0-9a-f]{32}$")
 ATTESTATION_VALIDITY = 24 * 3600
@@ -83,12 +97,26 @@ def _check_id(rid):
 
 # ---- security headers -----------------------------------------------------------------
 
-CSP = (
-    "default-src 'self'; img-src 'self' data: https:; script-src 'self'; "
-    "style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; "
-    "connect-src 'self'; object-src 'none'; base-uri 'none'; "
-    "frame-ancestors 'self' https://huggingface.co https://*.hf.space"
-)
+
+def _origin(url):
+    m = re.match(r"^(https?://[^/]+)", url or "")
+    return m.group(1) if m else None
+
+
+def build_csp() -> str:
+    """Scripts only from this origin. Besides the API, the browser may read the configured chains'
+    public RPCs and the IPFS gateway: the provenance page checks the chain without trusting this API."""
+    readable = [n.public_rpc() for n in networks.available().values()] + [config.IPFS_GATEWAY]
+    connect = ["'self'"] + sorted({o for o in map(_origin, readable) if o})
+    return (
+        "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self'; "
+        "style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; "
+        f"connect-src {' '.join(connect)}; object-src 'none'; base-uri 'none'; form-action 'self'; "
+        "frame-ancestors 'self' https://huggingface.co https://*.hf.space"
+    )
+
+
+CSP = build_csp()
 
 
 @app.after_request
@@ -105,6 +133,11 @@ def security_headers(resp):
 @app.get("/")
 def index():
     return send_from_directory(FRONTEND_DIR, "index.html")
+
+
+@app.get("/token/<network>/<contract>/<int:token_id>")
+def token_page(network, contract, token_id):
+    return send_from_directory(FRONTEND_DIR, "token.html")
 
 
 @app.get("/static/<path:name>")
@@ -218,16 +251,26 @@ def status():
 
 @app.post("/api/analyze")
 @limiter.limit(lambda: f"{config.RATE_ANALYZE_PER_HOUR}/hour")
+@auth.require_session()
 def analyze():
+    """The artist is the signed-in wallet, and it must have signed the SHA-256 of these exact bytes."""
     f = request.files.get("image")
     if f is None:
         return error("form field 'image' is required")
-    artist = (request.form.get("artist") or "").strip()
-    if not Web3.is_address(artist):
-        return error("form field 'artist' must be the artist's 0x wallet address")
     raw = f.read()
     if not raw:
         return error("empty file")
+    artist = g.wallet
+    try:
+        claim = auth.verify_claim(
+            raw,
+            artist,
+            g.session["domain"],
+            request.form.get("claim_issued_at", ""),
+            request.form.get("claim_signature", ""),
+        )
+    except auth.AuthError as exc:
+        return error(str(exc), 401)
 
     sid = uuid.uuid4().hex
     path = config.INCOMING_DIR / sid
@@ -236,8 +279,10 @@ def analyze():
     tmp.replace(path)
     try:
         with db.session() as s:
-            repo.create_submission(s, sid, artist, f.filename or "")
-            repo.audit(s, "api", "submission.created", sid, artist=Web3.to_checksum_address(artist), bytes=len(raw))
+            repo.create_submission(s, sid, artist, f.filename or "", claim=claim)
+            repo.audit(
+                s, "api", "submission.created", sid, artist=artist, bytes=len(raw), file_sha256=claim["file_sha256"]
+            )
     except SQLAlchemyError as exc:
         path.unlink(missing_ok=True)
         log.error("analyze: database: %s", exc)
@@ -354,6 +399,7 @@ def _queue_review(rid, approve):
 
 @app.post("/api/attest/<rid>")
 @limiter.limit(lambda: f"{config.RATE_ATTEST_PER_DAY}/day")
+@auth.require_session()
 def attest(rid):
     """Everything the artist's wallet needs to mint: a signed verdict (PASS) or the on-chain
     approved review (REVIEW_APPROVED), plus the token URI. The artist pays the gas."""
@@ -372,6 +418,8 @@ def attest(rid):
         return error(f"minting blocked by Mint-Gate policy: status {report['status']}", 403)
     if not report["artist"]:
         return error("this report has no artist wallet", 409)
+    if report["artist"] != g.wallet:
+        return error("only the artist's wallet can mint this artwork - sign in with it", 403)
     reviewed_on = (report["review"] or {}).get("network", config.DEFAULT_NETWORK)
     if report["status"] == "REVIEW_APPROVED" and net.name != reviewed_on:
         return error(f"this verdict was reviewed on {reviewed_on}; mint there", 409)
@@ -457,20 +505,49 @@ def verify(rid):
     )
 
 
+@app.get("/api/networks")
+def list_networks():
+    """Chains the frontend can use; `?abi=1` adds the registry + NFT ABIs (to decode custom errors)."""
+    with_abi = request.args.get("abi") == "1"
+    out = []
+    for n in networks.available().values():
+        d = n.browser()
+        if with_abi:
+            d["abi"] = {"registry": n.registry.abi, "nft": n.nft.abi}
+        out.append(d)
+    return jsonify({"default": config.DEFAULT_NETWORK, "networks": out})
+
+
+@app.get("/api/me/artworks")
+@auth.require_session(csrf=False)
+def my_artworks():
+    with db.session() as s:
+        rows = repo.artworks_of(s, g.wallet)
+    names = {n.chain_id: n.name for n in networks.available().values()}
+    for r in rows:
+        for item in r["tokens"] + r["disputes"]:
+            item["network"] = names.get(item["chain_id"])
+    return jsonify({"success": True, "wallet": g.wallet, "artworks": rows})
+
+
 @app.get("/api/token/<int:token_id>")
 @app.get("/api/token/<network>/<int:token_id>")
-def token(token_id, network=None):
+@app.get("/api/token/<network>/<contract>/<int:token_id>")
+def token(token_id, network=None, contract=None):
     try:
-        net = networks.get(network or config.DEFAULT_NETWORK)
+        net = networks.resolve(network or config.DEFAULT_NETWORK)
     except networks.UnknownNetwork:
         abort(404)
+    if contract is not None and not Web3.is_address(contract):
+        abort(404)
+    address = Web3.to_checksum_address(contract or net.nft.address)
     with db.session() as s:
-        t = s.get(Token, (net.chain_id, Web3.to_checksum_address(net.nft.address), Decimal(token_id)))
+        t = s.get(Token, (net.chain_id, address, Decimal(token_id)))
         if t is None:
             return error("token not found", 404)
         rep = repo.get_report_by_hash(s, t.report_hash)
         out = {
-            **net.public(),
+            **net.browser(),
             "contract": t.contract,
             "token_id": int(t.token_id),
             "owner": t.owner,

@@ -16,7 +16,7 @@ repos:
         # Prettier 3 resolves plugins from the working directory, not from a hook env.
         language: system
         entry: node Blockchain/node_modules/prettier/bin/prettier.cjs --write --ignore-unknown
-        files: ^(Blockchain/(contracts|scripts|test)/|Blockchain/(hardhat\.config|\.solcover)\.js$|frontend/.*\.js$)
+        files: ^(Blockchain/(contracts|scripts|test)/|Blockchain/(hardhat\.config|\.solcover)\.js$|frontend/(js|tests)/.*\.m?js$|e2e/(tests/.*|playwright\.config)\.m?js$)
         types_or: [javascript, solidity]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks

@@ -1,5 +1,7 @@
 """Flask API + job queue end to end: real Postgres, fakeredis, fake models and an in-memory
-registry (see conftest.py). Jobs run in an in-process RQ burst worker (`run_jobs`)."""
+registry (see conftest.py). Jobs run in an in-process RQ burst worker (`run_jobs`).
+
+`client` here is the artist's browser, signed in with SIWE; `anon` has no session."""
 
 import io
 import json
@@ -9,9 +11,17 @@ import pytest
 from sqlalchemy import text
 
 from chain.eip712 import Verdict, recover_signer
-from tests.conftest import ARTIST, DEV_VERIFIER
+from tests.conftest import ARTIST, DEV_VERIFIER, OTHER_KEY
 
-OTHER = "0x00000000000000000000000000000000000000b2"
+
+@pytest.fixture
+def client(artist_client):
+    return artist_client
+
+
+@pytest.fixture
+def anon(server):
+    return server.app.test_client()
 
 
 @pytest.fixture
@@ -21,12 +31,8 @@ def reviewer_key(server):
 
 @pytest.fixture
 def submit(client, fixture_bytes):
-    def run(name, artist=ARTIST, expect=202):
-        resp = client.post(
-            "/api/analyze",
-            data={"image": (io.BytesIO(fixture_bytes(name)), name), "artist": artist},
-            content_type="multipart/form-data",
-        )
+    def run(name, wallet=None, expect=202):
+        resp = (wallet or client).upload(fixture_bytes(name), name)
         assert resp.status_code == expect, resp.get_json()
         return resp.get_json()
 
@@ -37,8 +43,8 @@ def submit(client, fixture_bytes):
 def analyse(client, submit, run_jobs):
     """Submit, run the worker, return the finished report."""
 
-    def run(name, artist=ARTIST):
-        job = submit(name, artist)
+    def run(name, wallet=None):
+        job = submit(name, wallet)
         run_jobs()
         done = client.get(f"/api/jobs/{job['job_id']}").get_json()
         assert done["status"] == "done", done
@@ -58,13 +64,36 @@ def attest(client, rid, **body):
 # ---- submission + jobs ----------------------------------------------------------------------
 
 
-def test_analyze_validates_input(client, submit):
+def test_analyze_validates_input(client, anon, fixture_bytes):
     assert client.post("/api/analyze").status_code == 400
-    no_artist = client.post(
-        "/api/analyze", data={"image": (io.BytesIO(b"x"), "x.png")}, content_type="multipart/form-data"
-    )
-    assert no_artist.status_code == 400 and "artist" in no_artist.get_json()["error"]
-    assert submit("photo.png", artist="0x1234", expect=400)["success"] is False
+    assert client.upload(b"", "x.png").status_code == 400
+    # without a wallet session, nothing can be submitted
+    resp = anon.post("/api/analyze")
+    assert resp.status_code == 401 and "sign in" in resp.get_json()["error"]
+
+
+def test_upload_must_be_signed_by_the_session_wallet(client, fixture_bytes):
+    raw = fixture_bytes("photo.png")
+    wrong = client.upload(raw, key=OTHER_KEY)  # someone else's signature over the same file
+    assert wrong.status_code == 401 and "signed-in wallet" in wrong.get_json()["error"]
+    stale = client.upload(raw, issued_at="2026-01-01T00:00:00.000Z")
+    assert stale.status_code == 401 and "expired" in stale.get_json()["error"]
+    bad_time = client.upload(raw, issued_at="yesterday")
+    assert bad_time.status_code == 401
+    unsigned = client.post("/api/analyze", data={"image": (io.BytesIO(raw), "p.png")})
+    assert unsigned.status_code == 401
+
+
+def test_signed_claim_is_stored_with_the_report(client, analyse, fixture_bytes):
+    import hashlib
+
+    from auth import recover
+
+    r = analyse("photo.png")
+    claim = client.get(f"/api/report/{r['report_id']}").get_json()["claim"]
+    assert claim["file_sha256"] == hashlib.sha256(fixture_bytes("photo.png")).hexdigest()
+    assert f"File SHA-256: 0x{claim['file_sha256']}" in claim["message"]
+    assert recover(claim["message"], claim["signature"]) == ARTIST  # anyone can re-check who claimed it
 
 
 def test_submit_is_async_and_fast(server, client, submit, run_jobs):
@@ -89,11 +118,7 @@ def test_submit_is_async_and_fast(server, client, submit, run_jobs):
 
 
 def test_invalid_image_fails_the_job(client, submit, run_jobs):
-    resp = client.post(
-        "/api/analyze",
-        data={"image": (io.BytesIO(b"definitely not a png"), "x.png"), "artist": ARTIST},
-        content_type="multipart/form-data",
-    )
+    resp = client.upload(b"definitely not a png", "x.png")
     assert resp.status_code == 202
     run_jobs()
     out = client.get(f"/api/jobs/{resp.get_json()['job_id']}").get_json()
@@ -131,11 +156,7 @@ def test_queue_down_returns_503(server, client, fixture_bytes, monkeypatch):
         raise ConnectionError("redis down")
 
     monkeypatch.setattr(server.jq, "enqueue_analysis", down)
-    resp = client.post(
-        "/api/analyze",
-        data={"image": (io.BytesIO(fixture_bytes("photo.png")), "p.png"), "artist": ARTIST},
-        content_type="multipart/form-data",
-    )
+    resp = client.upload(fixture_bytes("photo.png"), "p.png")
     assert resp.status_code == 503
     with server.db.session() as s:
         assert s.execute(text("SELECT status FROM submissions")).scalar() == "error"
@@ -212,6 +233,7 @@ def test_review_flow(server, client, analyse, run_jobs, reviewer_key, fake_regis
     with server.db.session() as s:
         actions = [a for (a,) in s.execute(text("SELECT action FROM audit_log ORDER BY id"))]
     assert actions == [
+        "auth.signin",
         "submission.created",
         "report.created",
         "verdict.submitted",
@@ -268,7 +290,7 @@ def test_ai_generated_upload_fails(server, analyse):
     assert "AI-generated probability (CLIP probe + spectral) crossed the hard-fail threshold" in r["reasons"]
 
 
-def test_minted_artwork_protects_against_reupload(server, client, analyse):
+def test_minted_artwork_protects_against_reupload(server, client, analyse, wallet):
     """The indexer sees ImageMinted -> reference_items row -> every worker adds it to its index."""
     from chain import networks
     from indexer.core import Indexer
@@ -298,7 +320,7 @@ def test_minted_artwork_protects_against_reupload(server, client, analyse):
     tok = client.get("/api/token/1").get_json()
     assert tok["report_id"] == first["report_id"] and tok["owner"] == ARTIST and tok["status"] == "active"
 
-    second = analyse("photo.png", artist=OTHER)
+    second = analyse("photo.png", wallet=wallet(OTHER_KEY))
     assert second["decision"] == "FAIL"
     assert second["checks"]["clip"]["nearest"] == f"minted/{first['report_id']}.png"
 

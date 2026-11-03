@@ -12,6 +12,7 @@ Data services:
   * Redis: fakeredis (RQ jobs are run with an in-process burst worker).
 """
 
+import io
 import json
 import os
 import shutil
@@ -19,11 +20,9 @@ import signal
 import socket
 import subprocess
 import tempfile
-import threading
 import time
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 _TMP = tempfile.mkdtemp(prefix="mintgate-tests-")
@@ -48,15 +47,22 @@ os.environ.update(
     }
 )
 
-from PIL import Image  # noqa: E402
+from eth_account import Account  # noqa: E402
+from eth_account.messages import encode_defunct  # noqa: E402
 from web3 import Web3  # noqa: E402
 
-FIXTURES = Path(__file__).resolve().parent / "fixtures"
+from tests.fakes import FIXTURES, fixture_image, make_pipeline  # noqa: E402,F401
+
 ARTIFACTS = ROOT / "Blockchain" / "artifacts" / "contracts" / "v2"
 REAL_DEPLOYMENT = ROOT / "backend" / "chain" / "deployments" / "baseSepolia.json"
 # Hardhat account #0: the backend's verifier key on chainId 31337 (public test data).
 DEV_VERIFIER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-ARTIST = "0x00000000000000000000000000000000000000A1"
+# Throwaway test keys: the artist and a second wallet sign in with SIWE and sign their uploads.
+ARTIST_KEY = "0x" + "a1" * 32
+OTHER_KEY = "0x" + "b2" * 32
+ARTIST = Account.from_key(ARTIST_KEY).address
+OTHER = Account.from_key(OTHER_KEY).address
+SIWE_DOMAIN = "testserver"  # host of PUBLIC_BASE_URL
 
 
 def _write_test_deployment():
@@ -81,79 +87,9 @@ def pytest_sessionfinish(session, exitstatus):
     shutil.rmtree(_TMP, ignore_errors=True)
 
 
-def fixture_image(name) -> Image.Image:
-    with Image.open(FIXTURES / name) as im:
-        return im.convert("RGB")
-
-
 @pytest.fixture
 def fixture_bytes():
     return lambda name: (FIXTURES / name).read_bytes()
-
-
-# ---- tiny stand-ins for the learned models -------------------------------------------
-
-
-class FakeResNet:
-    version = "fake-resnet"
-
-    def __init__(self):
-        self.value = 0.05
-
-    def predict(self, img):
-        return self.value
-
-
-class FakeAIDetector:
-    version = "fake-ai"
-    metrics = {}
-
-    def __init__(self):
-        self.value = 0.05
-
-    def predict(self, img, clip_emb=None):
-        return {"spectral": self.value, "clip_probe": self.value, "probability": self.value}
-
-
-class FakeClip:
-    """Deterministic 512-d 'embedding' (CLIP's size, so it fits reference_items.embedding):
-    a mean-centred, L2-normalised thumbnail. Identical pixels give similarity 1.0."""
-
-    def encode_one(self, img):
-        v = np.asarray(img.convert("RGB").resize((16, 11), Image.BILINEAR), dtype=np.float32).ravel()[:512]
-        v = np.pad(v, (0, 512 - len(v)))
-        v -= v.mean()
-        return (v / (np.linalg.norm(v) + 1e-8)).astype(np.float32)
-
-
-def tiny_index(clip):
-    """Two references: a generative-collection member and a protected painting."""
-    from detection import reference_index
-    from detection.hashing import phash_int
-
-    reference_index.ORIGINALS_DIR = FIXTURES  # "<file>"     seed collection
-    reference_index.REFERENCE_ART_DIR = FIXTURES  # "art/<file>" protected artworks
-    idx = reference_index.ReferenceIndex.__new__(reference_index.ReferenceIndex)
-    idx.files = ["punk.png", "art/painting.png"]
-    imgs = [fixture_image("punk.png"), fixture_image("painting.png")]
-    idx.phash = np.array([phash_int(im) for im in imgs], dtype=np.uint64)
-    idx.clip = np.stack([clip.encode_one(im) for im in imgs])
-    idx.nn_sim = np.array([0.99, 0.85], dtype=np.float32)  # dense collection / distinct painting
-    return idx
-
-
-def make_pipeline():
-    from detection.pipeline import MintGatePipeline
-    from detection.policy import Policy
-
-    p = MintGatePipeline.__new__(MintGatePipeline)
-    p.policy = Policy()
-    p.resnet = FakeResNet()
-    p.ai = FakeAIDetector()
-    p.clip = FakeClip()
-    p.index = tiny_index(p.clip)
-    p._lock = threading.Lock()
-    return p
 
 
 # ---- in-memory registry that enforces the MintGateRegistry rules the backend relies on -----
@@ -309,7 +245,104 @@ def server(clean_db, fake_redis, worker_pipeline, fake_registry):
 
 @pytest.fixture
 def client(server):
+    """Anonymous browser (no wallet session)."""
     return server.app.test_client()
+
+
+# ---- wallets: SIWE sign-in + signed uploads ----------------------------------------------------
+
+
+def sign_text(key: str, text: str) -> str:
+    """EIP-191 personal_sign, as a wallet does it."""
+    return "0x" + bytes(Account.sign_message(encode_defunct(text=text), private_key=key).signature).hex()
+
+
+def now_iso(offset_s: int = 0) -> str:
+    from datetime import UTC, datetime, timedelta
+
+    return (datetime.now(UTC) + timedelta(seconds=offset_s)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def siwe_text(address: str, nonce: str, chain_id: int = 31337, domain: str = SIWE_DOMAIN, **fields) -> str:
+    from datetime import datetime
+
+    import auth
+
+    issued = fields.pop("issued_at", now_iso())
+    return auth.SiweMessage(
+        domain=domain,
+        address=address,
+        statement=fields.pop("statement", auth.STATEMENT),
+        uri=fields.pop("uri", f"http://{domain}"),
+        version=fields.pop("version", "1"),
+        chain_id=chain_id,
+        nonce=nonce,
+        issued_at=datetime.fromisoformat(issued),
+        **fields,
+    ).text()
+
+
+class WalletClient:
+    """A browser with a wallet: Flask test client + SIWE session + CSRF header on every POST."""
+
+    def __init__(self, app, key: str):
+        self.http = app.test_client()
+        self.key = key
+        self.address = Account.from_key(key).address
+        self.csrf = ""
+
+    def __getattr__(self, name):  # get(), delete(), ... go straight to the test client
+        return getattr(self.http, name)
+
+    def post(self, path, headers=None, **kw):
+        return self.http.post(path, headers={"X-CSRF-Token": self.csrf, **(headers or {})}, **kw)
+
+    def sign(self, text: str) -> str:
+        return sign_text(self.key, text)
+
+    def login(self, **fields):
+        nonce = self.http.get("/api/auth/nonce").get_json()["nonce"]
+        text = siwe_text(self.address, nonce, **fields)
+        resp = self.http.post("/api/auth/verify", json={"message": text, "signature": self.sign(text)})
+        if resp.status_code == 200:
+            self.csrf = resp.get_json()["csrf"]
+        return resp
+
+    def upload(self, raw: bytes, name: str = "upload.png", issued_at: str | None = None, key: str | None = None):
+        """POST /api/analyze with the claim signature (by `key`, default: this wallet)."""
+        import hashlib
+
+        import auth
+
+        issued = issued_at or now_iso()
+        claim = auth.claim_message(SIWE_DOMAIN, self.address, hashlib.sha256(raw).hexdigest(), issued)
+        return self.post(
+            "/api/analyze",
+            data={
+                "image": (io.BytesIO(raw), name),
+                "claim_issued_at": issued,
+                "claim_signature": sign_text(key or self.key, claim),
+            },
+            content_type="multipart/form-data",
+        )
+
+
+@pytest.fixture
+def wallet(server):
+    """Factory: wallet(key) -> signed-in WalletClient."""
+
+    def make(key=ARTIST_KEY, login=True):
+        w = WalletClient(server.app, key)
+        if login:
+            assert w.login().status_code == 200
+        return w
+
+    return make
+
+
+@pytest.fixture
+def artist_client(wallet):
+    return wallet(ARTIST_KEY)
 
 
 # ---- local Hardhat node ---------------------------------------------------------------------

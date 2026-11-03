@@ -93,6 +93,11 @@ def network_setting(prefix: str, network: str, default):
     return env(f"{prefix}_{network.upper()}", default)
 
 
+# RPC endpoints handed to browsers (PUBLIC_RPC_<NET>): never RPC_URL_<NET>, which may embed an API key.
+NATIVE_CURRENCY = {"name": "Ether", "symbol": "ETH", "decimals": 18}
+CHAIN_LABELS = {"localhost": "Hardhat (local)", "sepolia": "Sepolia", "baseSepolia": "Base Sepolia"}
+
+
 # ---- IPFS (Pinata) -----------------------------------------------------------------
 PINATA_JWT = env("PINATA_JWT", "")
 IPFS_GATEWAY = env("IPFS_GATEWAY", "https://gateway.pinata.cloud/ipfs/")
@@ -108,6 +113,28 @@ RATE_ATTEST_PER_DAY = int(env("RATE_ATTEST_PER_DAY", "20"))  # per client IP (at
 # Flask-Limiter storage; shared by every API instance. "memory://" only for tests.
 RATELIMIT_STORAGE_URI = env("RATELIMIT_STORAGE_URI", REDIS_URL)
 TRUSTED_PROXIES = int(env("TRUSTED_PROXIES", "0"))  # 1 behind HF Spaces / nginx
+
+# ---- Wallet sign-in (SIWE, EIP-4361) ---------------------------------------------------------
+SESSION_TTL_S = int(env("SESSION_TTL_S", "3600"))
+SIWE_NONCE_TTL_S = 300
+SIWE_MAX_AGE_S = 600  # a signed SIWE message / submission claim is accepted for 10 minutes
+# Secure cookies also work on http://localhost and http://127.0.0.1 in current browsers.
+COOKIE_SECURE = env("COOKIE_SECURE", "1") == "1"
+
+
+def _siwe_domains() -> list[str]:
+    """Hosts (host[:port]) a SIWE message may name; default: PUBLIC_BASE_URL's host (+ its loopback alias)."""
+    if env("SIWE_DOMAINS"):
+        return [d.strip() for d in env("SIWE_DOMAINS").split(",") if d.strip()]
+    host = PUBLIC_BASE_URL.split("://", 1)[-1].split("/", 1)[0]
+    out = [host]
+    for a, b in (("127.0.0.1", "localhost"), ("localhost", "127.0.0.1")):
+        if host == a or host.startswith(a + ":"):
+            out.append(b + host[len(a) :])
+    return out
+
+
+SIWE_DOMAINS = _siwe_domains()
 
 if IS_PRODUCTION:
     _problems = []

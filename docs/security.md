@@ -105,13 +105,55 @@ Excluded from the CI gate. To see them, set `"exclude_dependencies": false` in
   ~4 min. RQ's built-in scheduler (a child process) outlived hard-killed workers on Windows and
   blocked all retries with its lock; the worker runs the scheduler in a daemon thread instead.
 
+## Wallet identity (Phase 3)
+
+- **Sign-In with Ethereum (EIP-4361)**, verified in `backend/auth.py` (own parser, no third-party
+  SIWE library): domain must be in `SIWE_DOMAINS` (default: `PUBLIC_BASE_URL`'s host + its loopback
+  alias), URI on that domain, version 1, a configured chain id, EIP-55 address, issued ≤ 10 min ago
+  and not in the future (60 s skew), `Expiration Time` / `Not Before` honoured, EIP-191 signature
+  recovers the address. Nonces come from `GET /api/auth/nonce`, live 5 min in Redis and are
+  consumed with an atomic `GETDEL` only after every other check passed (a rejected message does not
+  burn it; a replayed one fails). Tests: `backend/tests/test_auth.py`.
+- **Session**: random 256-bit token in a `__Host-mg_session` cookie (`HttpOnly`, `Secure`,
+  `SameSite=Strict`, `Path=/`, 1 h). Redis stores only the token's SHA-256, so a Redis dump cannot be
+  replayed as cookies. Logout deletes the server-side record.
+- **CSRF**: every state-changing endpoint with a session (`/api/analyze`, `/api/attest`,
+  `/api/auth/logout`) needs the per-session `X-CSRF-Token` header, and a browser-sent `Origin` must
+  be an allowed domain (also checked on `/api/auth/verify`, against login CSRF). SameSite=Strict is
+  the second layer.
+- **Signed submission**: the wallet signs (personal_sign) a message containing the domain, its
+  address, the SHA-256 of the exact uploaded bytes and a timestamp (±10 min). The API recomputes the
+  hash, requires the signer to equal the session wallet, and stores message + signature with the
+  submission: anyone can later re-verify who claimed which file first (dispute evidence). The claim
+  stays out of the public IPFS report.
+- **Attestations** are only issued to the session wallet that is the report's artist (`403`
+  otherwise); the contract checks `msg.sender` again (`ArtistMismatch`).
+- **Strict CSP kept**: `script-src 'self'`, ethers v6.17.0 vendored as one ES module
+  (`frontend/vendor/`, MIT licence copied next to it). `connect-src` adds only the configured
+  chains' *public* RPCs (`PUBLIC_RPC_<NET>`; `RPC_URL_<NET>` may contain an API key and never
+  reaches the browser) and the IPFS gateway. `img-src` allows `blob:` (local upload preview).
+  The Playwright test fails on any CSP violation.
+- **Provenance without trusting the backend** (`/token/<chain>/<contract>/<id>`): the browser reads
+  the NFT and registry (wallet provider when it is on that chain, else the public RPC), fetches
+  metadata + report, recomputes the report hash with a byte-exact port of `canonical_hash`
+  (`frontend/js/canonical.js`, parity vector shared with pytest) and the pixel hash of the image.
+  Reports are pinned with `pinFileToIPFS` (exact bytes); `pinJSONToIPFS` would let Pinata
+  re-serialise numbers (`1.0` → `1`) and break the hash.
+
 ## Known limitations (trust model)
 
 These are design limits, not bugs; the roadmap addresses them.
 
-- **Artist wallet is not proven yet (Phase 2).** The upload names the artist's address; the
-  attestation can only be used by that wallet, but nothing proves the uploader controls it, so
-  someone could claim another wallet's address first. Phase 3 adds SIWE + a signed submission.
+- **Smart-contract wallets cannot sign in yet.** SIWE and signed uploads accept EOA signatures
+  (EIP-191) only; EIP-1271 verification (Safe, smart accounts) needs an RPC call and is not wired.
+- **Provenance page without a wallet** uses the RPC URL that `/api/networks` names. A malicious
+  backend could point it at a lying node; with a wallet on that chain the page uses the wallet's
+  node instead, and it always shows which source it read. The registry address is read from the
+  NFT contract itself and compared with the known deployment.
+- **Pixel check depends on the browser decoder.** PNGs written by Pillow carry no colour profile,
+  so the decode is exact in Chromium (`colorSpaceConversion: "none"`). A browser that
+  colour-manages anyway would report a mismatch on that one check (a false alarm, never a false
+  pass); the report-hash check does not depend on it.
 - **v1 hot wallet (retired from the app in Phase 2).** v1's verifier key recorded verdicts *and*
   minted. The app now uses v2 only: the backend signs EIP-712 verdicts, the artist submits and
   mints, and a leaked key is handled by pause → role rotation → `voidVerdict` → dispute
@@ -124,6 +166,7 @@ These are design limits, not bugs; the roadmap addresses them.
 - **Testnet roles are all one wallet** (`0xeed8…eD7F`: admin, verifier, reviewer, pauser, treasury).
   Production needs separate keys.
 - **The reviewer key is a shared secret** in the API (`REVIEWER_KEY`), compared in constant time
-  and rate-limited. Phase 3 replaces it with wallet signatures from REVIEWER_ROLE holders.
+  and rate-limited. To be replaced with wallet signatures from REVIEWER_ROLE holders (Phase 6
+  governance; Phase 3 gave artists wallet identity, reviewers still use the key).
 - **Detection is off-chain and probabilistic.** The contract proves which verdict and policy were
   used (report hash, policy SHA-256), not that the verdict is right. See README for error rates.

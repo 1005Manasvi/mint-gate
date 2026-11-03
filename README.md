@@ -97,12 +97,14 @@ upload ─▶ preprocessing ─▶ ┌ CLIP-probe AI detector   (decides on AI c
   normalisation to         │ CLIP copy score ┐ vs protected collection:        │   risk + score   FAIL ─▶ blocked
   the training data)       │ pHash, ORB      ┘ 15,037 works + all minted here  ┘          │
                                                                                           ▼
+   artist: Sign-In with Ethereum, signs the upload's SHA-256 (claim of authorship, stored with the report)
    API (stateless, N instances) ─▶ Postgres (submissions, reports, attestations, audit log) + Redis/RQ jobs
    analysis worker (models loaded once) ─▶ verdict ─▶ PASS: EIP-712 attestation for the artist's wallet
    chain worker: submits REVIEW / FAIL verdicts, mirrors reviewer decisions (resolveReview)
    artist wallet: MintGateNFTV2.submitAndMint ─▶ MintGateRegistry (one mint per image, disputes, revocation)
    indexer: registry + NFT events ─▶ chain_events ─▶ tokens / disputes (reorg-safe, rebuildable)
    IPFS: artwork + ERC-721 metadata + full verification report
+   /token/<chain>/<contract>/<id>: public page that re-checks chain + report hash in the browser
 ```
 
 Engineering decisions worth knowing:
@@ -124,6 +126,10 @@ Engineering decisions worth knowing:
 - **The server never mints.** It signs an EIP-712 verdict bound to the artist's wallet; the
   artist submits it and mints (and pays gas). The contract enforces the rule again
   (`NotMintable`, `ImageAlreadyMinted`, `ArtistMismatch`).
+- **Wallet identity, verifiable provenance.** Artists sign in with their wallet (SIWE, EIP-4361) and
+  sign each upload; only that wallet receives the attestation and mints (paying gas, with live
+  confirmations and decoded contract errors). A token's public page re-reads the chain and
+  recomputes the report hash in the browser, so it does not have to trust the Mint-Gate server.
 - **Asynchronous and stateless.** Uploads return `202 {job_id}` in ~50 ms; RQ workers run the
   models. A killed worker's job is retried automatically; API restarts lose nothing.
 
@@ -144,7 +150,9 @@ Engineering decisions worth knowing:
 | `docs/contracts.md` | v2 state machines, interface, roles, upgrade strategy, threat model, gas |
 | `backend/tests/` | pytest suite: policy, preprocessing, reference index, copy-move, repository layer, API + job flow, indexer on a Hardhat node |
 | `docs/security.md` | Slither results, coverage, known limitations |
-| `frontend/` | web UI (MetaMask connect, Etherscan/IPFS links) |
+| `backend/auth.py` | Sign-In with Ethereum, Redis sessions, CSRF, signed-upload verification |
+| `frontend/` | vanilla-JS ES modules (`js/`), vendored ethers v6 (`vendor/`), main app + public token page (`token.html`) |
+| `e2e/` | Playwright browser test against a local Hardhat node (`stack.py` = whole stack with fake models) |
 | `deploy/` | production Dockerfile and deploy tooling |
 | `PROJECT_REPORT.md` | full methodology and results |
 
@@ -167,9 +175,11 @@ Tests (CI runs the fast suite, Hardhat tests + coverage, Slither and the pre-com
 
 ```powershell
 .\venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\venv\Scripts\python.exe -m pytest -m "not slow"     # ~110 tests: test Postgres (docker compose), fakeredis,
+.\venv\Scripts\python.exe -m pytest -m "not slow"     # ~130 tests: test Postgres (docker compose), fakeredis,
                                                        # fake models; chain tests start a Hardhat node
 cd Blockchain; npm run coverage; cd ..
+node --test "frontend/tests/*.test.mjs"               # report-hash parity with Python
+cd e2e; npm ci; npx playwright install chromium; npx playwright test   # browser: sign in, upload, mint, verify
 ```
 
 Reproduce the models from `backend/`:
@@ -182,8 +192,11 @@ Secrets live in `backend/.env` and `Blockchain/.env` (templates: `.env.example`)
 
 - Uploads: 10 MB limit, format allow-list, `verify()` before decode, decompression-bomb guard.
 - Per-IP rate limits shared by all API instances (Flask-Limiter on Redis). Strict
-  Content-Security-Policy. No third-party scripts; the wallet uses `window.ethereum`.
-- Attestations are bound to the artist wallet given at upload and expire after 24 h; nonces
+  Content-Security-Policy (`script-src 'self'`): no third-party scripts, ethers v6 is vendored.
+- Sign-In with Ethereum with single-use Redis nonces; `__Host-` session cookie (HttpOnly, Secure,
+  SameSite=Strict, 1 h); CSRF token + Origin check on every state-changing request; uploads must be
+  signed by the session wallet.
+- Attestations are issued only to the signed-in artist wallet and expire after 24 h; nonces
   are random 256-bit and unique per chain (DB constraint). Append-only `audit_log` (a trigger
   rejects UPDATE / DELETE). Backend transactions take a Redis lock per sender (no nonce races).
 - All data rendered with `textContent`. Errors to clients are generic.

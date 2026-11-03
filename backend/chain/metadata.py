@@ -5,7 +5,7 @@ import json
 import config
 from chain import ipfs
 
-PRIVATE_FIELDS = ("evidence", "review", "publication", "attestations", "artist", "status", "legacy_v1")
+PRIVATE_FIELDS = ("evidence", "review", "publication", "attestations", "artist", "status", "legacy_v1", "claim")
 
 
 def publish(report: dict) -> dict:
@@ -21,7 +21,10 @@ def publish(report: dict) -> dict:
     ]
     if ipfs.enabled():
         image_uri = f"ipfs://{ipfs.pin_file(image_bytes, f'{rid}.png', 'image/png')}"
-        report_uri = f"ipfs://{ipfs.pin_json(public_report, f'mintgate-report-{rid}')}"
+        # Pinned as a file, not with pinJSONToIPFS: Pinata re-serialises JSON (1.0 -> 1), and the
+        # provenance page re-hashes these exact bytes in the browser against the on-chain reportHash.
+        report_bytes = json.dumps(public_report, sort_keys=True, indent=1).encode()
+        report_uri = f"ipfs://{ipfs.pin_file(report_bytes, f'mintgate-report-{rid}.json', 'application/json')}"
     else:  # local development fallback
         image_uri = f"{config.PUBLIC_BASE_URL}/api/upload/{rid}.png"
         report_uri = f"{config.PUBLIC_BASE_URL}/api/report/{rid}"

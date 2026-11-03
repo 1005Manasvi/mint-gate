@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token provenance · Mint-Gate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">◆</span> Mint-Gate</a>
+    <span class="topbar-title">Public provenance</span>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <div id="loadState" class="card state" role="status" aria-live="polite">Loading token…</div>
+
+  <div id="tokenView" hidden>
+    <div class="intro">
+      <h1 id="tokenTitle">Token</h1>
+      <p id="tokenSub" class="mono small"></p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <figure class="token-art">
+          <img id="tokenImg" alt="The minted artwork">
+          <figcaption id="tokenImgCap"></figcaption>
+        </figure>
+      </div>
+      <div class="card">
+        <h2>Verdict</h2>
+        <div class="verdict-mini">
+          <span id="verdictBadge" class="badge">–</span>
+          <span id="verdictScore" class="big-num">–</span><span class="muted">/100</span>
+        </div>
+        <dl id="facts" class="kv"></dl>
+        <p class="hint">Shown above: what the Mint-Gate indexer recorded. The button checks it yourself:
+          it reads the chain directly and re-hashes the report in your browser.</p>
+        <button id="verifyBtn" class="btn btn-primary">Verify integrity</button>
+      </div>
+    </div>
+
+    <section class="card" aria-labelledby="checksTitle">
+      <h2 id="checksTitle">Independent verification</h2>
+      <p id="verifySummary" class="hint" role="status" aria-live="polite">Not run yet.</p>
+      <ol id="checkList" class="checklist"></ol>
+    </section>
+  </div>
+</main>
+
+<footer class="wrap foot">
+  <a href="/">Mint-Gate</a> · AI forensics + blockchain provenance
+  <span class="foot-note">Automated detection is probabilistic: a PASS is not a legal guarantee of authorship.</span>
+</footer>
+<script type="module" src="/static/js/token.js"></script>
+</body>
+</html>

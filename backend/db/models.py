@@ -51,6 +51,11 @@ class Submission(Base):
     artist_id: Mapped[int | None] = mapped_column(ForeignKey("artists.id"), index=True)  # NULL: legacy v1
     image_sha256: Mapped[str | None] = mapped_column(String(64), index=True)  # set by the worker
     filename: Mapped[str] = mapped_column(String(200), default="")
+    # Signed claim (Phase 3): SHA-256 of the uploaded bytes + the personal_sign message and signature
+    # of the session wallet. NULL for submissions made before wallet sign-in existed.
+    file_sha256: Mapped[str | None] = mapped_column(String(64), index=True)
+    claim_message: Mapped[str | None] = mapped_column(Text)
+    claim_signature: Mapped[str | None] = mapped_column(String(132))
     # queued | processing | invalid | error | PASS | REVIEW | FAIL | REVIEW_APPROVED | REVIEW_REJECTED | MINTED
     status: Mapped[str] = mapped_column(String(20), index=True)
     error: Mapped[str | None] = mapped_column(Text)

@@ -10,51 +10,60 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
   <div class="wrap topbar-inner">
-    <div class="brand"><span class="brand-mark">◆</span> Mint-Gate</div>
-    <nav class="tabs" role="tablist">
-      <button class="tab active" data-view="verify">Verify &amp; Mint</button>
-      <button class="tab" data-view="queue">Review queue</button>
-      <button class="tab" data-view="lookup">Provenance lookup</button>
-      <button class="tab" data-view="about">How it works</button>
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">◆</span> Mint-Gate</a>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab active" role="tab" id="tab-verify" data-view="verify" aria-controls="view-verify" aria-selected="true">Verify &amp; Mint</button>
+      <button class="tab" role="tab" id="tab-mine" data-view="mine" aria-controls="view-mine" aria-selected="false" tabindex="-1">My artworks</button>
+      <button class="tab" role="tab" id="tab-queue" data-view="queue" aria-controls="view-queue" aria-selected="false" tabindex="-1">Review queue</button>
+      <button class="tab" role="tab" id="tab-lookup" data-view="lookup" aria-controls="view-lookup" aria-selected="false" tabindex="-1">Provenance</button>
+      <button class="tab" role="tab" id="tab-about" data-view="about" aria-controls="view-about" aria-selected="false" tabindex="-1">How it works</button>
     </nav>
-    <div id="chainPill" class="pill pill-muted" title="Blockchain status">chain: checking…</div>
-    <button id="walletBtn" class="btn btn-wallet">Connect wallet</button>
+    <div class="topbar-tools">
+      <label class="sr-only" for="netSelect">Network</label>
+      <select id="netSelect" class="net-select" title="Network used for minting"></select>
+      <div id="chainPill" class="pill pill-muted" title="Blockchain status" role="status">chain: checking…</div>
+      <button id="walletBtn" class="btn btn-wallet">Connect wallet</button>
+      <button id="signOutBtn" class="btn btn-wallet-ghost" hidden>Sign out</button>
+    </div>
   </div>
 </header>
 
-<main class="wrap">
+<main id="main" class="wrap">
+  <div id="globalMsg" class="txout" aria-live="assertive"></div>
+
   <!-- ============ VERIFY & MINT ============ -->
-  <section id="view-verify" class="view active">
+  <section id="view-verify" class="view active" role="tabpanel" aria-labelledby="tab-verify">
     <div class="intro">
       <h1>Verify artwork <em>before</em> it reaches the blockchain</h1>
       <p>Six independent forensic checks produce an authenticity score. The Mint-Gate policy decides
         <b class="t-pass">PASS</b>, <b class="t-review">REVIEW</b> or <b class="t-fail">FAIL</b>;
-        only verified artwork can be minted, and every verdict is anchored on-chain.</p>
+        only verified artwork can be minted, from the artist's own wallet.</p>
     </div>
 
     <div class="grid-2">
       <div class="card">
         <h2>1 · Upload artwork</h2>
-        <label id="dropzone" class="dropzone">
-          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/bmp,image/gif" hidden>
-          <img id="preview" alt="" hidden>
-          <span id="dropText">Drop an image here or <u>browse</u><br><small>PNG · JPG · WEBP, max 10 MB</small></span>
+        <div id="identity" class="identity" role="status" aria-live="polite"></div>
+        <label id="dropzone" class="dropzone" tabindex="0" aria-describedby="dropHelp">
+          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/bmp,image/gif" class="sr-only" tabindex="-1">
+          <img id="preview" alt="Selected artwork preview" hidden>
+          <span id="dropText">Drop an image here or <u>browse</u><br><small id="dropHelp">PNG · JPG · WEBP, max 10 MB</small></span>
         </label>
-        <label class="lbl" for="artist">Artist wallet (connect MetaMask or paste your address)</label>
-        <input id="artist" class="input mono" placeholder="0x…" spellcheck="false">
         <div class="row">
-          <button id="analyzeBtn" class="btn btn-primary" disabled>Analyze artwork</button>
+          <button id="analyzeBtn" class="btn btn-primary" disabled>Sign &amp; analyze</button>
           <button id="clearBtn" class="btn btn-ghost">Clear</button>
         </div>
+        <p class="hint">Your wallet signs the file's SHA-256: a timestamped, verifiable claim that you submitted it first.</p>
         <h3 class="mt">Try an example</h3>
         <div id="samples" class="samples"></div>
       </div>
 
       <div class="card">
         <h2>2 · Pipeline</h2>
-        <ol id="pipeline" class="pipeline">
+        <ol id="pipeline" class="pipeline" aria-label="Analysis steps">
           <li data-step="pre">Image preprocessing <small>validate · RGB · SHA-256</small></li>
           <li data-step="resnet">ResNet-18 classification</li>
           <li data-step="ai_detector">GAN / AI-generated detection <small>CLIP probe + spectrum</small></li>
@@ -65,12 +74,13 @@
           <li data-step="policy">Mint-Gate policy engine</li>
           <li data-step="chain">Verdict attestation <small>EIP-712, signed for your wallet</small></li>
         </ol>
+        <p id="pipelineStatus" class="sr-only" role="status" aria-live="polite"></p>
       </div>
     </div>
 
     <div id="results" hidden>
-      <div id="verdict" class="card verdict">
-        <div class="score-ring"><svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle id="ringFg" class="ring-fg" cx="60" cy="60" r="52"/></svg>
+      <div id="verdict" class="card verdict" tabindex="-1">
+        <div class="score-ring" aria-hidden="true"><svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle id="ringFg" class="ring-fg" cx="60" cy="60" r="52"/></svg>
           <div class="score-num"><span id="scoreVal">–</span><small>/100</small></div></div>
         <div class="verdict-body">
           <div class="verdict-label">Mint-Gate decision</div>
@@ -91,8 +101,8 @@
         <div class="card">
           <h2>Visual evidence</h2>
           <div class="evidence">
-            <figure><img id="cmHeat" alt="copy-move heatmap"><figcaption>Copy-move heatmap (cloned blocks in red)</figcaption></figure>
-            <figure id="orbFig" hidden><img id="orbImg" alt="ORB matches"><figcaption>ORB inlier matches vs nearest minted NFT</figcaption></figure>
+            <figure><img id="cmHeat" alt="Copy-move heatmap"><figcaption>Copy-move heatmap (cloned blocks in red)</figcaption></figure>
+            <figure id="orbFig" hidden><img id="orbImg" alt="ORB keypoint matches"><figcaption>ORB inlier matches vs nearest minted NFT</figcaption></figure>
           </div>
         </div>
       </div>
@@ -101,14 +111,29 @@
         <div class="card" id="actionCard">
           <h2>3 · Mint</h2>
           <div id="mintBox">
-            <p class="hint">Mint-Gate signs the verdict for the artist wallet; the artist mints (and pays gas) from that wallet.</p>
-            <button id="mintBtn" class="btn btn-primary" disabled>Get mint attestation</button>
+            <p class="hint">You mint from your own wallet and pay the gas. The verdict attestation is bound to your address.</p>
+            <label class="lbl" for="royalty">Royalty for you on resales (ERC-2981, max 10 %)</label>
+            <div class="row row-tight">
+              <input id="royalty" class="input input-narrow" type="number" min="0" max="10" step="0.5" value="5" inputmode="decimal">
+              <span class="muted">%</span>
+            </div>
+            <div class="row">
+              <button id="mintBtn" class="btn btn-primary" disabled>Mint from my wallet</button>
+            </div>
             <p id="mintHint" class="hint"></p>
+            <ol id="mintSteps" class="steps" aria-label="Minting progress" hidden>
+              <li data-stage="attest">Attestation from Mint-Gate</li>
+              <li data-stage="switching">Wallet on the right network</li>
+              <li data-stage="estimating">Gas estimate</li>
+              <li data-stage="wallet">Confirm in your wallet</li>
+              <li data-stage="pending">Transaction pending</li>
+              <li data-stage="confirming">Confirmations</li>
+            </ol>
           </div>
           <div id="reviewBox" hidden>
             <p class="hint">This artwork needs human verification before it may be minted.</p>
             <label class="lbl" for="reviewerKey">Reviewer key</label>
-            <input id="reviewerKey" type="password" class="input" placeholder="reviewer key">
+            <input id="reviewerKey" type="password" class="input" placeholder="reviewer key" autocomplete="off">
             <label class="lbl" for="reviewNote">Note</label>
             <input id="reviewNote" class="input" placeholder="optional justification">
             <div class="row">
@@ -116,55 +141,83 @@
               <button id="rejectBtn" class="btn btn-fail">Reject</button>
             </div>
           </div>
-          <div id="txOut" class="txout"></div>
+          <div id="txOut" class="txout" aria-live="polite"></div>
+          <details id="rawCall" class="raw" hidden>
+            <summary>Advanced: raw contract call</summary>
+            <pre id="rawCallData" class="mono attestation"></pre>
+          </details>
         </div>
         <div class="card">
           <h2>On-chain provenance</h2>
           <dl id="prov" class="kv"></dl>
           <button id="verifyBtn" class="btn btn-ghost">Verify report integrity against chain</button>
-          <div id="verifyOut" class="txout"></div>
+          <div id="verifyOut" class="txout" aria-live="polite"></div>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- ============ MY ARTWORKS ============ -->
+  <section id="view-mine" class="view" role="tabpanel" aria-labelledby="tab-mine" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>My artworks</h2>
+        <button id="mineRefresh" class="btn btn-ghost btn-small">Refresh</button>
+      </div>
+      <p class="hint">Submissions signed by your wallet, their verdicts, minted tokens and disputes (from the chain index).</p>
+      <div id="mine" class="mine" aria-live="polite"></div>
+    </div>
+  </section>
+
   <!-- ============ REVIEW QUEUE ============ -->
-  <section id="view-queue" class="view">
+  <section id="view-queue" class="view" role="tabpanel" aria-labelledby="tab-queue" hidden>
     <div class="card">
       <h2>Reports awaiting human review</h2>
       <p class="hint">Open a report to approve or reject it.</p>
-      <div id="queue" class="queue"></div>
+      <div id="queue" class="queue" aria-live="polite"></div>
     </div>
   </section>
 
   <!-- ============ LOOKUP ============ -->
-  <section id="view-lookup" class="view">
+  <section id="view-lookup" class="view" role="tabpanel" aria-labelledby="tab-lookup" hidden>
     <div class="card">
       <h2>Look up a minted token</h2>
-      <div class="row">
-        <input id="tokenId" class="input" type="number" min="1" placeholder="token id, e.g. 1">
-        <button id="lookupBtn" class="btn btn-primary">Look up</button>
-      </div>
-      <div id="lookupOut"></div>
+      <p class="hint">Opens the token's public provenance page, which verifies it against the chain in your browser.</p>
+      <form id="lookupForm" class="lookup">
+        <div>
+          <label class="lbl" for="lookupNet">Network</label>
+          <select id="lookupNet" class="input"></select>
+        </div>
+        <div>
+          <label class="lbl" for="tokenId">Token id</label>
+          <input id="tokenId" class="input" type="number" min="1" placeholder="e.g. 1" required inputmode="numeric">
+        </div>
+        <div>
+          <label class="lbl" for="lookupContract">Collection (optional)</label>
+          <input id="lookupContract" class="input mono" placeholder="Mint-Gate collection" spellcheck="false" pattern="0x[0-9a-fA-F]{40}">
+        </div>
+        <button class="btn btn-primary">Open provenance</button>
+      </form>
     </div>
   </section>
 
   <!-- ============ ABOUT ============ -->
-  <section id="view-about" class="view">
+  <section id="view-about" class="view" role="tabpanel" aria-labelledby="tab-about" hidden>
     <div class="card prose">
       <h2>Architecture</h2>
       <p><b>Principle:</b> the blockchain does not detect forgery. AI / image forensics verify the artwork first;
         the smart contract only stores a tamper-proof record of the verdict and refuses to mint without a passing one.</p>
       <ol>
-        <li><b>Preprocessing</b> – validation, decompression-bomb guard, RGB normalisation, SHA-256 of the pixels.</li>
-        <li><b>ResNet-18</b> – fully fine-tuned on 17k real-world images: authentic vs forged (AI-generated + manipulated).</li>
-        <li><b>GAN / AI detector</b> – linear probe on frozen CLIP features (generalises to unseen generators) + power-spectrum fingerprint.</li>
-        <li><b>Copy-move</b> – block matching with shift-vector voting; score = dominance of one displacement.</li>
-        <li><b>Perceptual hash</b> – 64-bit pHash, Hamming distance to every minted NFT.</li>
-        <li><b>CLIP copy score</b> – similarity to the protected collection, relative to each work's own nearest neighbour.</li>
-        <li><b>ORB</b> – keypoint matching with RANSAC homography on the CLIP/pHash shortlist.</li>
-        <li><b>Policy engine</b> – data-calibrated thresholds → per-check risk → weighted score → PASS / REVIEW / FAIL.</li>
-        <li><b>MintGateNFT.sol</b> – records every verdict (incl. failures), reviewer resolution, one token per image.</li>
+        <li><b>Wallet identity</b>: Sign-In with Ethereum (EIP-4361); every upload is signed by the artist's wallet.</li>
+        <li><b>Preprocessing</b>: validation, decompression-bomb guard, RGB normalisation, SHA-256 of the pixels.</li>
+        <li><b>ResNet-18</b>: fine-tuned on 17k real-world images; advisory (can flag for review, never fail).</li>
+        <li><b>GAN / AI detector</b>: linear probe on frozen CLIP features (generalises to unseen generators) + power-spectrum fingerprint.</li>
+        <li><b>Copy-move</b>: block matching with shift-vector voting; score = dominance of one displacement.</li>
+        <li><b>Perceptual hash</b>: 64-bit pHash, Hamming distance to every minted NFT.</li>
+        <li><b>CLIP copy score</b>: similarity to the protected collection, relative to each work's own nearest neighbour.</li>
+        <li><b>ORB</b>: keypoint matching with RANSAC homography on the CLIP/pHash shortlist.</li>
+        <li><b>Policy engine</b>: data-calibrated thresholds → per-check risk → weighted score → PASS / REVIEW / FAIL.</li>
+        <li><b>MintGateRegistry + MintGateNFTV2</b>: EIP-712 verdicts, one mint per image, artist-paid mints, disputes.</li>
       </ol>
       <h2>Current policy &amp; models</h2>
       <pre id="statusDump" class="mono small-pre">loading…</pre>
@@ -177,6 +230,6 @@
   <span id="footContract"></span>
   <span class="foot-note">Automated detection is probabilistic: a PASS is not a legal guarantee of authorship.</span>
 </footer>
-<script src="/static/app.js"></script>
+<script type="module" src="/static/js/app.js"></script>
 </body>
 </html>

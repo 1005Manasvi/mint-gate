@@ -20,9 +20,13 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
   `backend/migrations/` (Alembic; hand-written revisions, `test_models_match_migrations` guards drift).
   `audit_log` is append-only (trigger). Submission id = RQ job id = report id.
 - `backend/server.py`: **stateless** Flask API (`wsgi.py`), no torch import, sends no transactions.
-  `POST /api/analyze` (image + `artist`) → 202 job; `/api/jobs/<id>`; `/api/attest/<id>` returns the
-  EIP-712 verdict (PASS → artist `submitAndMint`) or `mint` args (REVIEW_APPROVED). Rate limits:
-  Flask-Limiter on Redis. Images / evidence / metadata still in `backend/storage/` (shared disk).
+  `POST /api/analyze` (image + claim signature; artist = SIWE session wallet) → 202 job; `/api/jobs/<id>`;
+  `/api/attest/<id>` (session wallet must be the artist) returns the EIP-712 verdict (PASS → artist
+  `submitAndMint`) or `mint` args (REVIEW_APPROVED); `/api/me/artworks`; `/api/networks` (public RPC +
+  ABIs). Rate limits: Flask-Limiter on Redis. Images / evidence / metadata still in `backend/storage/`.
+- `backend/auth.py` (Phase 3): SIWE (EIP-4361, own parser) + Redis nonces/sessions (`__Host-mg_session`,
+  1 h) + CSRF (`X-CSRF-Token` + Origin) + signed-upload claim (`claim_message`, stored on `submissions`).
+  JS twins of `SiweMessage.text()` / `claim_message()` live in `frontend/js/wallet.js`: keep them identical.
 - `backend/jobs/`: RQ queues `analysis` (pipeline, models loaded once, syncs `reference_items`) and
   `chain` (submit REVIEW/FAIL verdicts, `resolveReview`; Redis nonce lock). `backend/indexer/`:
   registry + NFT events → `chain_events` → `tokens` / `disputes` (cursor + reorg check in DB).
@@ -43,7 +47,12 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
   Sepolia registry `0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB`, NFT `0x59900d4F93fAb95F3B8aFBD4E9fEbF15Fa0F4f22`;
   Base Sepolia registry `0xae989b374DF85a942b4caE07940713Ff89418F32` (= v1's Sepolia address!), NFT `0xf45c9cB2…49fB`.
   Python signer: `backend/chain/eip712.py` (`Verdict.from_report`, `sign_verdict`).
-- `frontend/`: vanilla JS, strict CSP (script-src 'self': no CDN scripts, vendor libraries locally).
+- `frontend/`: vanilla-JS ES modules in `js/` (app, wallet, provenance, canonical, ui, token), strict CSP
+  (script-src 'self': no CDN scripts). ethers **6.17.0** vendored as `vendor/ethers-6.17.0.min.js` (copied
+  from `Blockchain/node_modules/ethers/dist/ethers.min.js`; prettier-ignored). Public token page
+  `/token/<chain>/<contract>/<id>` (`token.html`) verifies chain + report hash in the browser;
+  `js/canonical.js` must stay byte-compatible with `detection/report_hash.py` (shared vector
+  `backend/tests/fixtures/canonical_vector.json`, regenerate with `python -m tests.test_canonical_vector`).
 - Training: `backend/training/` (fetch_realworld, fetch_v2, train_cnn, train_ai_detector,
   build_index, calibrate, evaluate_system, independent_check). Data in
   `backend/data/realworld/` (20,309 images, manifest.json); held-out generator = Flux.
@@ -72,7 +81,10 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - Python tests marked `chain` start a local Hardhat node (`test_eip712.py`, `test_indexer.py`); they skip
   without compiled artifacts. DB tests use `TEST_DATABASE_URL` (default: compose `mintgate_test`; schema
   rebuilt by Alembic per session, truncated per test) and skip without Postgres unless `REQUIRE_DB=1` (CI).
-- CI: `.github/workflows/ci.yml` (python, contracts [+ chain pytest], foundry, slither, lint). Accepted findings: `docs/security.md`.
+- Frontend unit tests: `node --test "frontend/tests/*.test.mjs"`. Browser E2E: `cd e2e; npx playwright test`
+  (starts its own Hardhat node :8547 + `e2e/stack.py` :5057 = API + fake-model worker + indexer, DB
+  `mintgate_e2e`, Redis db 15; needs compose + compiled contracts). `PW_CHANNEL=chrome` uses installed Chrome.
+- CI: `.github/workflows/ci.yml` (python, contracts [+ chain pytest], foundry, slither, e2e, lint). Accepted findings: `docs/security.md`.
 
 ## Hard-won gotchas (do not relearn these)
 - **Secrets**: `backend/.env`, `Blockchain/.env`. **Never print or read their values**; check
@@ -105,6 +117,13 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - Killing processes by command line: a PowerShell filter like `*jobs.worker*` also matches the PowerShell
   process running it; filter on `Name -eq 'python.exe'` or kill by PID.
 - Bash heredocs in this harness collapse `\\` to `\`: write Python edit scripts with the Write tool.
+  The Write tool may decode `\uXXXX` in JS string literals: build such test strings from parts.
+- Quote workflow step names that contain `: ` (invalid YAML → CI runs zero jobs; bitten twice).
+- Windows maps `.js` to `text/plain` via the registry: `server.py` registers `text/javascript`
+  (with nosniff, ES modules are refused otherwise).
+- Pinata `pinJSONToIPFS` re-serialises JSON (`1.0` → `1`), breaking report hashes: pin reports as
+  files (`metadata.publish` does). Fake models for non-pytest use: `tests/fakes.py` (conftest pins env).
+- `cdn.playwright.dev` sometimes fails DNS here: retry `npx playwright install chromium` or use `PW_CHANNEL=chrome`.
 
 ## Model-selection rules (apply in every phase)
 1. **Benchmark before adopting.** A new model replaces the current one only if it wins on the task's

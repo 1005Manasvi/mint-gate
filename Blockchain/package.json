@@ -9,7 +9,7 @@
     "node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "coverage": "hardhat coverage && node scripts/check-coverage.js",
-    "format": "prettier --write --config ../.prettierrc.json --ignore-path ../.prettierignore contracts scripts test hardhat.config.js .solcover.js ../frontend/*.js"
+    "format": "prettier --write --config ../.prettierrc.json --ignore-path ../.prettierignore contracts scripts test hardhat.config.js .solcover.js ../frontend/js ../frontend/tests ../e2e/tests ../e2e/playwright.config.mjs"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

@@ -11,7 +11,7 @@ from sqlalchemy.dialects.postgresql import insert
 from web3 import Web3
 
 from chain.eip712 import Verdict
-from db.models import Artist, Attestation, AuditLog, ReferenceItem, Report, Submission
+from db.models import Artist, Attestation, AuditLog, Dispute, ReferenceItem, Report, Submission, Token
 
 PENDING = {"queued", "processing"}
 FAILED = {"invalid", "error"}
@@ -36,9 +36,21 @@ def get_or_create_artist(s, wallet: str) -> Artist:
     return s.scalars(select(Artist).where(Artist.wallet == wallet)).one()
 
 
-def create_submission(s, sid: str, wallet: str | None, filename: str, status: str = "queued") -> Submission:
+def create_submission(
+    s, sid: str, wallet: str | None, filename: str, status: str = "queued", claim: dict | None = None
+) -> Submission:
+    """`claim` = auth.verify_claim() output: the wallet's signature over the uploaded file's SHA-256."""
     artist = get_or_create_artist(s, wallet) if wallet else None
-    sub = Submission(id=sid, artist_id=artist.id if artist else None, filename=filename[:200], status=status)
+    claim = claim or {}
+    sub = Submission(
+        id=sid,
+        artist_id=artist.id if artist else None,
+        filename=filename[:200],
+        status=status,
+        file_sha256=claim.get("file_sha256"),
+        claim_message=claim.get("message"),
+        claim_signature=claim.get("signature"),
+    )
     s.add(sub)
     s.flush()
     return sub
@@ -99,7 +111,14 @@ def report_dict(rep: Report) -> dict:
     out["review"] = rep.review
     out["publication"] = rep.publication
     out["attestations"] = [attestation_summary(a) for a in rep.attestations]
+    out["claim"] = claim_of(sub)
     return out
+
+
+def claim_of(sub: Submission) -> dict | None:
+    if not sub.claim_signature:
+        return None
+    return {"file_sha256": sub.file_sha256, "message": sub.claim_message, "signature": sub.claim_signature}
 
 
 def list_reports(s, status: str | None = None, limit: int = 200) -> list[Report]:
@@ -107,6 +126,66 @@ def list_reports(s, status: str | None = None, limit: int = 200) -> list[Report]
     if status:
         q = q.where(Submission.status == status)
     return list(s.scalars(q))
+
+
+def artworks_of(s, wallet: str, limit: int = 100) -> list[dict]:
+    """A wallet's submissions (newest first) with their verdict, minted tokens and disputes."""
+    wallet = Web3.to_checksum_address(wallet)
+    subs = list(
+        s.scalars(
+            select(Submission)
+            .join(Artist)
+            .where(Artist.wallet == wallet)
+            .order_by(Submission.created_at.desc())
+            .limit(limit)
+        )
+    )
+    images = {sub.image_sha256 for sub in subs if sub.image_sha256}
+    tokens, disputes = {}, {}
+    if images:
+        for t in s.scalars(select(Token).where(Token.image_sha256.in_(images)).order_by(Token.minted_block)):
+            tokens.setdefault(t.image_sha256, []).append(t)
+        for d in s.scalars(select(Dispute).where(Dispute.image_sha256.in_(images)).order_by(Dispute.opened_block)):
+            disputes.setdefault(d.image_sha256, []).append(d)
+    out = []
+    for sub in subs:
+        rep = sub.report
+        out.append(
+            {
+                "submission_id": sub.id,
+                "filename": sub.filename,
+                "created_at": int(sub.created_at.timestamp()),
+                "status": sub.status,
+                "error": sub.error,
+                "signed": sub.claim_signature is not None,
+                "image_sha256": sub.image_sha256,
+                "decision": rep.decision if rep else None,
+                "score": rep.score if rep else None,
+                "report_hash": rep.report_hash if rep else None,
+                "tokens": [
+                    {
+                        "chain_id": t.chain_id,
+                        "contract": t.contract,
+                        "token_id": str(t.token_id),
+                        "owner": t.owner,
+                        "status": t.status,
+                        "minted_tx": t.minted_tx,
+                    }
+                    for t in tokens.get(sub.image_sha256, [])
+                ],
+                "disputes": [
+                    {
+                        "chain_id": d.chain_id,
+                        "dispute_id": str(d.dispute_id),
+                        "status": d.status,
+                        "opened_tx": d.opened_tx,
+                        "resolved_tx": d.resolved_tx,
+                    }
+                    for d in disputes.get(sub.image_sha256, [])
+                ],
+            }
+        )
+    return out
 
 
 # ---- attestations -------------------------------------------------------------------------------

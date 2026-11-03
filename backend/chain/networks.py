@@ -76,6 +76,19 @@ class Network:
             "explorer": self.explorer,
         }
 
+    def public_rpc(self) -> str:
+        return config.network_setting("PUBLIC_RPC", self.name, config.DEFAULT_RPC.get(self.name, ""))
+
+    def browser(self) -> dict:
+        """What the frontend needs to switch / add the chain in a wallet and to read it."""
+        return {
+            **self.public(),
+            "label": config.CHAIN_LABELS.get(self.name, self.name),
+            "rpc_url": self.public_rpc(),
+            "confirmations": self.confirmations,
+            "native_currency": config.NATIVE_CURRENCY,
+        }
+
 
 def available() -> dict[str, Network]:
     """Every deployment file found (v2 only), keyed by network name."""
@@ -99,3 +112,10 @@ def get(name: str) -> Network:
 
 def by_chain_id(chain_id: int) -> Network | None:
     return next((n for n in available().values() if n.chain_id == chain_id), None)
+
+
+def resolve(ref: str) -> Network:
+    """A network by name or decimal chain id (URLs use either)."""
+    if ref.isdigit() and (net := by_chain_id(int(ref))):
+        return net
+    return get(ref)
