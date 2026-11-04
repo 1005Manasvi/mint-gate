@@ -50,3 +50,27 @@ def test_resnet_outputs_probability():
     m = ResNetClassifier()
     assert m.classes.index("forged") == m.forged_idx
     assert 0.0 <= m.predict(view("02_genuine_photo.png")) <= 1.0
+
+
+def test_copy_engine_real_models():
+    """SSCD + DINOv2 (+ region crops) on a cropped / rotated copy vs an unrelated photo (shipped config)."""
+    from benchmark import attacks
+    from detection.copy_engine import CopyEngine
+    from detection.copy_index import MemoryCopyIndex
+
+    eng = CopyEngine()
+    a, b = load_path(DEMO_DIR / "01_genuine_painting.png"), load_path(DEMO_DIR / "02_genuine_photo.png")
+    idx = MemoryCopyIndex(w=eng.p["fusion"]["w"])
+    for name, im in (("art/a", a), ("art/b", b)):
+        idx.add(
+            name,
+            eng.fingerprint(im),
+            DEMO_DIR / ("01_genuine_painting.png" if name == "art/a" else "02_genuine_photo.png"),
+        )
+    import random
+
+    copy = attacks.apply("rotate", attacks.apply("crop", a, random.Random(1)), random.Random(2))
+    out = eng.analyse(copy, idx)
+    assert out["details"]["copy_semantic"]["nearest"] == "art/a"
+    assert out["values"]["copy_semantic"] > 0.3 and "copy_geometric" not in out["values"]
+    assert eng.analyse(a, idx)["values"]["copy_exact"] == 0

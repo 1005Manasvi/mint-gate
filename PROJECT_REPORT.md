@@ -12,21 +12,23 @@ plus an on-chain rule that refuses to mint without a passing one.
 
 ## 2. System
 
-| Stage | Technique | Role in policy v3.1.0 |
+| Stage | Technique | Role in policy v4.0.0 |
 |---|---|---|
 | Preprocessing | format allow-list, decompression-bomb guard, RGB, SHA-256; *detector view* (same 256 px + JPEG normalisation as the training data) | — |
 | AI detector | linear probe on frozen CLIP ViT-B/32 features (Ojha et al., CVPR 2023); spectral fingerprint kept as an informational signal | weight 0.40, can FAIL |
 | ResNet-18 | ImageNet-pretrained, fully fine-tuned (GPU) on authentic vs AI + manipulated | weight 0.15, **REVIEW only** |
 | Copy-move | 16×16 block matching, shift-vector voting; score = dominance of one displacement | weight 0.15 |
-| CLIP copy score | similarity to the protected collection minus each reference's own nearest-neighbour similarity | weight 0.15 |
-| pHash / ORB | 64-bit DCT hash; ORB + RANSAC homography; one-off artworks only | weights 0.10 / 0.05 |
+| `copy_semantic` (Phase 4) | SSCD + DINOv2-S fusion (+ 18 SSCD region crops on GPU), density-relative, vs one-off works | weight 0.20 |
+| `copy_exact` (Phase 4) | PDQ 256-bit (8 dihedral hashes), exact in-memory search; collection members only when pixel-identical | weight 0.10 |
 
 Each check's value maps to a risk (0.5 at REVIEW, 1.0 at FAIL). The score is
 `100·(1 − Σ wᵢ·riskᵢ)`. Any FAIL-level check gives FAIL; any REVIEW-level check or a score
 below 70 gives REVIEW.
 
-The **protected collection** has 15,037 works: 9,000 CryptoPunks, 3,347 items from real NFT
-collections, 2,690 museum/WikiArt paintings, plus everything minted through Mint-Gate.
+The **protected collection** is a Postgres/pgvector index of 284,861 references: 269,816 Ethereum
+NFTs from 48 collections (Phase 4), the 15,037-work seed collection (9,000 CryptoPunks, 3,347 items
+from real NFT collections, 2,690 museum/WikiArt paintings), plus everything minted through Mint-Gate.
+v1's pHash, CLIP copy score and ORB were replaced after a copy-detection benchmark (section 4.5).
 
 ## 3. Data
 
@@ -100,13 +102,16 @@ accordingly: the CLIP probe makes the AI decision, and the ResNet can only reque
 
 ![Calibration](assets/calibration.png)
 
+*Figure (regenerated in Phase 4): policy v4.0.0 copy checks `copy_exact` / `copy_semantic` on the
+benchmark test split; the v3.1.0 rows in the table above are history.*
+
 **Finding: collection density.** Genuine items of a generative collection are near-identical to
 existing ones: CryptoPunk nearest-neighbour similarity is 0.99, Bored-Ape-type collections 0.94,
 paintings 0.88. Applying pHash/ORB to collection members rejected 26 % of genuine Bored Apes in
 an intermediate version. Those checks now apply only to one-off artworks, and collection members
 are protected against exact copies.
 
-### 4.4 End-to-end evaluation (n = 50 per category)
+### 4.4 End-to-end evaluation, policy v3.1.0 (n = 50 per category; v4.0.0: section 4.5 and README)
 
 ![System evaluation](assets/system_evaluation.png)
 
@@ -128,6 +133,40 @@ Summary:
 - Genuine uploads: 77 % PASS, **3 % wrongly FAILed**.
 - Forgeries: **85.8 % stopped**, 58.4 % rejected automatically.
 - **No modern-AI or Flux image passes.**
+
+### 4.5 Copy detection v4 (Phase 4): benchmark first, then models
+
+Built before any model was swapped: 4,000 protected works, 600 attacked copies (14 attacks incl.
+collage and SD 1.5 img2img re-generation), 5,967 genuine distractors (NFT siblings, paintings,
+photos) with the same attacks; DISC21 micro-AP, TPR at fixed FPR; tuned on val, reported on test.
+Every component passed a val gate (≥ 0.005 micro-AP) or was dropped; full table: `docs/models.md`.
+
+| Paintings (test) | micro-AP | TPR @ 1 % FPR | Recall@1 |
+|---|---|---|---|
+| v1 engine (pHash + CLIP + ORB) | 0.820 | 0.542 | 0.938 |
+| SSCD alone | 0.909 | 0.868 | 0.993 |
+| **SSCD + DINOv2-S + region crops (shipped, GPU)** | **0.905** | **0.896** | 0.986 |
+
+Decisions: DINOv2-S over -B (tie, 4× cheaper); ALIKED + LightGlue rejected (+0.3 pp as a check:
+ORB retired without a replacement); int8 ONNX rejected (SSCD 20× slower, DINOv2 lost accuracy).
+Region crops cost 3.6 s on a 2-vCPU box, so the CPU profile runs without them (p50 1.10 s, p95
+1.35 s per upload; GPU p50 0.83 s).
+
+**What the small benchmark could not show** (found by re-running `evaluate_system` against the
+live 285k index, each fixed and re-measured):
+1. One HNSW graph over 280k clustered NFTs returned a painting copy's source only 51 % of the time
+   (exact search: 100 %): one-off works got their own partial HNSW index (100 %).
+2. A member rule calibrated on 1,500 CryptoPunks (PDQ + SSCD cosine ≥ 0.978) failed 36 % of genuine
+   new punks against 9,000+: members now count only when pixel-identical (128 px nearest RGB,
+   2× margin below the closest genuine val sibling).
+3. HNSW over PDQ bits missed 6 % of exact matches: PDQ is searched exactly in memory (9 MB).
+4. The PDQ quality gate switched exact detection off for flat NFT art: re-uploads of indexed
+   Ethereum NFTs passed 38 %; after the fixes 0 % pass (98 % FAIL).
+
+Policy v4.0.0 on the benchmark test split: paintings 97.2 % of copies flagged / 2.2 % of genuine
+(v1: 93.1 % / 5.0 %); generative-collection NFTs 0 % of genuine flagged (v1: 6.5 %).
+End-to-end against the live index: 83 % of genuine uploads pass (v1 77 %), 3.5 % wrongly failed
+(v1 3.0 %); exact re-uploads of indexed NFTs 98 % FAIL.
 
 ## 5. Blockchain layer
 
@@ -154,7 +193,10 @@ source verified on Sourcify (exact match).
    uploads go to human review (photos most often). 14 % of forgeries pass, mainly older-generator
    images and edited copies of collection NFTs.
 2. **Generative collections.** Edited copies of collection items are indistinguishable from new
-   siblings by appearance alone. Collection-aware trait parsing is future work.
+   siblings by appearance alone; only pixel-identical copies are blocked (10.7 % of attacked NFT
+   copies on the benchmark, 0 % genuine flagged). Trait hashes are stored, but an identical trait
+   set means an identical image only in some collections (Pixelmon yes, Checks no).
+   JPEG re-uploads of textured collection art usually exceed the pixel budget.
 3. **Generators.** Coverage is 2024-era. New generators need periodic retraining; the
    out-of-source protocol in `training/independent_check.py` is designed for exactly that.
 4. **Trust model.** The platform's verifier key mints on artists' behalf (sponsored gas).
@@ -167,7 +209,11 @@ source verified on Sourcify (exact match).
 
 From `backend/`:
 `training.fetch_realworld` → `training.fetch_v2` → `train_cnn --epochs 10` → `train_ai_detector`
-→ `build_index` → `calibrate --n 240` → `evaluate_system --n 50` → `independent_check`.
+→ `build_index` → `independent_check`. Copy engine (Phase 4): `benchmark.fetch_models` →
+`benchmark.build_copydet` (+ `--regen`) → `benchmark.copydet features|crops|orb|lightglue|evaluate`
+→ `benchmark.latency components` → `benchmark.copydet evaluate` → `calibrate --keep-detectors`;
+on-chain index: `ingest fetch` → `ingest seed` → `ingest embed` → `ingest embed --rebuild-nn`;
+then `evaluate_system --n 50`, `benchmark.latency index|pipeline|copy_recall`.
 
 Outputs are in `backend/model/` (`model_meta.json`, `metrics.json`, `ai_detector.json`,
 `system_eval.json`, `independent_check.json`) and `backend/policy.json`.

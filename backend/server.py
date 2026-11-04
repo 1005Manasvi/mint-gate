@@ -151,6 +151,8 @@ def reference_image(name):
         return send_from_directory(config.UPLOADS_DIR, name.removeprefix("minted/"))
     if name.startswith("art/"):  # protected paintings
         return send_from_directory(config.REFERENCE_ART_DIR, name.removeprefix("art/"))
+    if name.startswith("nft/"):  # on-chain NFT index: 128 px thumbnails
+        return send_from_directory(config.NFT_THUMBS_DIR, name.removeprefix("nft/"))
     return send_from_directory(config.ORIGINALS_DIR, name)
 
 

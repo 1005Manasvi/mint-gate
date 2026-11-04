@@ -1,0 +1,18 @@
+{
+  "copies": 532,
+  "exact_top50": {
+    "painting": 1.0,
+    "nft": 0.9886
+  },
+  "hnsw_shared_graph_ef100": {
+    "painting": 0.5149,
+    "nft": 0.9167
+  },
+  "hnsw_shared_graph_ef400": {
+    "painting": 0.6754,
+    "nft": 0.9432
+  },
+  "hnsw_oneoff_partial_index_ef100": {
+    "painting": 1.0
+  }
+}

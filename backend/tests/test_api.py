@@ -110,7 +110,7 @@ def test_submit_is_async_and_fast(server, client, submit, run_jobs):
     assert done["status"] == "done" and r["report_id"] == job["job_id"]
     assert r["decision"] == r["status"] == "PASS", r["reasons"]
     assert r["artist"] == ARTIST
-    assert set(r["checks"]) == {"resnet", "ai_detector", "phash", "orb", "copy_move", "clip"}
+    assert set(r["checks"]) == {"resnet", "ai_detector", "copy_move", "copy_exact", "copy_semantic"}
     assert (server.config.UPLOADS_DIR / f"{r['report_id']}.png").exists()
     assert not (server.config.INCOMING_DIR / job["job_id"]).exists()
     full = client.get(f"/api/report/{r['report_id']}").get_json()
@@ -255,7 +255,7 @@ def test_rejected_review_cannot_mint(server, client, analyse, run_jobs, reviewer
 def test_copy_of_protected_painting_fails_and_is_anchored(server, client, analyse, run_jobs, fake_registry):
     r = analyse("painting.png")  # identical to the protected reference "art/painting.png"
     assert r["decision"] == "FAIL"
-    assert r["checks"]["clip"]["value"] == 1.0 and r["checks"]["clip"]["nearest"] == "art/painting.png"
+    assert r["checks"]["copy_exact"]["value"] == 0 and r["checks"]["copy_exact"]["nearest"] == "art/painting.png"
     resp = attest(client, r["report_id"])
     assert resp.status_code == 403 and "blocked by Mint-Gate policy" in resp.get_json()["error"]
     run_jobs()
@@ -322,7 +322,7 @@ def test_minted_artwork_protects_against_reupload(server, client, analyse, walle
 
     second = analyse("photo.png", wallet=wallet(OTHER_KEY))
     assert second["decision"] == "FAIL"
-    assert second["checks"]["clip"]["nearest"] == f"minted/{first['report_id']}.png"
+    assert second["checks"]["copy_exact"]["nearest"] == f"minted/{first['report_id']}.png"
 
 
 def test_verify_detects_tampering(server, client, analyse, run_jobs):

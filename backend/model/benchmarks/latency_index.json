@@ -1,0 +1,24 @@
+{
+  "references": 284861,
+  "index_mb": {
+    "ix_reference_items_pdq": 89.3,
+    "ix_reference_items_sscd": 363.2,
+    "ix_reference_items_copy_vec": 726.3
+  },
+  "fused_knn50": {
+    "p50_ms": 7.7,
+    "p95_ms": 20.3,
+    "recall_at_10_ids": 0.582,
+    "recall_at_10_distance": 0.59
+  },
+  "sscd_knn50": {
+    "p50_ms": 6.5,
+    "p95_ms": 10.8,
+    "recall_at_10_ids": 0.42,
+    "recall_at_10_distance": 0.438
+  },
+  "pdq_8_lookups": {
+    "p50_ms": 31.8,
+    "p95_ms": 49.4
+  }
+}

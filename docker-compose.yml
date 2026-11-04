@@ -7,6 +7,10 @@ name: mintgate
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    shm_size: 1g  # parallel HNSW index builds need more than Docker's 64 MB /dev/shm
+    # The on-chain index's HNSW graphs are ~1.2 GB: with the 128 MB default they are read from disk
+    # on every search (p95 130-300 ms). 1 GB keeps the hot part of the fused-vector graph in memory.
+    command: ["postgres", "-c", "shared_buffers=1GB", "-c", "effective_cache_size=3GB", "-c", "maintenance_work_mem=512MB"]
     environment:
       POSTGRES_USER: mintgate
       POSTGRES_PASSWORD: mintgate

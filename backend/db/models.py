@@ -7,9 +7,11 @@ uint256 values (token ids, nonces, bonds) are NUMERIC(78, 0).
 from datetime import datetime
 from decimal import Decimal
 
-from pgvector.sqlalchemy import Vector
+from pgvector.sqlalchemy import BIT, HALFVEC
 from sqlalchemy import (
+    REAL,
     BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -20,12 +22,20 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
+)
+from sqlalchemy import (
+    false as sa_false,
+)
+from sqlalchemy import (
+    true as sa_true,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 UINT256 = Numeric(78, 0)
-EMBEDDING_DIM = 512  # CLIP ViT-B/32
+SSCD_DIM = 512  # SSCD sscd_disc_mixup
+DINO_DIM = 384  # DINOv2 ViT-S/14 (migration 0004)
 
 
 class Base(DeclarativeBase):
@@ -189,8 +199,10 @@ class AuditLog(Base):
 class ReferenceItem(Base):
     """Artwork new uploads are compared against. Phase 2: Mint-Gate mints; Phase 4: on-chain NFTs.
 
-    `phash` is the 64-bit pHash stored as a signed BIGINT; `embedding` is filled lazily by a
-    worker when NULL (the indexer and the legacy migration do not load CLIP).
+    Phase 4 copy-engine fingerprint (filled while status = pending -> ready by an analysis worker
+    for Mint-Gate mints, by `python -m ingest embed` for everything else): PDQ bit(256), SSCD and
+    DINOv2 halfvecs, `copy_vec` = the fused ANN vector, `nn_*` = similarity to the reference's own
+    nearest neighbour (density-relative scoring). `collection_member`: generative-collection item.
     """
 
     __tablename__ = "reference_items"
@@ -200,15 +212,69 @@ class ReferenceItem(Base):
     contract: Mapped[str | None] = mapped_column(String(42))
     token_id: Mapped[Decimal | None] = mapped_column(UINT256)
     image_uri: Mapped[str] = mapped_column(Text, unique=True)  # minted/<report_id>.png for our own mints
-    phash: Mapped[int | None] = mapped_column(BigInteger)
-    embedding: Mapped[list | None] = mapped_column(Vector(EMBEDDING_DIM))
     created_at: Mapped[datetime] = _created()
+    # Phase 4: on-chain NFTs (source "alchemy"). image_uri = nft/<chain>/<contract>/<token>.jpg (128 px thumb).
+    collection_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("nft_collections.id"))
+    source_url: Mapped[str | None] = mapped_column(Text)
+    attributes: Mapped[list | None] = mapped_column(JSONB)
+    trait_hash: Mapped[str | None] = mapped_column(String(64))  # SHA-256 of the canonical trait set
+    status: Mapped[str] = mapped_column(String(12), server_default="ready")  # pending | ready | failed
+    pdq = mapped_column(BIT(256), nullable=True)
+    pdq_quality: Mapped[int | None] = mapped_column(SmallInteger)
+    sscd = mapped_column(HALFVEC(SSCD_DIM), nullable=True)
+    dino = mapped_column(HALFVEC(DINO_DIM), nullable=True)
+    copy_vec = mapped_column(HALFVEC(SSCD_DIM + DINO_DIM), nullable=True)
+    nn_sscd: Mapped[float | None] = mapped_column(REAL)
+    nn_dino: Mapped[float | None] = mapped_column(REAL)
+    collection_member: Mapped[bool] = mapped_column(Boolean, server_default=sa_false())
 
     __table_args__ = (
+        Index("ix_reference_items_pdq", "pdq", postgresql_using="hnsw", postgresql_ops={"pdq": "bit_hamming_ops"}),
+        Index("ix_reference_items_sscd", "sscd", postgresql_using="hnsw", postgresql_ops={"sscd": "halfvec_ip_ops"}),
         Index(
-            "ix_reference_items_embedding",
-            "embedding",
+            "ix_reference_items_copy_vec",
+            "copy_vec",
             postgresql_using="hnsw",
-            postgresql_ops={"embedding": "vector_cosine_ops"},
+            postgresql_ops={"copy_vec": "halfvec_ip_ops"},
         ),
+        # migration 0005: one-off works get their own graphs (HNSW recall in the shared graph: 51 %)
+        Index(
+            "ix_reference_items_copy_vec_oneoff",
+            "copy_vec",
+            postgresql_using="hnsw",
+            postgresql_ops={"copy_vec": "halfvec_ip_ops"},
+            postgresql_where=text("NOT collection_member"),
+        ),
+        Index(
+            "ix_reference_items_sscd_oneoff",
+            "sscd",
+            postgresql_using="hnsw",
+            postgresql_ops={"sscd": "halfvec_ip_ops"},
+            postgresql_where=text("NOT collection_member"),
+        ),
+        Index("ix_reference_items_collection_trait", "collection_id", "trait_hash"),
+        Index("ix_reference_items_status", "status"),
+        Index("uq_reference_items_token", "chain_id", "contract", "token_id", "source", unique=True),
     )
+
+
+class NftCollection(Base):
+    """A tracked on-chain collection: backfill cursor (Alchemy pageKey) + live-sync block."""
+
+    __tablename__ = "nft_collections"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    chain_id: Mapped[int] = mapped_column(Integer)
+    contract: Mapped[str] = mapped_column(String(42))
+    name: Mapped[str | None] = mapped_column(Text)
+    token_type: Mapped[str | None] = mapped_column(String(16))
+    total_supply: Mapped[Decimal | None] = mapped_column(UINT256)
+    cap: Mapped[int] = mapped_column(Integer)
+    page_key: Mapped[str | None] = mapped_column(Text)
+    ingested: Mapped[int] = mapped_column(Integer, server_default="0")
+    backfill_done: Mapped[bool] = mapped_column(Boolean, server_default=sa_false())
+    sync_block: Mapped[int | None] = mapped_column(BigInteger)
+    tracked: Mapped[bool] = mapped_column(Boolean, server_default=sa_true())
+    created_at: Mapped[datetime] = _created()
+    updated_at: Mapped[datetime] = _created()
+
+    __table_args__ = (UniqueConstraint("chain_id", "contract", name="uq_nft_collections_chain_contract"),)

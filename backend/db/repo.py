@@ -11,20 +11,11 @@ from sqlalchemy.dialects.postgresql import insert
 from web3 import Web3
 
 from chain.eip712 import Verdict
-from db.models import Artist, Attestation, AuditLog, Dispute, ReferenceItem, Report, Submission, Token
+from db.models import Artist, Attestation, AuditLog, Dispute, NftCollection, ReferenceItem, Report, Submission, Token
 
 PENDING = {"queued", "processing"}
 FAILED = {"invalid", "error"}
 MINTABLE = {"PASS", "REVIEW_APPROVED"}
-
-
-def to_signed64(u: int) -> int:
-    """uint64 pHash -> BIGINT."""
-    return u - (1 << 64) if u >= 1 << 63 else u
-
-
-def to_unsigned64(i: int) -> int:
-    return i + (1 << 64) if i < 0 else i
 
 
 # ---- artists / submissions ------------------------------------------------------------------
@@ -255,9 +246,9 @@ def audit(s, actor: str, action: str, target: str | None = None, **meta):
 # ---- reference items ------------------------------------------------------------------------------------
 
 
-def add_reference(
-    s, source: str, image_uri: str, chain_id=None, contract=None, token_id=None, phash=None, embedding=None
-):
+def add_reference(s, source: str, image_uri: str, chain_id=None, contract=None, token_id=None, status="pending"):
+    """A reference new uploads are compared against; its copy fingerprint is filled in later
+    (analysis worker for Mint-Gate mints, `python -m ingest embed` for everything else)."""
     s.execute(
         insert(ReferenceItem)
         .values(
@@ -266,25 +257,91 @@ def add_reference(
             chain_id=chain_id,
             contract=contract,
             token_id=None if token_id is None else Decimal(token_id),
-            phash=None if phash is None else to_signed64(phash),
-            embedding=embedding,
+            status=status,
         )
         .on_conflict_do_nothing(index_elements=["image_uri"])
     )
 
 
-def references_after(s, after_id: int, limit: int = 1000) -> list[ReferenceItem]:
-    q = select(ReferenceItem).where(ReferenceItem.id > after_id).order_by(ReferenceItem.id).limit(limit)
-    return list(s.scalars(q))
-
-
-def set_fingerprint(s, item_id: int, phash: int, embedding):
-    s.execute(
-        update(ReferenceItem)
-        .where(ReferenceItem.id == item_id, ReferenceItem.embedding.is_(None))
-        .values(phash=to_signed64(phash), embedding=embedding)
-    )
+def references_after(s, after_id: int, limit: int = 1000, sources=None) -> list[ReferenceItem]:
+    q = select(ReferenceItem).where(ReferenceItem.id > after_id)
+    if sources:
+        q = q.where(ReferenceItem.source.in_(sources))
+    return list(s.scalars(q.order_by(ReferenceItem.id).limit(limit)))
 
 
 def count_references(s) -> int:
     return s.scalar(select(func.count()).select_from(ReferenceItem))
+
+
+# ---- on-chain NFT index (Phase 4) -------------------------------------------------------------------
+
+
+def upsert_collection(s, chain_id: int, contract: str, cap: int, **meta) -> NftCollection:
+    contract = Web3.to_checksum_address(contract)
+    s.execute(
+        insert(NftCollection)
+        .values(chain_id=chain_id, contract=contract, cap=cap, **meta)
+        .on_conflict_do_update(constraint="uq_nft_collections_chain_contract", set_={"cap": cap, **meta})
+    )
+    return s.scalars(
+        select(NftCollection).where(NftCollection.chain_id == chain_id, NftCollection.contract == contract)
+    ).one()
+
+
+def get_collection(s, chain_id: int, contract: str, lock: bool = False) -> NftCollection | None:
+    q = select(NftCollection).where(
+        NftCollection.chain_id == chain_id, NftCollection.contract == Web3.to_checksum_address(contract)
+    )
+    return s.scalars(q.with_for_update() if lock else q).one_or_none()
+
+
+def tracked_collections(s, chain_id: int | None = None) -> list[NftCollection]:
+    q = select(NftCollection).where(NftCollection.tracked.is_(True)).order_by(NftCollection.id)
+    if chain_id is not None:
+        q = q.where(NftCollection.chain_id == chain_id)
+    return list(s.scalars(q))
+
+
+def add_nft_items(s, collection: NftCollection, items: list[dict]) -> int:
+    """Insert ingested tokens (status pending/failed); existing (chain, contract, token) rows are kept."""
+    if not items:
+        return 0
+    rows = [
+        {
+            "source": "alchemy",
+            "chain_id": collection.chain_id,
+            "contract": collection.contract,
+            "collection_id": collection.id,
+            "token_id": Decimal(it["token_id"]),
+            "image_uri": it["image_uri"],
+            "source_url": it.get("source_url"),
+            "attributes": it.get("attributes"),
+            "trait_hash": it.get("trait_hash"),
+            "status": it.get("status", "pending"),
+        }
+        for it in items
+    ]
+    res = s.execute(insert(ReferenceItem).values(rows).on_conflict_do_nothing().returning(ReferenceItem.id))
+    return len(res.all())
+
+
+def nft_items_by_status(s, status: str, after_id: int = 0, limit: int = 512) -> list[ReferenceItem]:
+    q = (
+        select(ReferenceItem)
+        .where(ReferenceItem.status == status, ReferenceItem.id > after_id)
+        .order_by(ReferenceItem.id)
+        .limit(limit)
+    )
+    return list(s.scalars(q))
+
+
+def trait_duplicates(s, collection_id: int) -> list[tuple[str, list[Decimal]]]:
+    """Groups of tokens in one collection that share an identical (non-empty) trait set."""
+    q = (
+        select(ReferenceItem.trait_hash, func.array_agg(ReferenceItem.token_id))
+        .where(ReferenceItem.collection_id == collection_id, ReferenceItem.trait_hash.is_not(None))
+        .group_by(ReferenceItem.trait_hash)
+        .having(func.count() > 1)
+    )
+    return [(h, sorted(ids)) for h, ids in s.execute(q)]

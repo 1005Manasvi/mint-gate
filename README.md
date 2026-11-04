@@ -1,4 +1,4 @@
-# Mint-Gate: AI forensics that verifies artwork *before* it becomes an NFT
+# Mint-Gate: AI forensics that verifies artwork *before* it becomes an  NFT
 
 [![CI](https://github.com/1005Manasvi/mint-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/1005Manasvi/mint-gate/actions/workflows/ci.yml)
 [![Contract coverage](https://img.shields.io/badge/contract%20coverage-100%25-brightgreen)](docs/security.md)
@@ -60,33 +60,49 @@ The ResNet's in-distribution score partly came from memorising collections it ha
 CLIP probe generalises. The policy therefore lets the CLIP probe decide on AI content, and
 uses the ResNet only to request human review.
 
-**End-to-end gate decisions** (full pipeline + policy v3.1.0, n = 50 uploads per category):
+**Copy detection (Phase 4, benchmark-gated).** A copy-detection benchmark was built *before* any
+new model: 4,000 protected works, 600 attacked copies (14 attacks: crop, rotation, perspective,
+recolour, overlays, screenshots, collages, Stable-Diffusion re-generation, ...) and 5,967 genuine
+distractors, tuned on val, reported on test ([details](docs/models.md)).
 
-| Upload | PASS | REVIEW | FAIL |
+| Paintings, test split | micro-AP | TPR at 1 % FPR | Genuine flagged (policy) |
 |---|---|---|---|
-| Genuine art from an NFT collection | **88 %** | 12 % | **0 %** |
-| Genuine pixel-art NFT | 82 % | 18 % | 0 % |
-| Genuine painting | 76 % | 12 % | 12 % ¹ |
-| Genuine photograph | 62 % | 38 % | 0 % |
-| **Modern AI** (DALL·E 3, Midjourney, SD3, SDXL) | **0 %** | 12 % | 88 % |
-| **Unseen Flux** | **0 %** | 24 % | 76 % |
-| Other AI-art generators | 12 % | 42 % | 46 % |
-| Exact copy of a protected work | 0 % | 0 % | **100 %** |
-| Edited copy of a protected painting | 4 % | 6 % | **90 %** |
-| Copy-move forgery | 2 % | 20 % | 78 % |
-| Spliced forgery | 0 % | 84 % | 16 % |
-| Edited copy of a generative-collection NFT | 94 % | 6 % | 0 % ² |
+| v1: pHash + CLIP + ORB | 0.820 | 0.542 | 5.0 % |
+| **v4: PDQ + SSCD + DINOv2-S + region crops** | **0.905** | **0.896** | **2.2 %** |
 
-Overall: **3 % of genuine uploads wrongly rejected** and 77 % passed directly; **86 % of
-forgeries stopped** (REVIEW or FAIL).
+LightGlue was benchmarked too and **rejected** (+0.3 pp, below the gate). Genuine items of generative
+collections are never flagged any more (6.5 % → 0 %), because a collection member only counts as
+copied when it is pixel-identical.
 
-¹ On a larger sample (n = 120) the rate is 6.7 %. Two of those eight "genuine" paintings are
-near-duplicates of protected paintings (the same artwork appears in two source datasets), so
-the real false-alarm rate is about 5 %.
+**End-to-end gate decisions** (full pipeline, policy 4.0.0, against the live index of 284,861
+references incl. 269,816 Ethereum NFTs; n = 50 uploads per category; v1 = policy 3.1.0):
+
+| Upload | PASS | REVIEW | FAIL | v1 PASS / FAIL |
+|---|---|---|---|---|
+| Genuine art from an NFT collection | **98 %** | 2 % | **0 %** | 88 % / 0 % |
+| Genuine pixel-art NFT | 94 % | 4 % | 2 % | 82 % / 0 % |
+| Genuine painting | 72 % | 16 % | 12 % ¹ | 76 % / 12 % |
+| Genuine photograph | 68 % | 32 % | 0 % | 62 % / 0 % |
+| **Modern AI** (DALL·E 3, Midjourney, SD3, SDXL) | **0 %** | 12 % | 88 % | 0 % / 88 % |
+| **Unseen Flux** | **0 %** | 24 % | 76 % | 0 % / 76 % |
+| Other AI-art generators | 12 % | 44 % | 44 % | 12 % / 46 % |
+| Exact copy of a protected work | 0 % | 0 % | **100 %** | 0 % / 100 % |
+| Edited copy of a protected painting | **2 %** | 26 % | 72 % | 4 % / 90 % |
+| Copy-move / spliced forgery | 4 % / 0 % | 18 % / 84 % | 78 % / 16 % | PASS 2 % / 0 % |
+| **Exact re-upload of an indexed Ethereum NFT** (new) | **0 %** | 2 % | **98 %** | not indexed |
+| Edited copy of an indexed Ethereum NFT (new) | 54 % | 40 % | 6 % | not indexed |
+| Edited copy of a generative-collection NFT | 100 % | 0 % | 0 % ² | 94 % / 0 % |
+
+Overall: **83 % of genuine uploads pass** (v1 77 %), **3.5 % are wrongly rejected** (v1 3.0 %: one
+genuine punk in 200 uploads); on the same forgery categories as v1, 84.9 % are stopped (v1 85.8 %).
+CPU-only deployment: **p50 1.10 s, p95 1.35 s per upload** (2 threads); search over the 285k-NFT
+index p95 15 ms.
+
+¹ v1 found that many of these are near-duplicates of protected paintings in a second source dataset.
 
 ² A known limitation. Genuine items of a generative collection share traits by design, so an
-edited copy can't be told apart from a new sibling by appearance alone. Only exact copies are
-blocked here, and the contract enforces that as well.
+edited copy can't be told apart from a new sibling by appearance alone. Only exact (pixel-identical)
+copies are blocked; letting similarity count would wrongly flag genuine NFTs.
 
 ## How it works
 
@@ -94,8 +110,9 @@ blocked here, and the contract enforces that as well.
 upload ─▶ preprocessing ─▶ ┌ CLIP-probe AI detector   (decides on AI content) ┐
  (validate, RGB,           │ ResNet-18                 (REVIEW-only signal)    │   policy engine ─▶ PASS ─▶ mint
   SHA-256, identical       │ copy-move: block matching + shift voting          │─▶ calibrated     REVIEW ─▶ human reviewer
-  normalisation to         │ CLIP copy score ┐ vs protected collection:        │   risk + score   FAIL ─▶ blocked
-  the training data)       │ pHash, ORB      ┘ 15,037 works + all minted here  ┘          │
+  normalisation to         │ copy engine: PDQ + SSCD/DINOv2 + region crops    │   risk + score   FAIL ─▶ blocked
+  the training data)       │   vs pgvector: 15k protected works, 270k        │          │
+                           │   Ethereum NFTs (48 collections), all minted here ┘          │
                                                                                           ▼
    artist: Sign-In with Ethereum, signs the upload's SHA-256 (claim of authorship, stored with the report)
    API (stateless, N instances) ─▶ Postgres (submissions, reports, attestations, audit log) + Redis/RQ jobs
@@ -113,10 +130,19 @@ Engineering decisions worth knowing:
   and uploads get the identical "detector view" at inference.
 - **Out-of-source evaluation.** In-distribution accuracy overstated the CNN. Testing on unseen
   collections and a different Flux publisher exposed this and drove the policy design.
+- **Benchmark-gated copy detection (Phase 4).** A copy-detection benchmark (14 attacks including
+  collage and Stable-Diffusion re-generation, ~10 genuine distractors per copy, val/test split) was
+  built *before* any new model. Every candidate had to beat the incumbent on it: SSCD + DINOv2-S +
+  region crops replaced CLIP / pHash (paintings micro-AP 0.820 → 0.905, TPR at 1 % FPR 0.54 → 0.90),
+  PDQ replaced pHash, and ALIKED + LightGlue was **rejected** (+0.3 pp, below the gate), so ORB was
+  retired without a replacement. Details: [docs/models.md](docs/models.md).
 - **Collection-aware copy detection.** In a generative collection (CryptoPunks, Bored Apes),
-  genuine siblings share hashes and keypoints. pHash and ORB therefore only count against
-  one-off artworks, and the CLIP copy score is relative to each work's own nearest neighbour.
-  Collection members are protected against exact copies.
+  genuine siblings look alike by design, and CryptoPunks siblings are even PDQ-close. Collection
+  members therefore count only as exact copies, and only when PDQ and SSCD agree; copy scores are
+  relative to each work's own nearest neighbour in the index.
+- **An on-chain NFT database.** 275,882 Ethereum tokens from 48 collections (Alchemy NFT API,
+  resumable per collection) are fingerprinted into Postgres/pgvector (HNSW, halfvec) with their
+  traits; a sync loop follows new `Transfer(from=0)` mints of tracked collections.
 - **Data-driven thresholds.** REVIEW/FAIL thresholds sit at measured 5 % / 1 % false-alarm
   rates on genuine validation art. The policy file's SHA-256 is stored on-chain with every verdict.
 - **The chain is the source of truth.** An indexer follows the registry and NFT events

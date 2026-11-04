@@ -3,9 +3,12 @@
 upload bytes
   -> preprocessing (validate, RGB, canonical PNG, SHA-256)
   -> detector view (same resize + JPEG normalisation as the training data)
-  -> ResNet-18 | AI ensemble (spectral + CLIP probe) | copy-move   (image-only checks)
-  -> pHash + CLIP search over the minted-NFT index         (plagiarism checks)
-  -> ORB + RANSAC on the shortlisted candidates
+  -> ResNet-18 | AI detector (CLIP probe + spectral) | copy-move        (image-only checks)
+  -> copy engine (Phase 4) against every reference: seed collection, Mint-Gate mints and the
+     on-chain NFT index (pgvector):
+       copy_exact     PDQ Hamming distance (dihedral)
+       copy_semantic  fused SSCD (+ DINOv2) score, density-relative, + region crops
+       copy_geometric ALIKED + LightGlue inliers on the top-10
   -> policy engine -> PASS / REVIEW / FAIL + authenticity score
 """
 
@@ -13,46 +16,47 @@ import threading
 import time
 import uuid
 
-from detection import copy_move, feature_match
+from detection import copy_move
 from detection.ai_detector import AIDetector
 from detection.clip_similarity import ClipEncoder
-from detection.hashing import phash_int
+from detection.copy_engine import CopyEngine
 from detection.policy import Policy
-from detection.preprocessing import detector_view, load_path, prepare
-from detection.reference_index import ReferenceIndex
+from detection.preprocessing import detector_view, prepare
 from detection.report_hash import canonical_hash
 from detection.resnet_classifier import ResNetClassifier
 
 
 class MintGatePipeline:
-    def __init__(self):
+    def __init__(self, index=None):
+        from detection.copy_index import PgCopyIndex
+
         t = time.time()
         self.policy = Policy()
-        self.index = ReferenceIndex()
         self.resnet = ResNetClassifier()
         self.ai = AIDetector()
-        self.clip = ClipEncoder()
+        self.clip = ClipEncoder()  # features of the AI detector's probe
+        self.copy = CopyEngine()
+        self.index = index if index is not None else PgCopyIndex(fused=self.copy.dino is not None)
         self._lock = threading.Lock()  # models are not re-entrant on one GPU
         print(
-            f"[pipeline] ready in {time.time() - t:.1f}s - {len(self.index)} reference NFTs, "
-            f"policy {self.policy.version}"
+            f"[pipeline] ready in {time.time() - t:.1f}s - copy engine {self.copy.version}, policy {self.policy.version}"
         )
 
     def fingerprint(self, img):
-        """(pHash, CLIP embedding) of an image, as stored in `reference_items`."""
+        """Copy-engine fingerprint of a reference image, as stored in `reference_items`."""
         with self._lock:
-            return phash_int(img), self.clip.encode_one(img)
+            return self.copy.fingerprint(img)
 
-    def add_reference(self, report_id: str, phash: int, emb) -> bool:
-        """Add a minted artwork (uploads/<report_id>.png) to the in-memory reference index.
-
-        Workers call this for every new `reference_items` row (see jobs.tasks.sync_references),
-        so duplicate protection is shared by all workers and survives restarts.
-        """
+    def add_reference(self, name: str, f, path) -> bool:
+        """Make a freshly fingerprinted reference searchable. The pgvector index reads the table
+        itself (nothing to do); an in-memory index (tests, small deployments) appends it."""
+        add = getattr(self.index, "add", None)
+        if add is None:
+            return True
         with self._lock:
-            if f"minted/{report_id}.png" in self.index.files:
+            if name in self.index.names:
                 return False
-            self.index.add(f"{report_id}.png", phash, emb)
+            add(name, f, path, collection=False)
             return True
 
     def analyse(self, raw: bytes, filename: str = "", report_id: str | None = None) -> dict:
@@ -64,60 +68,21 @@ class MintGatePipeline:
             view_emb = self.clip.encode_one(view)
             ai = self.ai.predict(view, view_emb)
             cm = copy_move.analyse(img.rgb)
-            ph = phash_int(img.rgb)
-            emb = self.clip.encode_one(img.rgb)
-        p_ai = ai["probability"]
-
-        sims, dists, cand = self.index.search(ph, emb)
-        sparse = self.index.sparse
-        q = feature_match.describe(img.rgb)
-        best_orb, orb_vis, matches = (0, None, None), "", []
-        for i in cand:
-            ref = feature_match.describe(load_path(self.index.path(i)))
-            inl, good, inliers = feature_match.match(q, ref)
-            matches.append(
-                {
-                    "filename": self.index.files[i],
-                    "clip_similarity": round(float(sims[i]), 4),
-                    "phash_distance": int(dists[i]),
-                    "orb_inliers": inl,
-                }
-            )
-            # Keypoint matches only count as copy evidence against sparse references.
-            if sparse[i] and inl > best_orb[0]:
-                best_orb = (inl, i, (ref, inliers))
-        matches.sort(key=lambda m: -m["clip_similarity"])
-
-        nearest_hash, hash_ref = self.index.sparse_min_distance(dists)
-        copy_score, copy_ref = self.index.copy_score(sims)
+            cp = self.copy.analyse(img.rgb, self.index)
         values = {
             "resnet": round(p_forged, 4),
-            "ai_detector": round(p_ai, 4),
-            "phash": nearest_hash,
-            "orb": int(best_orb[0]),
+            "ai_detector": round(ai["probability"], 4),
             "copy_move": cm["score"],
-            "clip": round(copy_score, 4),
+            **cp["values"],
         }
         decision, score, checks, reasons = self.policy.decide(values)
 
-        if best_orb[0] >= self.policy.checks["orb"]["review"]:
-            ref, inliers = best_orb[2]
-            orb_vis = feature_match.draw(q, ref, inliers)
-
         details = {
-            "phash": {
-                "nearest": self.index.files[hash_ref] if hash_ref is not None else None,
-                "uploaded_phash": f"{ph:016x}",
-            },
-            "clip": {
-                "nearest": self.index.files[copy_ref],
-                "similarity": round(float(sims[copy_ref]), 4),
-                "reference_neighbour_similarity": round(float(self.index.nn_sim[copy_ref]), 4),
-            },
-            "orb": {"nearest": self.index.files[best_orb[1]] if best_orb[1] is not None else None},
+            **cp["details"],
             "copy_move": {"votes": cm["votes"], "shift": cm["shift"]},
             "ai_detector": {"spectral": ai["spectral"], "clip_probe": ai["clip_probe"]},
         }
+        details["copy_exact"]["uploaded_pdq"] = cp["fingerprint"].pdq.hex()
         for name, extra in details.items():
             checks[name].update(extra)
         for name, c in checks.items():
@@ -138,10 +103,11 @@ class MintGatePipeline:
                 "resnet18": self.resnet.version,
                 "clip": "openai/clip-vit-base-patch32",
                 "ai_detector": getattr(self.ai, "version", "none"),
+                "copy_engine": self.copy.version,
             },
             "checks": checks,
-            "similar_nfts": matches[:5],
-            "evidence": {"copy_move_heatmap": copy_move.heatmap(img.rgb, cm), "orb_matches": orb_vis},
+            "similar_nfts": cp["matches"],
+            "evidence": {"copy_move_heatmap": copy_move.heatmap(img.rgb, cm), "copy_matches": cp["evidence"]},
             "timing_ms": int((time.time() - t0) * 1000),
         }
         report["report_hash"] = canonical_hash(report)

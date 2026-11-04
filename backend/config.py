@@ -60,6 +60,7 @@ INCOMING_DIR = STORAGE_DIR / "incoming"  # raw uploads waiting for a worker, <su
 EVIDENCE_DIR = STORAGE_DIR / "evidence"  # heatmaps / match images, <report_id>.json
 REPORTS_DIR = STORAGE_DIR / "reports"  # legacy v1 JSON reports (imported by db.migrate_json)
 METADATA_DIR = STORAGE_DIR / "metadata"
+NFT_THUMBS_DIR = STORAGE_DIR / "nft" / "thumbs"  # 128 px thumbnails of indexed on-chain NFTs
 DEMO_DIR = BACKEND_DIR / "demo_samples"
 
 # ---- Database + queue ---------------------------------------------------------------

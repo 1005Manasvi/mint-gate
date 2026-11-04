@@ -8,8 +8,6 @@ indexer) protects against re-uploads in every worker.
 import json
 import logging
 
-import numpy as np
-
 import config
 import db
 from chain import networks, registry
@@ -44,27 +42,34 @@ def set_pipeline(p):
 
 
 def sync_references(p) -> int:
-    """Add reference_items rows this worker has not seen to its index; fills missing fingerprints."""
+    """Fingerprint new Mint-Gate mints (reference_items, source mintgate*) and make them searchable.
+
+    The image of a mint is on the API host (uploads/), so analysis workers fingerprint it with the
+    models they already hold; on-chain NFTs and the seed collection are fingerprinted by
+    `python -m ingest embed`. With the pgvector index a stored fingerprint is immediately visible
+    to every worker; an in-memory index (tests) also appends it here.
+    """
+    from ingest.embed import load_fingerprint, store_fingerprint
+
     global _ref_cursor
     pos, hold, added = _ref_cursor, None, 0
     while True:
         with db.session() as s:
-            rows = repo.references_after(s, pos)
+            rows = repo.references_after(s, pos, sources=("mintgate", "mintgate-v1"))
             for r in rows:
                 pos = r.id
-                if not r.image_uri.startswith(MINTED_PREFIX):  # Phase 4 sources are searched in pgvector
-                    continue
-                rid = r.image_uri[len(MINTED_PREFIX) :].removesuffix(".png")
-                if r.embedding is None:
-                    path = config.UPLOADS_DIR / f"{rid}.png"
+                path = config.UPLOADS_DIR / r.image_uri[len(MINTED_PREFIX) :]
+                if r.status == "pending":
                     if not path.exists():  # image not on this host (yet): retry next time
                         hold = r.id if hold is None else hold
                         continue
-                    ph, emb = p.fingerprint(load_path(path))
-                    repo.set_fingerprint(s, r.id, ph, emb.tolist())
+                    f = p.fingerprint(load_path(path))
+                    store_fingerprint(s, r.id, f, p.copy.p["fusion"].get("w", 1.0))
+                elif r.status == "ready":
+                    f = load_fingerprint(r)
                 else:
-                    ph, emb = repo.to_unsigned64(r.phash), np.asarray(r.embedding, dtype=np.float32)
-                added += p.add_reference(rid, ph, emb)
+                    continue
+                added += p.add_reference(r.image_uri, f, path)
         if not rows:
             break
     _ref_cursor = pos if hold is None else hold - 1

@@ -1,0 +1,783 @@
+{
+  "items_by_status": {
+    "failed": 6066,
+    "pending": 269816
+  },
+  "collections": [
+    {
+      "chain_id": 1,
+      "contract": "0x9C8fF314C9Bc7F6e59A9d9225Fb22946427eDC03",
+      "name": "Nouns",
+      "ingested": 2038,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xED5AF388653567Af2F388E6224dC7C4b3241C544",
+      "name": "Azuki",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+      "name": "BoredApeYachtClub",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xBd3531dA5CF5857e7CfAA92426877b022e612cf8",
+      "name": "PudgyPenguins",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x60E4d786628Fea6478F785A6d7e704777c86a7c6",
+      "name": "MutantApeYachtClub",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x7Bd29408f11D2bFC23c34f18275bBf23bB716Bc7",
+      "name": "Meebits",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 2,
+      "tokens_in_trait_duplicates": 4,
+      "example_duplicates": [
+        [
+          "957",
+          "1758"
+        ],
+        [
+          "1814",
+          "2128"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x49cF6f5d44E70224e2E23fDcdd2C053F30aDA28B",
+      "name": "CloneX",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x23581767a106ae21c074b2276D25e5C3e136a68b",
+      "name": "Moonbirds",
+      "ingested": 6092,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 105,
+      "tokens_in_trait_duplicates": 218,
+      "example_duplicates": [
+        [
+          "2842",
+          "4024"
+        ],
+        [
+          "1347",
+          "2254"
+        ],
+        [
+          "217",
+          "2954"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e",
+      "name": "Doodles",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xe785E82358879F061BC3dcAC6f0444462D4b5330",
+      "name": "World Of Women",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x1A92f7381B9F03921564a437210bB9396471050C",
+      "name": "Cool Cats",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x34d85c9CDeB23FA97cb08333b511ac86E1C4E258",
+      "name": "Otherdeed",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x524cAB2ec69124574082676e6F654a18df49A048",
+      "name": "LilPudgys",
+      "ingested": 6098,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xB6a37b5d14D502c3Ab0Ae6f3a0E058BC9517786e",
+      "name": "Elemental",
+      "ingested": 6099,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x5Af0D9827E0c53E4799BB226655A1de152A425a5",
+      "name": "Milady",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 1,
+      "tokens_in_trait_duplicates": 2,
+      "example_duplicates": [
+        [
+          "1000",
+          "1001"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x8821BeE2ba0dF28761AffF119D66390D594CD280",
+      "name": "DeGods",
+      "ingested": 3214,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 2,
+      "tokens_in_trait_duplicates": 4,
+      "example_duplicates": [
+        [
+          "833",
+          "2296"
+        ],
+        [
+          "400",
+          "8837"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xba30E5F9Bb24caa003E9f2f0497Ad287FDF95623",
+      "name": "BoredApeKennelClub",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x1CB1A5e65610AEFF2551A50f76a87a7d3fB649C6",
+      "name": "Cryptoadz",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 18,
+      "tokens_in_trait_duplicates": 98,
+      "example_duplicates": [
+        [
+          "1519",
+          "2208",
+          "3250",
+          "5844"
+        ],
+        [
+          "1243",
+          "2349"
+        ],
+        [
+          "2243",
+          "4583"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x79FCDEF22feeD20eDDacbB2587640e45491b757f",
+      "name": "mfer",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x59468516a8259058baD1cA5F8f4BFF190d30E066",
+      "name": "Invisible Friends",
+      "ingested": 5000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x1792a96E5668ad7C167ab804a100ce42395Ce54D",
+      "name": "Moonbirds Oddities",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xa7d8d9ef8D8Ce8992Df33D8b8CF4Aebabd5bD270",
+      "name": "Art Blocks",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x059EDD72Cd353dF5106D2B9cC5ab83a52287aC3a",
+      "name": "Art Blocks",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xa3AEe8BcE55BEeA1951EF834b99f3Ac60d1ABeeB",
+      "name": "VeeFriends",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 9,
+      "tokens_in_trait_duplicates": 47,
+      "example_duplicates": [
+        [
+          "5576",
+          "5577",
+          "5578",
+          "5580"
+        ],
+        [
+          "1427",
+          "1435"
+        ],
+        [
+          "2599",
+          "2600",
+          "2601",
+          "2604",
+          "2605"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x364C828eE171616a39897688A831c2499aD972ec",
+      "name": "Sappy Seals",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 1,
+      "tokens_in_trait_duplicates": 5,
+      "example_duplicates": [
+        [
+          "15",
+          "16",
+          "17",
+          "2093",
+          "4920"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x036721e5A769Cc48B3189EFbb9ccE4471E8A48B1",
+      "name": "Checks",
+      "ingested": 5324,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 540,
+      "tokens_in_trait_duplicates": 3147,
+      "example_duplicates": [
+        [
+          "1603",
+          "7486",
+          "7988"
+        ],
+        [
+          "468",
+          "4475",
+          "5125",
+          "9427"
+        ],
+        [
+          "2473",
+          "10706",
+          "13671"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x6339e5E072086621540D0362C4e3Cea0d643E114",
+      "name": "Opepen Edition",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x8943C7bAC1914C9A7ABa750Bf2B6B09Fd21037E0",
+      "name": "Lazy Lions",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x3bf2922f4520a8BA0c2eFC3D2a1539678DaD5e9D",
+      "name": "0N1 Force",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xC2C747E0F7004F9E8817Db2ca4997657a7746928",
+      "name": "Hashmasks",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x2acAb3DEa77832C09420663b0E1cB386031bA17B",
+      "name": "DeadFellaz",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xaCF63E56fd08970b43401492a02F6F38B6635C91",
+      "name": "Kanpai Pandas",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xbCe3781ae7Ca1a5e050Bd9C4c77369867eBc307e",
+      "name": "goblintown",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x769272677faB02575E84945F03Eca517ACc544Cc",
+      "name": "Captainz",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 96,
+      "tokens_in_trait_duplicates": 5891,
+      "example_duplicates": [
+        [
+          "2567",
+          "5279",
+          "5577"
+        ],
+        [
+          "121",
+          "278",
+          "338",
+          "352",
+          "396"
+        ],
+        [
+          "127",
+          "368",
+          "524",
+          "561",
+          "687"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x39ee2c7b3cb80254225884ca001F57118C8f21B6",
+      "name": "Potatoz",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 16,
+      "tokens_in_trait_duplicates": 56,
+      "example_duplicates": [
+        [
+          "380",
+          "448",
+          "480",
+          "1537",
+          "2470"
+        ],
+        [
+          "1804",
+          "2068",
+          "2376",
+          "2994",
+          "3665"
+        ],
+        [
+          "479",
+          "1469",
+          "1710"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xb7F7F6C52F2e2fdb1963Eab30438024864c313F6",
+      "name": "Wrapped Cryptopunks",
+      "ingested": 364,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 11,
+      "tokens_in_trait_duplicates": 22,
+      "example_duplicates": [
+        [
+          "2210",
+          "5904"
+        ],
+        [
+          "2998",
+          "7215"
+        ],
+        [
+          "1818",
+          "8419"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xB852c6b5892256C264Cc2C888eA462189154D8d7",
+      "name": "Rektguy",
+      "ingested": 6098,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x32973908FaeE0Bf825A343000fE412ebE56F802A",
+      "name": "Pixelmon",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 64,
+      "tokens_in_trait_duplicates": 342,
+      "example_duplicates": [
+        [
+          "483",
+          "979",
+          "2164",
+          "3196",
+          "3392"
+        ],
+        [
+          "971",
+          "3597"
+        ],
+        [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x7D8820FA92EB1584636f4F5b8515B5476B75171a",
+      "name": "Murakami.Flowers",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x306b1ea3ecdf94aB739F1910bbda052Ed4A9f949",
+      "name": "Beanz",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x231d3559aa848Bf10366fB9868590F01d34bF240",
+      "name": "Valhalla",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 1,
+      "tokens_in_trait_duplicates": 2,
+      "example_duplicates": [
+        [
+          "3",
+          "3988"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x892848074ddeA461A15f337250Da3ce55580CA85",
+      "name": "CyberBrokers",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 2,
+      "tokens_in_trait_duplicates": 4,
+      "example_duplicates": [
+        [
+          "1767",
+          "3683"
+        ],
+        [
+          "3981",
+          "4706"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x6632a9d63E142F17a668064D41A21193b49B41a0",
+      "name": "Prime Ape Planet",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x4b10701Bfd7BFEdc47d50562b76b436fbB5BdB3B",
+      "name": "LilNoun",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x80336Ad7A747236ef41F47ed2C7641828a480BAA",
+      "name": "Chimpers",
+      "ingested": 5555,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 4,
+      "tokens_in_trait_duplicates": 12,
+      "example_duplicates": [
+        [
+          "2012",
+          "5045",
+          "5348"
+        ],
+        [
+          "1131",
+          "5396"
+        ],
+        [
+          "2520",
+          "3588",
+          "4430"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x3903d4fFaAa700b62578a66e7a67Ba4cb67787f9",
+      "name": "Quirkies",
+      "ingested": 5000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 0,
+      "tokens_in_trait_duplicates": 0,
+      "example_duplicates": []
+    },
+    {
+      "chain_id": 1,
+      "contract": "0x0c2E57EFddbA8c768147D1fdF9176a0A6EBd5d83",
+      "name": "KaijuKingz",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 3,
+      "tokens_in_trait_duplicates": 50,
+      "example_duplicates": [
+        [
+          "3568",
+          "3756",
+          "4036",
+          "4039",
+          "4185"
+        ],
+        [
+          "19",
+          "20",
+          "21",
+          "22",
+          "23"
+        ],
+        [
+          "9",
+          "10",
+          "11",
+          "12",
+          "13"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xEdB61f74B0d09B2558F1eeb79B247c1F363Ae452",
+      "name": "Gutter Cat Gang",
+      "ingested": 3000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 1,
+      "tokens_in_trait_duplicates": 2,
+      "example_duplicates": [
+        [
+          "378",
+          "2625"
+        ]
+      ]
+    },
+    {
+      "chain_id": 1,
+      "contract": "0xc92cedDfb8dd984A89fb494c376f9A48b999aAFc",
+      "name": "Creature World",
+      "ingested": 6000,
+      "backfill_done": true,
+      "sync_block": null,
+      "trait_duplicate_groups": 6,
+      "tokens_in_trait_duplicates": 14,
+      "example_duplicates": [
+        [
+          "614",
+          "4199"
+        ],
+        [
+          "4097",
+          "5636"
+        ],
+        [
+          "301",
+          "637",
+          "875"
+        ]
+      ]
+    }
+  ]
+}

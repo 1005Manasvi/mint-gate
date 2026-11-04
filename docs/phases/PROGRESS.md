@@ -166,3 +166,41 @@ and anything the next phase must know. Keep entries brief: this file is read at 
 - **For Phase 4:** `/api/token/<net>/<contract>/<id>` already accepts any collection address, and the
   provenance page works for any `MintGated` collection (it reads the registry from the NFT). Run the
   indexer for `baseSepolia,sepolia` once real mints start.
+
+## Phase 4: Benchmark-gated copy engine + on-chain NFT index (done, 2026-11-04)
+- **Benchmark first** (`backend/benchmark/`, data in `data/benchmark/copydet/`, results `model/benchmarks/`):
+  4,000 refs, 600 attacked copies, 5,967 distractors (~10:1; NFT siblings, paintings, photos, same
+  attack mix), 14 attacks incl. collage + SD 1.5 img2img re-generation (36 NFT regen distractors
+  not generated: GPU memory). DISC21 micro-AP, R@1/@10, TPR @ 1/5 % FPR, per domain; val tunes, test
+  reports. Baseline = v1 engine under frozen policy 3.1.0 (`model/benchmarks/policy_v3.1.0.json`).
+- **Gate results (paintings, test):** v1 micro-AP 0.820 / TPR@1% 0.542 → shipped SSCD + DINOv2-S (w 0.8)
+  + 18 region crops **0.905 / 0.896**. PDQ (dihedral) replaces pHash. DINOv2-B = tie → ViT-S.
+  **ALIKED + LightGlue rejected** (+0.3 pp as a check; ORB retired, `local_match.py` unused).
+  CPU budget (`benchmark.latency components`): crops cost 0.4–3.6 s → CPU profile runs **no crops**
+  (`regions_cpu` = null), GPU profile 18 × 320. ONNX fp32 = PyTorch (no gain); dynamic int8 unusable.
+- **Policy 4.0.0** (`training/calibrate.py --keep-detectors`; detector thresholds unchanged): checks
+  `copy_exact` (PDQ bits) + `copy_semantic` replace phash / clip / orb. Benchmark test: paintings 97.2 %
+  copies flagged / 2.2 % genuine (v1 93.1 / 5.0); NFT genuine flagged **0 %** (v1 6.5 %), NFT copies
+  auto-failed 10.7 % (v1 0 %).
+- **On-chain index:** 48 Ethereum collections (Alchemy, cap 6,000), **275,882 tokens ingested,
+  269,816 fingerprinted** + 15,037 seed = **284,861 references** in pgvector (migrations 0003–0005,
+  halfvec + HNSW; 128 px thumbs in `storage/nft/thumbs/`, ~1.1 GB of HNSW graphs). Search p50 7 ms /
+  p95 15 ms (needs `shared_buffers` 1 GB: compose). Sync (`ingest sync`) ran ~3,900 blocks: no mint
+  in tracked collections (minted out), path covered by the fake-Alchemy test only.
+- **Live-index lessons (each fixed + re-measured):** shared HNSW graph found painting sources 51 % →
+  partial one-off index (0005) 100 %; SSCD-cosine member rule failed 36 % of genuine new punks →
+  pixel-identity rule (128 px NEAREST RGB, ≤ 13 px, 2× margin); PDQ HNSW missed 6 % → exact
+  in-memory PDQ (9 MB, 22–33 ms); PDQ quality gate blinded flat NFT art → gate for one-off works only.
+- **End-to-end (live index, n = 50/category):** genuine pass 83 % (v1 77 %), wrongly failed 3.5 % (v1 3.0 %),
+  v1-comparable forgeries stopped 84.9 % (v1 85.8 %); exact re-upload of an indexed Ethereum NFT
+  **98 % FAIL**; edited copies of collection NFTs still pass (documented limit). Latency: CPU 2 threads
+  **p50 1.10 s / p95 1.35 s**, GPU p50 0.83 s.
+- **Tests:** 140 fast pytest (+ `test_copy_engine.py` 7, `test_ingest.py` 6, pgvector index test), slow
+  test for the real engine; frontend shows v4 checks + on-chain matches; `start_mintgate.bat` launcher.
+- **Owner actions:** enable **Base mainnet** on the Alchemy app (dashboard → networks: the API returns
+  403), then add Base collections to `ingest/collections.py`; run `ingest sync` + `ingest embed --follow`
+  as services (Phase 7). The dev DB holds the index (~4 GB incl. thumbs): back it up before `docker
+  compose down -v`.
+- **For Phase 5/7:** deploy needs `pdqhash` built from source (no Linux wheel → `build-essential`),
+  SSCD weights via `benchmark.fetch_models` (SHA-256 pinned, not in git), Postgres `shared_buffers` ≥ 1 GB.
+  Recalibrate whenever the index grows a lot: thresholds from the 4k benchmark did not all transfer.

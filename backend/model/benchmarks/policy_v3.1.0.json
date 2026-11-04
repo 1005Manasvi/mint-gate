@@ -1,0 +1,159 @@
+{
+  "version": "3.1.0",
+  "weights": {
+    "resnet": 0.15,
+    "ai_detector": 0.4,
+    "copy_move": 0.15,
+    "clip": 0.15,
+    "phash": 0.1,
+    "orb": 0.05
+  },
+  "checks": {
+    "resnet": {
+      "label": "ResNet-18 forgery probability",
+      "review": 0.517,
+      "fail": 0.936,
+      "max_status": "REVIEW"
+    },
+    "ai_detector": {
+      "label": "AI-generated probability (CLIP probe + spectral)",
+      "review": 0.675,
+      "fail": 0.925
+    },
+    "phash": {
+      "label": "pHash distance to nearest protected work (sparse references)",
+      "review": 12,
+      "fail": 4,
+      "advisory": false
+    },
+    "orb": {
+      "label": "ORB geometric inliers vs nearest protected work (sparse references)",
+      "review": 13,
+      "fail": 481,
+      "advisory": false
+    },
+    "copy_move": {
+      "label": "Copy-move clone peak ratio",
+      "review": 3.8,
+      "fail": 6.0
+    },
+    "clip": {
+      "label": "CLIP copy score vs protected collection (density-relative)",
+      "review": 0.0586,
+      "fail": 0.0883
+    }
+  },
+  "score": {
+    "pass_min": 70,
+    "review_min": 40
+  },
+  "calibration": {
+    "n": 240,
+    "results": {
+      "copy_move": {
+        "auc": 0.8985,
+        "genuine_p5_p50_p95": [
+          1.0,
+          1.2505,
+          3.7994
+        ],
+        "copies_p5_p50_p95": [
+          1.19,
+          6.93,
+          151.1967
+        ],
+        "review": 3.79945,
+        "fail": 6.0,
+        "tpr_at_review": 0.6438,
+        "fpr_at_review": 0.05,
+        "tpr_at_fail": 0.5312,
+        "fpr_at_fail": 0.0156
+      },
+      "clip": {
+        "auc": 0.7196,
+        "genuine_p5_p50_p95": [
+          -0.0322,
+          0.0,
+          0.0399
+        ],
+        "copies_p5_p50_p95": [
+          0.0,
+          0.0,
+          0.146
+        ],
+        "review": 0.05859095156192779,
+        "fail": 0.08825466871261599,
+        "tpr_at_review": 0.6,
+        "fpr_at_review": 0.05,
+        "tpr_at_fail": 0.375,
+        "fpr_at_fail": 0.0167,
+        "per_domain": {
+          "nft": {
+            "auc": 0.5,
+            "genuine_flagged_at_review": 0.0,
+            "copies_caught_at_review": 0.0,
+            "copies_failed": 0.0
+          },
+          "painting": {
+            "auc": 0.9117,
+            "genuine_flagged_at_review": 0.05,
+            "copies_caught_at_review": 0.6,
+            "copies_failed": 0.375
+          }
+        }
+      },
+      "phash": {
+        "auc": 0.6932,
+        "genuine_p5_p50_p95": [
+          14.0,
+          18.0,
+          20.0
+        ],
+        "copies_p5_p50_p95": [
+          0.0,
+          16.0,
+          18.0
+        ],
+        "review": 12.0,
+        "fail": 4.38,
+        "tpr_at_review": 0.65,
+        "fpr_at_review": 0.0667,
+        "tpr_at_fail": 0.3417,
+        "fpr_at_fail": 0.0167
+      },
+      "orb": {
+        "auc": 0.6893,
+        "genuine_p5_p50_p95": [
+          0.0,
+          6.0,
+          21.1
+        ],
+        "copies_p5_p50_p95": [
+          0.0,
+          9.0,
+          1101.45
+        ],
+        "review": 12.549999999999969,
+        "fail": 479.3800000000009,
+        "tpr_at_review": 0.9667,
+        "fpr_at_review": 0.05,
+        "tpr_at_fail": 0.8333,
+        "fpr_at_fail": 0.0167
+      },
+      "resnet": {
+        "review": 0.517,
+        "fail": 0.936,
+        "genuine_fpr_at_review": 0.0505,
+        "genuine_fpr_at_fail": 0.0105,
+        "n": 951
+      },
+      "ai_detector": {
+        "review": 0.675,
+        "fail": 0.925,
+        "genuine_fpr_at_review": 0.0505,
+        "genuine_fpr_at_fail": 0.0105,
+        "n": 951
+      }
+    }
+  }
+}

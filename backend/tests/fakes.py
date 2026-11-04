@@ -50,19 +50,51 @@ class FakeClip:
         return (v / (np.linalg.norm(v) + 1e-8)).astype(np.float32)
 
 
-def tiny_index(clip):
-    """Two references: a generative-collection member and a protected painting."""
-    from detection import reference_index
-    from detection.hashing import phash_int
+class FakeSSCD:
+    """Stand-in for SSCD with the same contract (512-d, L2-normalised) built from a thumbnail."""
 
-    reference_index.ORIGINALS_DIR = FIXTURES  # "<file>"     seed collection
-    reference_index.REFERENCE_ART_DIR = FIXTURES  # "art/<file>" protected artworks
-    idx = reference_index.ReferenceIndex.__new__(reference_index.ReferenceIndex)
-    idx.files = ["punk.png", "art/painting.png"]
-    imgs = [fixture_image("punk.png"), fixture_image("painting.png")]
-    idx.phash = np.array([phash_int(im) for im in imgs], dtype=np.uint64)
-    idx.clip = np.stack([clip.encode_one(im) for im in imgs])
-    idx.nn_sim = np.array([0.99, 0.85], dtype=np.float32)  # dense collection / distinct painting
+    name, dim = "fake-sscd", 512
+
+    def encode(self, images, size=None):
+        return np.stack([FakeClip().encode_one(im) for im in images]) if images else np.zeros((0, 512), np.float32)
+
+    def encode_one(self, img):
+        return self.encode([img])[0]
+
+
+FAKE_COPY_PARAMS = {
+    "version": "fake-copy-engine",
+    "dino": None,
+    "sscd": {"alpha": 1.0, "beta": 0.0},
+    "fusion": {"w": 1.0, "mode": "sum"},
+    "regions": None,
+    "lightglue": False,
+    "retrieve_k": 50,
+    "crop_k": 5,
+    "verify_k": 10,
+    "pdq_max_bits": 31,
+    "pdq_min_quality": 50,
+    "evidence_min_inliers": 15,
+    "member_exact_min_sscd": 0.98,
+}
+
+
+def copy_engine():
+    """Real PDQ + scoring code, fake SSCD, no DINOv2 / LightGlue (no 100 MB weights in CI)."""
+    from detection.copy_engine import CopyEngine
+
+    bg = {"sscd": np.zeros((4, 512), np.float32)}
+    return CopyEngine(FAKE_COPY_PARAMS, models=(FakeSSCD(), None, None, bg))
+
+
+def tiny_copy_index(engine):
+    """Two references: a generative-collection member and a protected painting."""
+    from detection.copy_index import MemoryCopyIndex
+
+    idx = MemoryCopyIndex()
+    for name, member in (("punk.png", True), ("painting.png", False)):
+        idx.add(name if member else "art/" + name, engine.fingerprint(fixture_image(name)), FIXTURES / name, member)
+    idx.nn_sscd[:] = [0.99, 0.85]  # dense collection / distinct painting
     return idx
 
 
@@ -75,6 +107,7 @@ def make_pipeline():
     p.resnet = FakeResNet()
     p.ai = FakeAIDetector()
     p.clip = FakeClip()
-    p.index = tiny_index(p.clip)
+    p.copy = copy_engine()
+    p.index = tiny_copy_index(p.copy)
     p._lock = threading.Lock()
     return p

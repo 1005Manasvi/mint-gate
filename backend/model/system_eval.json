@@ -1,88 +1,116 @@
 {
   "n_per_category": 50,
-  "policy_version": "3.1.0",
-  "genuine_pass_rate": 0.77,
-  "genuine_wrongly_failed": 0.03,
-  "forgery_stopped_rate (REVIEW or FAIL)": 0.858,
-  "forgery_auto_failed_rate": 0.584,
+  "policy_version": "4.0.0",
+  "copy_engine": "copy-engine-1.0.0+gpu",
+  "genuine_pass_rate": 0.83,
+  "genuine_wrongly_failed": 0.035,
+  "forgery_stopped_rate (REVIEW or FAIL)": 0.827,
+  "forgery_auto_failed_rate": 0.555,
   "per_category": {
     "genuine_human_art": {
-      "PASS": 0.76,
-      "REVIEW": 0.12,
+      "PASS": 0.72,
+      "REVIEW": 0.16,
       "FAIL": 0.12,
-      "mean_score": 89.2
+      "mean_score": 87.1,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "genuine_photo": {
-      "PASS": 0.62,
-      "REVIEW": 0.38,
+      "PASS": 0.68,
+      "REVIEW": 0.32,
       "FAIL": 0.0,
-      "mean_score": 85.3
+      "mean_score": 85.4,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "genuine_new_punk": {
-      "PASS": 0.82,
-      "REVIEW": 0.18,
-      "FAIL": 0.0,
-      "mean_score": 94.5
+      "PASS": 0.94,
+      "REVIEW": 0.04,
+      "FAIL": 0.02,
+      "mean_score": 95.7,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "genuine_nft_collection": {
-      "PASS": 0.88,
-      "REVIEW": 0.12,
+      "PASS": 0.98,
+      "REVIEW": 0.02,
       "FAIL": 0.0,
-      "mean_score": 94.3
+      "mean_score": 95.4,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "ai_modern_generators": {
       "PASS": 0.0,
       "REVIEW": 0.12,
       "FAIL": 0.88,
-      "mean_score": 41.7
+      "mean_score": 43.3,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "ai_art_generators": {
       "PASS": 0.12,
-      "REVIEW": 0.42,
-      "FAIL": 0.46,
-      "mean_score": 58.4
+      "REVIEW": 0.44,
+      "FAIL": 0.44,
+      "mean_score": 57.5,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "ai_older_generators": {
-      "PASS": 0.16,
-      "REVIEW": 0.52,
+      "PASS": 0.18,
+      "REVIEW": 0.5,
       "FAIL": 0.32,
-      "mean_score": 59.8
+      "mean_score": 60.8,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "ai_unseen_flux": {
       "PASS": 0.0,
       "REVIEW": 0.24,
       "FAIL": 0.76,
-      "mean_score": 42.4
+      "mean_score": 44.1,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "exact_duplicate": {
       "PASS": 0.0,
       "REVIEW": 0.0,
       "FAIL": 1.0,
-      "mean_score": 77.4
+      "mean_score": 82.3,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "edited_copy_nft": {
-      "PASS": 0.94,
-      "REVIEW": 0.06,
+      "PASS": 1.0,
+      "REVIEW": 0.0,
       "FAIL": 0.0,
-      "mean_score": 94.7
+      "mean_score": 95.9,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "edited_copy_painting": {
-      "PASS": 0.04,
-      "REVIEW": 0.06,
-      "FAIL": 0.9,
-      "mean_score": 76.9
+      "PASS": 0.02,
+      "REVIEW": 0.26,
+      "FAIL": 0.72,
+      "mean_score": 74.6,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "copy_move_human_art": {
-      "PASS": 0.02,
-      "REVIEW": 0.2,
+      "PASS": 0.04,
+      "REVIEW": 0.18,
       "FAIL": 0.78,
-      "mean_score": 67.8
+      "mean_score": 66.7,
+      "blocked_as_existing_onchain_token": 0.0
     },
     "splice_human_art": {
       "PASS": 0.0,
       "REVIEW": 0.84,
       "FAIL": 0.16,
-      "mean_score": 65.2
+      "mean_score": 64.2,
+      "blocked_as_existing_onchain_token": 0.0
+    },
+    "exact_onchain_nft": {
+      "PASS": 0.0,
+      "REVIEW": 0.02,
+      "FAIL": 0.98,
+      "mean_score": 72.7,
+      "blocked_as_existing_onchain_token": 0.74
+    },
+    "edited_onchain_nft": {
+      "PASS": 0.54,
+      "REVIEW": 0.4,
+      "FAIL": 0.06,
+      "mean_score": 84.9,
+      "blocked_as_existing_onchain_token": 0.06
     }
   }
 }

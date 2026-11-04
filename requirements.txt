@@ -7,7 +7,13 @@ torchvision>=0.21
 numpy>=2
 Pillow>=12
 opencv-python>=4.9
-imagehash>=4.3
+imagehash>=4.3  # v1 baseline (benchmark only)
+# copy engine (Phase 4)
+pdqhash>=0.2.8
+kornia>=0.9
+onnx>=1.17
+onnxruntime>=1.20
+diffusers>=0.30  # benchmark only: img2img "re-generation" attack
 transformers>=5
 scikit-learn>=1.4
 matplotlib>=3.8

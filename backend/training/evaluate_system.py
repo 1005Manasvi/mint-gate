@@ -11,8 +11,10 @@ Forged / plagiarised uploads (should NOT pass):
   ai_older_generators   GenImage generators test split (SD 1.5, ADM, GLIDE, ...)
   ai_unseen_flux        Flux - a generator NEVER seen in training
   exact_duplicate       a protected work (NFT or painting) re-uploaded
-  edited_copy_nft       minted NFT cropped / recoloured / rotated / text + JPEG
+  edited_copy_nft       protected NFT cropped / recoloured / rotated / text + JPEG
   edited_copy_painting  protected museum/WikiArt painting, same edits
+  exact_onchain_nft     an indexed Ethereum NFT (on-chain index, Phase 4) re-uploaded
+  edited_onchain_nft    an indexed Ethereum NFT with the same edits
   copy_move_human_art   clone forgery of genuine human art
   splice_human_art      genuine human art with a region pasted from another image
 
@@ -29,15 +31,20 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from sqlalchemy import text
 
-from config import MODEL_DIR, PROJECT_DIR
+import db
+from config import INDEX_FILES, MODEL_DIR, PROJECT_DIR
+from detection.copy_index import resolve_image
 from detection.manipulations import copy_move, near_duplicate, splice
 from detection.pipeline import MintGatePipeline
 from detection.preprocessing import load_path
+from ingest.seed import is_collection_member, seed_path
 from training.realworld_data import load_manifest, open_image
 from training.split import load_split, paths
 
 DECISIONS = ("PASS", "REVIEW", "FAIL")
+ONCHAIN_DUP_BITS = 10
 GENUINE = ("genuine_human_art", "genuine_photo", "genuine_new_punk", "genuine_nft_collection")
 
 
@@ -69,11 +76,23 @@ def main():
         r["file"].removeprefix("local_authentic_").removesuffix(".jpg") for r in man if r["generator"] == "cryptopunk"
     }
     new_punks = [p for p in paths(load_split(), "authentic", "test") if p.stem not in used_punks]
-    minted = range(len(pipe.index))
-    art_refs = [i for i, f in enumerate(pipe.index.files) if f.startswith("art/") and not f.startswith("art/nft_")]
-    nft_refs = [
-        i for i, f in enumerate(pipe.index.files) if f.startswith("art/nft_") or not f.startswith(("art/", "minted/"))
-    ]
+    # Protected references = the seed collection (now searched through pgvector with everything else)
+    seed = [f for f in json.loads(INDEX_FILES.read_text()) if not f.startswith("minted/")]
+    art_refs = [f for f in seed if f.startswith("art/") and not is_collection_member(f)]
+    nft_refs = [f for f in seed if is_collection_member(f)]
+
+    def ref(name):
+        return load_path(seed_path("seed/" + name))
+
+    with db.session() as s:
+        onchain = [
+            r[0]
+            for r in s.execute(
+                text(
+                    "SELECT image_uri FROM reference_items WHERE source = 'alchemy' AND status = 'ready' ORDER BY random() LIMIT 2000"
+                )
+            )
+        ]
     n = args.n
 
     gens = {
@@ -85,25 +104,36 @@ def main():
         "ai_art_generators": lambda: open_image(rng.choice(ai_art)),
         "ai_older_generators": lambda: open_image(rng.choice(ai_photo)),
         "ai_unseen_flux": lambda: open_image(rng.choice(unseen)),
-        "exact_duplicate": lambda: load_path(pipe.index.path(rng.choice(minted))),
-        "edited_copy_nft": lambda: near_duplicate(load_path(pipe.index.path(rng.choice(nft_refs))), rng),
-        "edited_copy_painting": lambda: near_duplicate(load_path(pipe.index.path(rng.choice(art_refs))), rng),
+        "exact_duplicate": lambda: ref(rng.choice(seed)),
+        "edited_copy_nft": lambda: near_duplicate(ref(rng.choice(nft_refs)), rng),
+        "edited_copy_painting": lambda: near_duplicate(ref(rng.choice(art_refs)), rng),
         "copy_move_human_art": lambda: copy_move(open_image(rng.choice(human_art)), rng),
         "splice_human_art": lambda: splice(
             open_image(rng.choice(human_art)), open_image(rng.choice(human_art + photos)), rng
         ),
     }
 
+    if onchain:
+        thumb = lambda: load_path(resolve_image("alchemy", rng.choice(onchain)))  # noqa: E731
+        gens["exact_onchain_nft"] = thumb
+        gens["edited_onchain_nft"] = lambda: near_duplicate(thumb(), rng)
+
     results = {}
     for cat, gen in gens.items():
         counts = {d: 0 for d in DECISIONS}
-        scores = []
+        scores, onchain_dup = [], 0
         for _ in range(n):
             report, _ = pipe.analyse(png(gen()))
             counts[report["decision"]] += 1
             scores.append(report["score"])
+            ex = report["checks"]["copy_exact"]
+            # The upload IS an indexed on-chain token (the HF collection datasets are real tokens):
+            # blocking it is correct, so it is counted, not hidden.
+            if report["decision"] != "PASS" and ex["value"] <= ONCHAIN_DUP_BITS and ":" in str(ex.get("nearest")):
+                onchain_dup += 1
         results[cat] = {d: round(counts[d] / n, 3) for d in DECISIONS}
         results[cat]["mean_score"] = round(sum(scores) / n, 1)
+        results[cat]["blocked_as_existing_onchain_token"] = round(onchain_dup / n, 3)
         print(
             f"{cat:22s} "
             + "  ".join(f"{d} {results[cat][d]:6.1%}" for d in DECISIONS)
@@ -115,6 +145,7 @@ def main():
     summary = {
         "n_per_category": n,
         "policy_version": pipe.policy.version,
+        "copy_engine": pipe.copy.version,
         "genuine_pass_rate": round(sum(results[c]["PASS"] for c in GENUINE) / len(GENUINE), 3),
         "genuine_wrongly_failed": round(sum(results[c]["FAIL"] for c in GENUINE) / len(GENUINE), 3),
         "forgery_stopped_rate (REVIEW or FAIL)": round(sum(1 - results[c]["PASS"] for c in forged) / len(forged), 3),

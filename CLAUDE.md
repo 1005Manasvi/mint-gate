@@ -7,14 +7,28 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 **Always read `docs/phases/PROGRESS.md` first** and update it when a phase finishes.
 
 ## Architecture (current state)
-- `backend/detection/`: preprocessing → 6 checks → `policy.py` (PASS / REVIEW / FAIL).
+- `backend/detection/`: preprocessing → 5 checks → `policy.py` (PASS / REVIEW / FAIL), policy **v4.0.0**.
   - AI detector = CLIP ViT-B/32 linear probe (`ai_detector.py`, JSON weights). This is the main AI signal.
   - ResNet-18 (`resnet_classifier.py`, `model/best_model.pt`) is **REVIEW-only**
     (`max_status`): it generalises poorly to unseen NFT collections.
-  - Copy detection: `reference_index.py` (pHash + CLIP + nearest-neighbour density) and
-    `feature_match.py` (ORB). Generative-collection members (`/`-less names = CryptoPunks,
-    `art/nft_*`) are protected against **exact copies only**.
+  - Copy detection (Phase 4): `copy_engine.py` = PDQ (`copy_exact`, dihedral) + SSCD/DINOv2-S
+    fusion + 18 SSCD region crops, density-relative (`copy_semantic`); params `model/copy_engine.json`
+    are written by `benchmark.copydet evaluate` (val-tuned). Index: `copy_index.py` (`PgCopyIndex` =
+    pgvector HNSW on `reference_items`, one-off works in their own partial HNSW indexes [0005];
+    PDQ searched **exactly** from an in-memory cache; `MemoryCopyIndex` for tests). Collection
+    members count only as exact copies, and only if pixel-identical too (`member_max_diff_px`, 128 px
+    NEAREST RGB; CryptoPunks siblings are PDQ-close). Profiles: GPU = 18 SSCD region crops, CPU = none
+    (`regions_cpu`, 1.5 s budget). LightGlue (`local_match.py`) was benchmarked and rejected: unused. v1 `reference_index.py` / `hashing.py` / `feature_match.py` / `training/build_index.py`
+    are kept only for the benchmark baseline (`build_index` still writes `index/files.json` = seed list).
   - `copy_move.py`: block matching with shift-vector voting.
+- **Benchmark + on-chain index (Phase 4):** `backend/benchmark/` (`build_copydet`, `copydet` steps
+  features / orb / lightglue / evaluate / latency, `export_onnx`; data in `data/benchmark/copydet/`,
+  results `model/benchmarks/`; the v1 baseline uses the frozen `model/benchmarks/policy_v3.1.0.json`).
+  `backend/ingest/` (`python -m ingest fetch|seed|embed|sync|stats`): Alchemy NFT API → 48 Ethereum
+  collections (cap 6,000 each, `ingest/collections.py`), spool → `embed` (GPU) → 128 px thumbs in
+  `storage/nft/thumbs/`; `sync` polls `Transfer(from=0)` in 10-block windows (free tier). Tables
+  `nft_collections` + `reference_items` (migrations 0003 / 0004: PDQ `bit(256)`, SSCD / DINOv2 /
+  fused `halfvec`, `nn_*`, `collection_member`, `attributes`, `trait_hash`, `status`).
 - **Data layer (Phase 2):** Postgres 16 + pgvector and Redis 7 (`docker-compose.yml`).
   `backend/db/` (SQLAlchemy 2 models, `repo.py` = all SQL, `migrate_json.py` legacy import),
   `backend/migrations/` (Alembic; hand-written revisions, `test_models_match_migrations` guards drift).
@@ -56,7 +70,7 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - Training: `backend/training/` (fetch_realworld, fetch_v2, train_cnn, train_ai_detector,
   build_index, calibrate, evaluate_system, independent_check). Data in
   `backend/data/realworld/` (20,309 images, manifest.json); held-out generator = Flux.
-- Results: README.md and PROJECT_REPORT.md. Policy v3.1.0. Tests: `backend/tests/` (pytest), `Blockchain/test/` (Hardhat) + `Blockchain/test/foundry/`; security review: `docs/security.md`.
+- Results: README.md, PROJECT_REPORT.md, `docs/models.md` (model register + benchmark). Policy v4.0.0. Tests: `backend/tests/` (pytest), `Blockchain/test/` (Hardhat) + `Blockchain/test/foundry/`; security review: `docs/security.md`.
 
 ## Commands (Windows; venv = Python 3.12 + CUDA torch 2.6)
 - Python: `venv\Scripts\python.exe` (run from `backend/` as `-m training.xxx`).
@@ -87,6 +101,18 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - CI: `.github/workflows/ci.yml` (python, contracts [+ chain pytest], foundry, slither, e2e, lint). Accepted findings: `docs/security.md`.
 
 ## Hard-won gotchas (do not relearn these)
+- **Phase 4:** SSCD TorchScript returns a constant vector in fp16: run it fp32 (SHA-256 pinned).
+  SD 1.5 img2img overflows the 4 GB GPU into shared memory after a while (10× slower): restart it.
+  The laptop **sleeps** during long jobs unless sleep-on-AC is off. Bulk pgvector loads: drop the
+  HNSW indexes, load, recreate. Alchemy free tier: `eth_getLogs` max 10 blocks; Base mainnet must be
+  enabled on the Alchemy app (dashboard). `pdqhash` has no Linux wheel (sdist: needs a compiler).
+  Raw-SQL halfvec values come back as text: parse with `copy_index._array`. Postgres needs
+  `shared_buffers` ≥ 1 GB for the 1.2 GB of HNSW graphs (compose `command:`), else p95 is 130-300 ms.
+  One HNSW graph over 280k clustered NFTs found painting sources only 51 % of the time (partial
+  indexes fix it); HNSW over PDQ bits misses ~6 % (hence the exact cache). Thresholds calibrated on
+  the 4k-reference benchmark did NOT transfer to the 285k index (SSCD member rule failed 36 % of
+  genuine punks): always re-check with `training.evaluate_system` against the live index.
+  Bulk `UPDATE`s of reference_items: drop the HNSW indexes first (`ingest.embed.drop_hnsw`).
 - **Secrets**: `backend/.env`, `Blockchain/.env`. **Never print or read their values**; check
   presence and format only. Both are git-ignored. `Blockchain/scripts/.env` is an OLD wallet key
   (the owner decides whether to delete it).

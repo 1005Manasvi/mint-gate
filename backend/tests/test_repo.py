@@ -5,12 +5,12 @@ import time
 
 import numpy as np
 import pytest
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from chain.eip712 import Verdict
 from db import repo
-from db.models import ChainEvent, ReferenceItem
+from db.models import ChainEvent
 from tests.conftest import ARTIST
 
 REPORT = {
@@ -115,30 +115,46 @@ def test_chain_events_are_unique(clean_db):
         s.add(ChainEvent(**ev))
 
 
-def test_reference_items_phash_and_vector(clean_db):
-    high = 0xF0F0_0000_0000_00FF  # top bit set: does not fit a signed BIGINT unconverted
-    a = np.zeros(512, dtype=np.float32)
-    a[0] = 1.0
-    b = np.zeros(512, dtype=np.float32)
-    b[1] = 1.0
+def test_copy_index_on_pgvector(clean_db):
+    """Fingerprints round-trip through bit(256) / halfvec; PDQ, SSCD and fused KNN search work."""
+    from detection.copy_engine import Fingerprint
+    from detection.copy_index import PgCopyIndex
+    from ingest.embed import load_fingerprint, store_fingerprint, update_nn
+
+    def unit(i, j=None):
+        v = np.zeros(512, np.float32)
+        v[i] = 1.0
+        if j is not None:
+            v[j] = 1.0
+        return v / np.linalg.norm(v)
+
+    def fpr(i, pdq_byte, j=None):  # SSCD only (no DINOv2): copy_vec = sscd
+        return Fingerprint(bytes([pdq_byte]) + b"\0" * 31, 90, None, unit(i, j))
+
     with clean_db.session() as s:
-        repo.add_reference(s, "mintgate", "minted/a.png", phash=high, embedding=a.tolist())
-        repo.add_reference(s, "mintgate", "minted/b.png", phash=1, embedding=b.tolist())
+        for uri in ("minted/a.png", "minted/b.png", "minted/c.png"):
+            repo.add_reference(s, "mintgate", uri)
         repo.add_reference(s, "mintgate", "minted/a.png")  # duplicate URI: ignored
-        repo.add_reference(s, "mintgate-v1", "minted/c.png")  # fingerprint filled later by a worker
     with clean_db.session() as s:
-        rows = repo.references_after(s, 0)
+        rows = repo.references_after(s, 0, sources=("mintgate",))
         assert [r.image_uri for r in rows] == ["minted/a.png", "minted/b.png", "minted/c.png"]
-        assert repo.to_unsigned64(rows[0].phash) == high
-        assert rows[2].embedding is None
-        repo.set_fingerprint(s, rows[2].id, 7, a.tolist())
-        q = (0.9 * a + 0.1 * b).tolist()
-        nearest = s.scalars(select(ReferenceItem.image_uri).order_by(ReferenceItem.embedding.cosine_distance(q)))
-        assert list(nearest)[:2] == ["minted/a.png", "minted/c.png"]  # pgvector cosine search
-        assert repo.references_after(s, rows[1].id)[0].phash == 7
-
-
-# ---- legacy JSON migration ---------------------------------------------------------------------
+        assert {r.status for r in rows} == {"pending"}
+        store_fingerprint(s, rows[0].id, fpr(0, 0xFF), 1.0)
+        store_fingerprint(s, rows[1].id, fpr(1, 0x00), 1.0)
+        store_fingerprint(s, rows[2].id, fpr(0, 0x0F, j=2), 1.0)  # close to a
+        update_nn(s, [r.id for r in rows])
+    idx = PgCopyIndex(fused=False)
+    near = idx.exact(np.frombuffer(bytes([0xFE]) + b"\0" * 31, np.uint8)[None], 4)
+    assert [(r.name, d) for r, d in near] == [("minted/a.png", 1)]
+    q = unit(0)[:512]
+    assert [r.name for r in idx.knn_sscd(q, 2)] == ["minted/a.png", "minted/c.png"]
+    assert [r.name for r in idx.knn(q, 1)] == ["minted/a.png"]
+    with clean_db.session() as s:
+        a, b, c = repo.references_after(s, 0)
+        assert a.status == "ready" and np.isclose(a.nn_sscd, 1 / np.sqrt(2), atol=1e-3)  # its neighbour is c
+        assert np.isclose(b.nn_sscd, 0.0, atol=1e-3)
+        back = load_fingerprint(a)
+        assert back.pdq == bytes([0xFF]) + b"\0" * 31 and np.allclose(back.sscd, q, atol=1e-3)
 
 
 def _legacy(rid, status, mint=None, review=None):

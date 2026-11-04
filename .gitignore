@@ -26,3 +26,7 @@ backend/storage/
 # test / lint caches
 .pytest_cache/
 .ruff_cache/
+# copy-engine weights: fetched by `python -m benchmark.fetch_models` / built by `benchmark.export_onnx`
+backend/model/copydet/*.pt
+backend/model/copydet/*.part
+backend/model/copydet/*.onnx

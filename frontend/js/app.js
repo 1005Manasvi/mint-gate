@@ -5,15 +5,16 @@ import { el, explorerLink, link, msg, short, tokenPath } from "./ui.js";
 import * as wallet from "./wallet.js";
 
 const $ = (id) => document.getElementById(id);
-const CHECK_ORDER = ["resnet", "ai_detector", "copy_move", "phash", "clip", "orb"];
+const CHECK_ORDER = ["resnet", "ai_detector", "copy_move", "copy_exact", "copy_semantic", "copy_geometric"];
 const CHECK_TITLE = {
   resnet: "ResNet-18",
   ai_detector: "GAN / AI detector",
   copy_move: "Copy-move",
-  phash: "Perceptual hash",
-  clip: "CLIP similarity",
-  orb: "ORB matching",
+  copy_exact: "Exact copy (PDQ)",
+  copy_semantic: "Edited copy (SSCD)",
+  copy_geometric: "Partial copy (LightGlue)",
 };
+const CHAIN_NAMES = { 1: "Ethereum", 8453: "Base" };
 const RISK_COLOR = (r, advisory) =>
   advisory && r >= 0.5 ? "#6366f1" : r >= 1 ? "var(--fail)" : r >= 0.5 ? "var(--review)" : "var(--pass)";
 const STATUS_TEXT = {
@@ -384,14 +385,16 @@ $("analyzeBtn").addEventListener("click", async () => {
 // ---------------- report rendering ----------------
 function fmtValue(name, v) {
   if (name === "resnet" || name === "ai_detector") return `${(v * 100).toFixed(1)}%`;
-  if (name === "clip") return v.toFixed(3);
+  if (name === "copy_semantic") return v.toFixed(3);
+  if (name === "copy_exact") return `${v} bits`;
+  if (name === "copy_geometric") return `${v} inliers`;
   if (name === "copy_move") return `${Number(v).toFixed(2)}×`;
   return String(v);
 }
 
 function renderChecks(checks) {
   $("checks").replaceChildren(
-    ...CHECK_ORDER.map((k) => {
+    ...CHECK_ORDER.filter((k) => checks[k]).map((k) => {
       const c = checks[k];
       const bar = el("div", { className: "riskbar", role: "presentation" }, el("div"));
       bar.firstChild.style.width = `${Math.max(3, c.risk * 100)}%`;
@@ -399,7 +402,7 @@ function renderChecks(checks) {
       const extra = [];
       if (c.nearest) extra.push(`nearest: ${c.nearest}`);
       if (c.shift) extra.push(`shift (${c.shift.join(", ")}), ${c.votes} block pairs`);
-      if (c.uploaded_phash) extra.push(`pHash ${c.uploaded_phash}`);
+      if (c.uploaded_pdq) extra.push(`PDQ ${c.uploaded_pdq.slice(0, 16)}…`);
       return el(
         "div",
         { className: "check" },
@@ -458,26 +461,30 @@ function renderSimilar(list) {
     return;
   }
   $("similar").replaceChildren(
-    ...list.map((s) =>
-      el(
+    ...list.map((s) => {
+      const label = s.contract
+        ? `${CHAIN_NAMES[s.chain_id] || `chain ${s.chain_id}`} · ${short(s.contract)} #${s.token_id}`
+        : s.reference;
+      return el(
         "div",
         { className: "sim" },
         el("img", {
-          src: `/api/reference/${s.filename.split("/").map(encodeURIComponent).join("/")}`,
-          alt: `Similar work ${s.filename}`,
-          title: s.filename,
+          src: `/api/reference/${s.image.split("/").map(encodeURIComponent).join("/")}`,
+          alt: `Similar work ${label}`,
+          title: label,
         }),
-        el("b", {}, `CLIP ${s.clip_similarity.toFixed(3)}`),
-        `pHash ${s.phash_distance} · ORB ${s.orb_inliers}`,
-      ),
-    ),
+        el("b", {}, `copy score ${s.copy_score.toFixed(3)}`),
+        `${s.inliers} inliers${s.collection_member ? " · collection" : ""}`,
+        el("small", {}, label),
+      );
+    }),
   );
 }
 
 function renderEvidence(ev) {
   $("cmHeat").src = `data:image/png;base64,${ev.copy_move_heatmap}`;
-  $("orbFig").hidden = !ev.orb_matches;
-  if (ev.orb_matches) $("orbImg").src = `data:image/png;base64,${ev.orb_matches}`;
+  $("matchFig").hidden = !ev.copy_matches;
+  if (ev.copy_matches) $("matchImg").src = `data:image/png;base64,${ev.copy_matches}`;
 }
 
 function renderProvenance(r) {

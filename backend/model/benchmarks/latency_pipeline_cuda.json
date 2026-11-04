@@ -1,0 +1,9 @@
+{
+  "device": "cuda",
+  "threads": 8,
+  "uploads": 30,
+  "end_to_end": {
+    "p50_ms": 834.3,
+    "p95_ms": 1238.6
+  }
+}

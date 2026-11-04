@@ -1,0 +1,39 @@
+{
+  "version": "copy-engine-1.0.0",
+  "sscd": {
+    "alpha": 1.0,
+    "beta": 0.5
+  },
+  "dino": "dinov2-small",
+  "fusion": {
+    "w": 0.8,
+    "mode": "sum"
+  },
+  "regions": {
+    "d": 0.0,
+    "variant": "18x320",
+    "sizes": [
+      0.5,
+      0.7
+    ],
+    "steps": 3,
+    "px": 320
+  },
+  "regions_cpu": null,
+  "lightglue": false,
+  "bg_k": 10,
+  "retrieve_k": 50,
+  "crop_k": 5,
+  "verify_k": 10,
+  "pdq_max_bits": 31,
+  "pdq_min_quality": 50,
+  "evidence_min_inliers": 15,
+  "collection_semantic": false,
+  "collection_geometric": false,
+  "benchmark": "model/benchmarks/copydet.json",
+  "dinov2-small": {
+    "alpha": 0.5,
+    "beta": 0
+  },
+  "member_max_diff_px": 13
+}

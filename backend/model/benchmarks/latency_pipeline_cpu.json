@@ -1,0 +1,9 @@
+{
+  "device": "cpu",
+  "threads": 2,
+  "uploads": 30,
+  "end_to_end": {
+    "p50_ms": 1102.5,
+    "p95_ms": 1353.5
+  }
+}

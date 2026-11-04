@@ -176,7 +176,7 @@ def database():
 
 
 TABLES = (
-    "audit_log, reference_items, disputes, tokens, chain_events, indexer_cursors, attestations, reports, "
+    "audit_log, reference_items, nft_collections, disputes, tokens, chain_events, indexer_cursors, attestations, reports, "
     "submissions, artists"
 )
 

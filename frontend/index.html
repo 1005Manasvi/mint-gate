@@ -68,9 +68,8 @@
           <li data-step="resnet">ResNet-18 classification</li>
           <li data-step="ai_detector">GAN / AI-generated detection <small>CLIP probe + spectrum</small></li>
           <li data-step="copy_move">Copy-move detection</li>
-          <li data-step="phash">Perceptual hashing</li>
-          <li data-step="clip">CLIP semantic similarity</li>
-          <li data-step="orb">ORB feature matching <small>RANSAC verified</small></li>
+          <li data-step="copy_exact">Exact-copy hash <small>PDQ, mirrored + rotated</small></li>
+          <li data-step="copy_semantic">Copy search <small>SSCD + DINOv2, region crops, vs protected works + on-chain NFTs</small></li>
           <li data-step="policy">Mint-Gate policy engine</li>
           <li data-step="chain">Verdict attestation <small>EIP-712, signed for your wallet</small></li>
         </ol>
@@ -102,7 +101,7 @@
           <h2>Visual evidence</h2>
           <div class="evidence">
             <figure><img id="cmHeat" alt="Copy-move heatmap"><figcaption>Copy-move heatmap (cloned blocks in red)</figcaption></figure>
-            <figure id="orbFig" hidden><img id="orbImg" alt="ORB keypoint matches"><figcaption>ORB inlier matches vs nearest minted NFT</figcaption></figure>
+            <figure id="matchFig" hidden><img id="matchImg" alt="Keypoint matches with the nearest protected work"><figcaption>LightGlue inlier matches vs the nearest protected work</figcaption></figure>
           </div>
         </div>
       </div>

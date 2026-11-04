@@ -1,0 +1,47 @@
+{
+  "queries": 600,
+  "copies": 284,
+  "threads": 2,
+  "sscd": {
+    "torch_micro_ap": 0.4481,
+    "fp32": {
+      "file_mb": 98.2,
+      "cos_vs_torch_mean": 0.99999,
+      "cos_vs_torch_min": 0.99996,
+      "micro_ap": 0.448,
+      "usable": true,
+      "p50_ms": 188.2,
+      "p95_ms": 211.4
+    },
+    "int8": {
+      "file_mb": 24.8,
+      "cos_vs_torch_mean": 0.90984,
+      "cos_vs_torch_min": 0.6135,
+      "micro_ap": 0.457,
+      "usable": true,
+      "p50_ms": 3800.0,
+      "p95_ms": 3962.1
+    }
+  },
+  "dinov2-small": {
+    "torch_micro_ap": 0.3421,
+    "fp32": {
+      "file_mb": 88.4,
+      "cos_vs_torch_mean": 1.0,
+      "cos_vs_torch_min": 0.99993,
+      "micro_ap": 0.3424,
+      "usable": true,
+      "p50_ms": 227.5,
+      "p95_ms": 249.5
+    },
+    "int8": {
+      "file_mb": 24.2,
+      "cos_vs_torch_mean": 0.95949,
+      "cos_vs_torch_min": 0.77933,
+      "micro_ap": 0.3342,
+      "usable": false,
+      "p50_ms": 206.0,
+      "p95_ms": 223.9
+    }
+  }
+}
