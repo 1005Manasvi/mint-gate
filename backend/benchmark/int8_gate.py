@@ -61,9 +61,12 @@ def main():
         del bb
     th16 = ab.thresholds(p16_rw[val_gen])
     th8 = ab.thresholds(p8_val)
-    out = {"thresholds_fp16": th16, "thresholds_int8": th8,
-           "max_abs_prob_diff_oos": round(float(np.abs(p8_oos - p16_oos).max()), 4),
-           "mean_abs_prob_diff_oos": round(float(np.abs(p8_oos - p16_oos).mean()), 4)}
+    out = {
+        "thresholds_fp16": th16,
+        "thresholds_int8": th8,
+        "max_abs_prob_diff_oos": round(float(np.abs(p8_oos - p16_oos).max()), 4),
+        "mean_abs_prob_diff_oos": round(float(np.abs(p8_oos - p16_oos).mean()), 4),
+    }
     for half in ("select", "report"):
         m = D.sel == half
         out[half] = {

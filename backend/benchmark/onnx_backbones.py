@@ -16,8 +16,6 @@ import time
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-
-
 def main():
     import numpy as np
     import onnxruntime as ort
@@ -49,9 +47,16 @@ def main():
         m = M(bb).eval()
         px = bb.pixels(imgs[:1])
         path = BACKBONE_DIR / key / "vision.onnx"
-        torch.onnx.export(m, (px,), str(path), input_names=["pixel_values"], output_names=["embedding"],
-                          dynamic_axes={"pixel_values": {0: "n"}, "embedding": {0: "n"}}, opset_version=17,
-                          dynamo=False)
+        torch.onnx.export(
+            m,
+            (px,),
+            str(path),
+            input_names=["pixel_values"],
+            output_names=["embedding"],
+            dynamic_axes={"pixel_values": {0: "n"}, "embedding": {0: "n"}},
+            opset_version=17,
+            dynamo=False,
+        )
         man_path = BACKBONE_DIR / key / "manifest.json"
         man = json.loads(man_path.read_text())
         man["onnx_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
@@ -70,10 +75,13 @@ def main():
             b = sess.run(None, {"pixel_values": p.numpy()})[0][0]
             t_ort.append((time.perf_counter() - t) * 1000)
             cos.append(float(a @ b))
-        out[key] = {"min_cosine": round(min(cos), 6), "pytorch_ms_p50": round(float(np.median(t_pt[1:])), 1),
-                    "onnx_ms_p50": round(float(np.median(t_ort[1:])), 1),
-                    "pytorch_ms_p95": round(float(np.percentile(t_pt[1:], 95)), 1),
-                    "onnx_ms_p95": round(float(np.percentile(t_ort[1:], 95)), 1)}
+        out[key] = {
+            "min_cosine": round(min(cos), 6),
+            "pytorch_ms_p50": round(float(np.median(t_pt[1:])), 1),
+            "onnx_ms_p50": round(float(np.median(t_ort[1:])), 1),
+            "pytorch_ms_p95": round(float(np.percentile(t_pt[1:], 95)), 1),
+            "onnx_ms_p95": round(float(np.percentile(t_ort[1:], 95)), 1),
+        }
         print(key, out[key], flush=True)
         del bb, sess
     (MODEL_DIR / "benchmarks" / "onnx_backbones.json").write_text(json.dumps(out, indent=2))

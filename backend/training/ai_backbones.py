@@ -322,7 +322,9 @@ def evaluate(keys, permissive=False, extras=False):
         r["beats_baseline"] = bool(c["balanced_acc_at_review"]["ci95"][0] > 0 and c["auc"]["ci95"][1] >= 0)
     meta = {k: v for k, v in results.items() if k.startswith("_")}
     cands = {k: v for k, v in results.items() if not k.startswith("_")}
-    out = OUT.with_name("ai_detector_permissive.json" if permissive else "ai_detector_extras.json" if extras else OUT.name)
+    out = OUT.with_name(
+        "ai_detector_permissive.json" if permissive else "ai_detector_extras.json" if extras else OUT.name
+    )
     OUT.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps(

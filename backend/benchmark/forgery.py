@@ -79,8 +79,13 @@ def fetch(zip_path=None):
     digest = hashlib.sha256(WEIGHTS.read_bytes()).hexdigest()
     (WEIGHTS.parent / "manifest.json").write_text(
         json.dumps(
-            {"file": WEIGHTS.name, "sha256": digest, "source": WEIGHTS_URL, "source_sha256": src_digest,
-             "licence": "GRIP-UNINA non-commercial"},
+            {
+                "file": WEIGHTS.name,
+                "sha256": digest,
+                "source": WEIGHTS_URL,
+                "source_sha256": src_digest,
+                "licence": "GRIP-UNINA non-commercial",
+            },
             indent=2,
         )
     )

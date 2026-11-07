@@ -48,16 +48,24 @@ def main():
             (IMG_DIR / f"{key}.jpg").write_bytes(normalise(Image.open(io.BytesIO(data))))
         except Exception:
             return
-        recs.append({"file": f"{key}.jpg", "label": "authentic", "source": source, "licence": licence,
-                     "generator": "human_art" if source == "artbench_pd" else "real_photo",
-                     "split": "val" if rng.random() < 0.15 else "train"})
+        recs.append(
+            {
+                "file": f"{key}.jpg",
+                "label": "authentic",
+                "source": source,
+                "licence": licence,
+                "generator": "human_art" if source == "artbench_pd" else "real_photo",
+                "split": "val" if rng.random() < 0.15 else "train",
+            }
+        )
 
     fs = HfFileSystem()
-    pf = pq.ParquetFile(fs.open(f"datasets/{ARTBENCH}/data/train-00000-of-00003-4c3fdb0c6fcc316c.parquet", "rb",
-                                block_size=1 << 24))
+    pf = pq.ParquetFile(
+        fs.open(f"datasets/{ARTBENCH}/data/train-00000-of-00003-4c3fdb0c6fcc316c.parquet", "rb", block_size=1 << 24)
+    )
     got = 0
     for batch in pf.iter_batches(batch_size=64, columns=["image"]):
-        for i, r in enumerate(batch.to_pylist()):
+        for r in batch.to_pylist():
             if got >= args.paintings:
                 break
             add(f"artbench_{got}", r["image"]["bytes"], "artbench_pd", "public domain (MIT card)")
@@ -67,8 +75,11 @@ def main():
     print("paintings", got, flush=True)
 
     p = hf_hub_download(COCO, "data/train-00000-of-00001-0084e041f1902997.parquet", repo_type="dataset")
-    rows = [r for r in pq.read_table(p, columns=["license", "coco_url", "image_id"]).to_pylist()
-            if r["license"] in COCO_OK_LICENCES]
+    rows = [
+        r
+        for r in pq.read_table(p, columns=["license", "coco_url", "image_id"]).to_pylist()
+        if r["license"] in COCO_OK_LICENCES
+    ]
     http = requests.Session()
 
     def get(r):
