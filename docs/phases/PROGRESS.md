@@ -239,5 +239,7 @@ and anything the next phase must know. Keep entries brief: this file is read at 
   ONNX Runtime export (`benchmark/onnx_backbones.py`, `MINTGATE_CPU_ONNX=1`, −180 ms) crashes next to the copy
   engine on Windows: verify on Linux. Deploy needs `training.ai_backbones fetch` (+ `benchmark.forgery fetch`
   for the GPU profile), `c2pa-python`, `invisible-watermark`; `C2PA_TRUST_ANCHORS` for positive evidence.
-  The SD 1.5 HF cache (5.2 GB) is still present (owner's call). The laptop's commit memory is the bottleneck
+  Owner decisions (2026-11-07): keep the new detector on CPU despite the budget (verify ONNX on Linux in
+  Phase 7); portfolio-only licensing. The SD 1.5 HF cache was deleted: `benchmark.build_copydet --regen`
+  needs `huggingface-cli download runwayml/stable-diffusion-v1-5` first (it loads with local_files_only). The laptop's commit memory is the bottleneck
   for long jobs (see CLAUDE.md gotchas).
