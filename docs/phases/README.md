@@ -16,6 +16,7 @@ Alchemy/Pinata free tiers, GitHub Actions.
 | [3](phase-3-wallet-minting.md) | **Wallet UX** | Sign-In with Ethereum, artist-signed submissions, mint from the artist's own wallet, tx tracking | 1 chat |
 | [4](phase-4-onchain-index.md) | **Modern plagiarism engine + on-chain DB** | Copy-detection benchmark; PDQ + SSCD/DINOv2 fusion + ALIKED/LightGlue verification; ~200k real NFTs (Ethereum + Base) in pgvector; live sync; trait duplicates | 2 chats |
 | [5](phase-5-provenance-signals.md) | Modern AI detection + forensics | SigLIP 2 probe (benchmark-gated), TruFor manipulation localisation, C2PA, AI watermarks, reverse search, real forgery datasets, 95 % CIs | 2 chats |
+| [5b](phase-5b-nft-datasets.md) | NFT-native evaluation data | Real copymint collections (RR/BAYC, CryptoPhunks, PHAYC) and real AI-generated NFT collections from the chain; per-collection results with 95 % CIs | 1 chat |
 | [6](phase-6-disputes-governance.md) | **Disputes + governance** | Report → evidence on IPFS → reviewer bond → on-chain resolution; Safe multisig admin; public provenance explorer | 1–2 chats |
 | [7](phase-7-deploy-ops.md) | Production | Azure Container Apps + Azure Postgres + Key Vault, monitoring, load test, docs, demo video | 1 chat |
 

@@ -250,3 +250,6 @@ and anything the next phase must know. Keep entries brief: this file is read at 
 - `DISCORD_WEBHOOK_URL` set in `backend/.env` (format checked). Alerts: disputes + REVIEW items (env switches).
 - PolicyRegistry behind a TimelockController (1 h), proposer = the Safe.
 - Balances: Sepolia 0.251 ETH, Base Sepolia 0.025 ETH (bridged).
+- **Next: Phase 5b** (`phase-5b-nft-datasets.md`, decided 2026-11-07, before Phase 6): Phase 5's evaluation
+  sets are not NFT-native (OpenFake = photo-realistic news, forgery sets = edited photos). Measure the gate on
+  real copymint collections and real AI-generated NFT collections first; then Phase 6.
