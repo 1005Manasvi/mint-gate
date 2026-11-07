@@ -243,3 +243,10 @@ and anything the next phase must know. Keep entries brief: this file is read at 
   Phase 7); portfolio-only licensing. The SD 1.5 HF cache was deleted: `benchmark.build_copydet --regen`
   needs `huggingface-cli download runwayml/stable-diffusion-v1-5` first (it loads with local_files_only). The laptop's commit memory is the bottleneck
   for long jobs (see CLAUDE.md gotchas).
+
+### Ready for Phase 6 (owner inputs, 2026-11-07)
+- Safe 2-of-3 owners (Sepolia + Base Sepolia): `0xeed816c3F61fC7A7396159c267658010dB69eD7F` (deployer),
+  `0x1F79bD0C6CF753D4708E729e4677e0fDd2E5E2E2`, `0xCb036B4E03086FDf56b4977722F3aA10EaAc57c2`.
+- `DISCORD_WEBHOOK_URL` set in `backend/.env` (format checked). Alerts: disputes + REVIEW items (env switches).
+- PolicyRegistry behind a TimelockController (1 h), proposer = the Safe.
+- Balances: Sepolia 0.251 ETH, Base Sepolia 0.025 ETH (bridged).
