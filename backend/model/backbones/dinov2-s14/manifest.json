@@ -1,0 +1,6 @@
+{
+  "hub_id": "facebook/dinov2-small",
+  "family": "dino",
+  "tensors": 223,
+  "sha256": "31cd680b8644fe2e93cac483921b3f99959c63f6bb5a58d745b523ddf1125ea0"
+}

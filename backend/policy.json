@@ -1,29 +1,14 @@
 {
-  "version": "4.0.0",
+  "version": "5.0.0",
   "weights": {
-    "resnet": 0.15,
-    "ai_detector": 0.4,
+    "ai_detector": 0.45,
+    "manipulation": 0.1,
     "copy_move": 0.15,
     "copy_semantic": 0.2,
-    "copy_exact": 0.1
+    "copy_exact": 0.1,
+    "provenance": 0.0
   },
   "checks": {
-    "resnet": {
-      "label": "ResNet-18 forgery probability",
-      "review": 0.517,
-      "fail": 0.936,
-      "max_status": "REVIEW"
-    },
-    "ai_detector": {
-      "label": "AI-generated probability (CLIP probe + spectral)",
-      "review": 0.675,
-      "fail": 0.925
-    },
-    "copy_move": {
-      "label": "Copy-move clone peak ratio",
-      "review": 3.8,
-      "fail": 6.0
-    },
     "copy_exact": {
       "label": "PDQ distance to the nearest protected work (bits, mirrored / rotated too)",
       "review": 31.5,
@@ -33,11 +18,39 @@
       "label": "SSCD copy score vs protected works + on-chain NFTs (density-relative)",
       "review": 0.1034,
       "fail": 0.4462
+    },
+    "copy_move": {
+      "label": "Copy-move clone peak ratio",
+      "review": 3.8,
+      "fail": 6.0
+    },
+    "ai_detector": {
+      "label": "AI-generated probability (probes on frozen CLIP-B/32 + SigLIP 2 B/16)",
+      "review": 0.5,
+      "fail": 0.798
+    },
+    "manipulation": {
+      "label": "TruFor manipulation probability (REVIEW-only)",
+      "review": 0.5875,
+      "fail": 0.9186,
+      "max_status": "REVIEW"
+    },
+    "provenance": {
+      "label": "Provenance evidence (C2PA, AI watermark, generator metadata, web)",
+      "review": 0.5,
+      "fail": 0.9
     }
   },
   "score": {
     "pass_min": 70,
     "review_min": 40
+  },
+  "positive_evidence": {
+    "check": "provenance",
+    "below": 0,
+    "cap": {
+      "ai_detector": "REVIEW"
+    }
   },
   "calibration": {
     "copy": {
@@ -167,9 +180,415 @@
       }
     },
     "detectors": {
-      "copy_move": null,
-      "resnet": null,
-      "ai_detector": null
+      "ai_detector": {
+        "source": "ai_detector.json (ai-probe-clip-b32+siglip2-b16-20261106)",
+        "test_auc": {
+          "auc": 0.9938,
+          "n_pos": 1034,
+          "n_neg": 873,
+          "ci95": [
+            0.9912,
+            0.9959
+          ]
+        },
+        "test_unseen_flux": {
+          "flagged": {
+            "rate": 0.989,
+            "k": 989,
+            "n": 1000,
+            "ci95": [
+              0.9804,
+              0.9938
+            ]
+          },
+          "auc_vs_test_genuine": {
+            "auc": 0.9978,
+            "n_pos": 1000,
+            "n_neg": 873,
+            "ci95": [
+              0.9963,
+              0.999
+            ]
+          }
+        },
+        "oos_report": {
+          "auc": {
+            "auc": 0.9245,
+            "n_pos": 364,
+            "n_neg": 827,
+            "ci95": [
+              0.9093,
+              0.9382
+            ]
+          },
+          "balanced_acc_at_review": 0.8242,
+          "ai_flagged": {
+            "rate": 0.8874,
+            "k": 323,
+            "n": 364,
+            "ci95": [
+              0.8508,
+              0.9159
+            ]
+          },
+          "genuine_flagged_by_domain": {
+            "nft_collection": {
+              "rate": 0.0725,
+              "k": 33,
+              "n": 455,
+              "ci95": [
+                0.0521,
+                0.1001
+              ]
+            },
+            "pixel_art": {
+              "rate": 0.2917,
+              "k": 7,
+              "n": 24,
+              "ci95": [
+                0.1491,
+                0.4917
+              ]
+            },
+            "painting": {
+              "rate": 0.0667,
+              "k": 10,
+              "n": 150,
+              "ci95": [
+                0.0366,
+                0.1184
+              ]
+            },
+            "photo": {
+              "rate": 0.5253,
+              "k": 104,
+              "n": 198,
+              "ci95": [
+                0.4559,
+                0.5937
+              ]
+            }
+          }
+        }
+      },
+      "manipulation": {
+        "source": "benchmark/forgery.py",
+        "datasets": {
+          "casia_v2": {
+            "fake_flagged": {
+              "rate": 0.9033,
+              "k": 271,
+              "n": 300,
+              "ci95": [
+                0.8646,
+                0.9318
+              ]
+            },
+            "fake_failed": {
+              "rate": 0.7833,
+              "k": 235,
+              "n": 300,
+              "ci95": [
+                0.7333,
+                0.8262
+              ]
+            },
+            "pixel_f1": {
+              "mean": 0.8283,
+              "n": 300,
+              "ci95": [
+                0.7973,
+                0.8605
+              ]
+            }
+          },
+          "cocoglide": {
+            "fake_flagged": {
+              "rate": 0.3233,
+              "k": 97,
+              "n": 300,
+              "ci95": [
+                0.2729,
+                0.3782
+              ]
+            },
+            "fake_failed": {
+              "rate": 0.1333,
+              "k": 40,
+              "n": 300,
+              "ci95": [
+                0.0995,
+                0.1765
+              ]
+            },
+            "real_flagged": {
+              "rate": 0.0533,
+              "k": 16,
+              "n": 300,
+              "ci95": [
+                0.0331,
+                0.0849
+              ]
+            },
+            "auc": {
+              "auc": 0.7678,
+              "n_pos": 300,
+              "n_neg": 300,
+              "ci95": [
+                0.7292,
+                0.8039
+              ]
+            },
+            "pixel_f1": {
+              "mean": 0.3898,
+              "n": 300,
+              "ci95": [
+                0.3469,
+                0.4313
+              ]
+            }
+          },
+          "columbia": {
+            "fake_flagged": {
+              "rate": 0.9833,
+              "k": 177,
+              "n": 180,
+              "ci95": [
+                0.9522,
+                0.9943
+              ]
+            },
+            "fake_failed": {
+              "rate": 0.8667,
+              "k": 156,
+              "n": 180,
+              "ci95": [
+                0.8093,
+                0.9087
+              ]
+            },
+            "pixel_f1": {
+              "mean": 0.7997,
+              "n": 180,
+              "ci95": [
+                0.7597,
+                0.8377
+              ]
+            }
+          },
+          "coverage": {
+            "fake_flagged": {
+              "rate": 0.34,
+              "k": 34,
+              "n": 100,
+              "ci95": [
+                0.2546,
+                0.4372
+              ]
+            },
+            "fake_failed": {
+              "rate": 0.23,
+              "k": 23,
+              "n": 100,
+              "ci95": [
+                0.1584,
+                0.3215
+              ]
+            },
+            "real_flagged": {
+              "rate": 0.02,
+              "k": 2,
+              "n": 100,
+              "ci95": [
+                0.0055,
+                0.07
+              ]
+            },
+            "auc": {
+              "auc": 0.7695,
+              "n_pos": 100,
+              "n_neg": 100,
+              "ci95": [
+                0.7018,
+                0.8335
+              ]
+            },
+            "pixel_f1": {
+              "mean": 0.5239,
+              "n": 100,
+              "ci95": [
+                0.4491,
+                0.5987
+              ]
+            }
+          },
+          "imd2020": {
+            "fake_flagged": {
+              "rate": 0.057,
+              "k": 15,
+              "n": 263,
+              "ci95": [
+                0.0349,
+                0.092
+              ]
+            },
+            "fake_failed": {
+              "rate": 0.0228,
+              "k": 6,
+              "n": 263,
+              "ci95": [
+                0.0105,
+                0.0489
+              ]
+            },
+            "real_flagged": {
+              "rate": 0.057,
+              "k": 15,
+              "n": 263,
+              "ci95": [
+                0.0349,
+                0.092
+              ]
+            },
+            "auc": {
+              "auc": 0.4981,
+              "n_pos": 263,
+              "n_neg": 263,
+              "ci95": [
+                0.447,
+                0.546
+              ]
+            },
+            "pixel_f1": {
+              "mean": 0.1179,
+              "n": 263,
+              "ci95": [
+                0.0925,
+                0.1465
+              ]
+            }
+          },
+          "imd2020_reallife": {
+            "fake_flagged": {
+              "rate": 0.8233,
+              "k": 191,
+              "n": 232,
+              "ci95": [
+                0.769,
+                0.867
+              ]
+            },
+            "fake_failed": {
+              "rate": 0.6379,
+              "k": 148,
+              "n": 232,
+              "ci95": [
+                0.5743,
+                0.6971
+              ]
+            },
+            "pixel_f1": {
+              "mean": 0.7236,
+              "n": 232,
+              "ci95": [
+                0.6831,
+                0.7625
+              ]
+            }
+          }
+        },
+        "genuine": {
+          "realworld_test": {
+            "rate": 0.047,
+            "k": 41,
+            "n": 873,
+            "ci95": [
+              0.0348,
+              0.0631
+            ]
+          },
+          "oos_nft_collection": {
+            "flagged": {
+              "rate": 0.0644,
+              "k": 61,
+              "n": 947,
+              "ci95": [
+                0.0505,
+                0.0819
+              ]
+            },
+            "failed": {
+              "rate": 0.0106,
+              "k": 10,
+              "n": 947,
+              "ci95": [
+                0.0057,
+                0.0193
+              ]
+            }
+          },
+          "oos_pixel_art": {
+            "flagged": {
+              "rate": 0.0741,
+              "k": 4,
+              "n": 54,
+              "ci95": [
+                0.0292,
+                0.1755
+              ]
+            },
+            "failed": {
+              "rate": 0.0,
+              "k": 0,
+              "n": 54,
+              "ci95": [
+                0.0,
+                0.0664
+              ]
+            }
+          },
+          "oos_painting": {
+            "flagged": {
+              "rate": 0.0667,
+              "k": 20,
+              "n": 300,
+              "ci95": [
+                0.0436,
+                0.1007
+              ]
+            },
+            "failed": {
+              "rate": 0.0033,
+              "k": 1,
+              "n": 300,
+              "ci95": [
+                0.0006,
+                0.0186
+              ]
+            }
+          },
+          "oos_photo": {
+            "flagged": {
+              "rate": 0.0781,
+              "k": 31,
+              "n": 397,
+              "ci95": [
+                0.0556,
+                0.1087
+              ]
+            },
+            "failed": {
+              "rate": 0.0126,
+              "k": 5,
+              "n": 397,
+              "ci95": [
+                0.0054,
+                0.0291
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }

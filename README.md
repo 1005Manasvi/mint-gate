@@ -7,7 +7,7 @@
 
 A blockchain proves who owns an NFT. It cannot tell whether the image is original: a
 plagiarised, edited or AI-generated picture mints as easily as real art. **Mint-Gate** sits in
-front of the mint. Six forensic checks score every upload, and a calibrated policy engine
+front of the mint. Provenance, AI-image, manipulation and copy checks score every upload, and a calibrated policy engine
 decides **PASS**, **REVIEW** (human verification) or **FAIL**. Only verified artwork can be
 minted. Every verdict, including the rejections, is anchored on Ethereum.
 
@@ -28,87 +28,112 @@ v1 (`MintGateNFT`, which the current app still uses) stays on Ethereum Sepolia a
 · [Sourcify](https://sourcify.dev/#/lookup/0xae989b374DF85a942b4caE07940713Ff89418F32).
 Same deployer and nonce, so v1 on Sepolia and the v2 registry on Base Sepolia share an address.
 
-**Stack:** PyTorch (ResNet-18 fine-tuned on an RTX 3050) · CLIP ViT-B/32 · OpenCV ·
+**Stack:** PyTorch · frozen CLIP ViT-B/32 + SigLIP 2 probes · TruFor · SSCD / DINOv2 / PDQ · C2PA · OpenCV ·
 scikit-learn · Flask + gunicorn · Solidity 0.8.24 / OpenZeppelin 5 / Hardhat + Foundry · EIP-712 · web3.py ·
 IPFS (Pinata) · MetaMask · Docker
 
 ## Results
 
-**Training data (v2):** 20,309 images chosen to match what is actually minted:
-- 3,700 images from **real NFT collections** (BAYC, MAYC, Azuki, Trippy Toadz, …; all minted
-  before modern image generators existed)
-- 3,000 museum/WikiArt paintings, plus some photos and pixel art
-- **modern AI images**: DALL·E 3, Midjourney, Stable Diffusion 3 and SDXL, plus older generators
+Every headline number below has its sample size and a **95 % confidence interval** (Wilson for
+rates, stratified bootstrap for AUCs). Models are only adopted if they beat the incumbent on a
+benchmark built *before* them; details and every rejected candidate: [docs/models.md](docs/models.md).
 
-**Flux was held out of training entirely**, to test generalisation to an unseen generator.
+**Training data:** 20,309 images matched to what is actually minted: 3,700 from real NFT collections
+(BAYC, MAYC, Azuki, …; minted before modern generators), 3,000 museum / WikiArt paintings, photos,
+pixel art, and AI images from DALL·E 3, Midjourney, SD3, SDXL and older generators. **Flux is held
+out of training entirely.**
 
-| Model | Held-out test | Unseen generator (Flux) |
+**AI detection: chosen out-of-source (Phase 5).** The test that matters uses sources that contributed
+*nothing* to training: 1,698 genuine images (947 NFTs from 47 unseen collections, 54 pixel-art NFTs,
+300 Rijksmuseum paintings, 397 COCO / DOCCI photos) and 733 images from 2025-26 generators
+(z-image, Flux.2, GPT-image-1.5, Midjourney 7, Illustrious, Recraft, …) plus Flux.1-dev. Candidates
+were ranked on one half, the winner is reported on the other half (n = 1,191).
+
+| Held-out out-of-source half | v1: probe on CLIP-B/32 | **v5: probes on CLIP-B/32 + SigLIP 2** |
 |---|---|---|
-| **AI detector**: linear probe on frozen CLIP | **92.8 % acc · ROC-AUC 0.982** | ROC-AUC **0.990** · 97.9 % caught |
-| ResNet-18 (all layers fine-tuned on GPU) | 91.1 % acc · ROC-AUC 0.974 | 95.3 % caught |
+| ROC-AUC | 0.894 [0.875, 0.911] | **0.925 [0.909, 0.938]** |
+| AI images flagged (n = 364) | 75.8 % [71.2, 79.9] | **88.7 % [85.1, 91.6]** |
+| AI images auto-failed | 46.2 % [41.1, 51.3] | **69.0 % [64.0, 73.5]** |
+| Genuine NFTs flagged (n = 455) | 5.7 % [3.9, 8.2] | 7.2 % [5.2, 10.0] |
+| Genuine paintings flagged (n = 150) | 2.7 % [1.0, 6.7] | 6.7 % [3.7, 11.8] |
+| Genuine photos flagged (n = 198) | 45.0 % [38.2, 51.9] | 52.5 % [45.6, 59.4] |
 
-**Out-of-source check (the honest number).** These images come from sources that contributed
-*nothing* to training: 480 artworks from 4 NFT collections never seen (CyberKongz, CrypToadz,
-Shiboshis, EtherBears), and 200 Flux images from a different publisher.
+The gain over v1 is significant (paired bootstrap, +4.6 pp [+1.8, +7.6] balanced accuracy). CLIP-L/14
+and SigLIP 2 So400m also won but cost 4-5 s per image on a CPU; DINOv2 lost; a LoRA fine-tune did
+not beat the frozen probe. **Honest weak spot:** photographs from new sources (professional DOCCI
+photos especially) are flagged by every detector tested, v1 included.
 
-| Model | Genuine NFTs correct | Flux caught | ROC-AUC |
+**Provenance (Phase 5):** C2PA Content Credentials, Stable Diffusion / SDXL invisible watermarks and
+generator metadata, read from the raw file. On real files: **0 false hits on 1,452 genuine files**
+([0, 0.3] %), AI evidence on 15.9 % [13.4, 18.8] of 729 AI files (Midjourney 7: 100 % via IPTC
+metadata; GPT-image-1.5: 47.5 % via OpenAI's C2PA manifest). Cheap and precise, low recall.
+
+**Manipulation forensics (Phase 5):** TruFor (CVPR 2023) replaces the ResNet-18, which was at chance
+on real forgeries (AUC 0.49-0.58) and flagged 43 % of genuine NFTs from new collections:
+
+| Real forgery dataset | ResNet-18 AUC | **TruFor AUC** | TruFor pixel F1 |
 |---|---|---|---|
-| **CLIP-probe AI detector** | **100 %** | **94 %** | **0.9998** |
-| ResNet-18 | 64 % | 77 % | 0.79 |
+| COVERAGE copy-move (100 / 100) | 0.486 [0.401, 0.567] | **0.769 [0.702, 0.834]** | 0.524 [0.449, 0.599] |
+| CocoGlide diffusion inpainting (300 / 300) | 0.579 [0.533, 0.625] | **0.768 [0.729, 0.804]** | 0.390 [0.347, 0.431] |
+| Columbia splicing (180 manipulated) | – | 98.3 % [95.2, 99.4] flagged | 0.800 [0.760, 0.838] |
 
-The ResNet's in-distribution score partly came from memorising collections it had seen. The
-CLIP probe generalises. The policy therefore lets the CLIP probe decide on AI content, and
-uses the ResNet only to request human review.
+TruFor flags 6-8 % of genuine NFT art, so it can only send uploads to human review, never reject
+them. Its licence is non-commercial and it needs a GPU (2-36 s per image on a CPU), so it runs in
+the GPU profile only.
 
-**Copy detection (Phase 4, benchmark-gated).** A copy-detection benchmark was built *before* any
-new model: 4,000 protected works, 600 attacked copies (14 attacks: crop, rotation, perspective,
-recolour, overlays, screenshots, collages, Stable-Diffusion re-generation, ...) and 5,967 genuine
-distractors, tuned on val, reported on test ([details](docs/models.md)).
+**Copy detection (Phase 4, benchmark-gated):** 4,000 protected works, 600 attacked copies (14 attacks),
+5,967 genuine distractors, tuned on val, reported on test.
 
-| Paintings, test split | micro-AP | TPR at 1 % FPR | Genuine flagged (policy) |
+| Paintings, test split (144 copies, 1,486 genuine) | micro-AP ³ | TPR at 1 % FPR | Genuine flagged (policy) |
 |---|---|---|---|
-| v1: pHash + CLIP + ORB | 0.820 | 0.542 | 5.0 % |
-| **v4: PDQ + SSCD + DINOv2-S + region crops** | **0.905** | **0.896** | **2.2 %** |
+| v1: pHash + CLIP + ORB | 0.820 | 54.2 % [46.0, 62.1] | 5.0 % [4.0, 6.2] |
+| **v4: PDQ + SSCD + DINOv2-S + region crops** | **0.905** | **89.6 % [83.5, 93.6]** | **2.2 % [1.6, 3.1]** |
 
-LightGlue was benchmarked too and **rejected** (+0.3 pp, below the gate). Genuine items of generative
-collections are never flagged any more (6.5 % → 0 %), because a collection member only counts as
-copied when it is pixel-identical.
+**End-to-end gate decisions** (full pipeline, policy 5.0.0, GPU profile, live index of 284,861
+references incl. 269,816 Ethereum NFTs; **n = 300 per category**, fewer only where the pool is smaller):
 
-**End-to-end gate decisions** (full pipeline, policy 4.0.0, against the live index of 284,861
-references incl. 269,816 Ethereum NFTs; n = 50 uploads per category; v1 = policy 3.1.0):
-
-| Upload | PASS | REVIEW | FAIL | v1 PASS / FAIL |
+| Upload | n | PASS | REVIEW | FAIL |
 |---|---|---|---|---|
-| Genuine art from an NFT collection | **98 %** | 2 % | **0 %** | 88 % / 0 % |
-| Genuine pixel-art NFT | 94 % | 4 % | 2 % | 82 % / 0 % |
-| Genuine painting | 72 % | 16 % | 12 % ¹ | 76 % / 12 % |
-| Genuine photograph | 68 % | 32 % | 0 % | 62 % / 0 % |
-| **Modern AI** (DALL·E 3, Midjourney, SD3, SDXL) | **0 %** | 12 % | 88 % | 0 % / 88 % |
-| **Unseen Flux** | **0 %** | 24 % | 76 % | 0 % / 76 % |
-| Other AI-art generators | 12 % | 44 % | 44 % | 12 % / 46 % |
-| Exact copy of a protected work | 0 % | 0 % | **100 %** | 0 % / 100 % |
-| Edited copy of a protected painting | **2 %** | 26 % | 72 % | 4 % / 90 % |
-| Copy-move / spliced forgery | 4 % / 0 % | 18 % / 84 % | 78 % / 16 % | PASS 2 % / 0 % |
-| **Exact re-upload of an indexed Ethereum NFT** (new) | **0 %** | 2 % | **98 %** | not indexed |
-| Edited copy of an indexed Ethereum NFT (new) | 54 % | 40 % | 6 % | not indexed |
-| Edited copy of a generative-collection NFT | 100 % | 0 % | 0 % ² | 94 % / 0 % |
+| Genuine NFT-collection art | 300 | **92.7 %** [89.1, 95.1] | 6.3 % | **1.0 %** [0.3, 2.9] |
+| Genuine NFT art, collections never seen | 300 | 84.0 % [79.4, 87.7] | 12.7 % | 3.3 % [1.8, 6.0] |
+| Genuine pixel-art punk | 300 | 92.0 % [88.4, 94.6] | 2.0 % | 6.0 % [3.8, 9.3] ¹ |
+| Genuine painting, Rijksmuseum (never seen) | 300 | 84.3 % [79.8, 88.0] | 15.7 % | **0.0 %** [0.0, 1.3] |
+| Genuine photo, COCO / DOCCI (never seen) | 300 | 42.3 % [36.9, 48.0] | 33.7 % | 24.0 % [19.5, 29.1] |
+| **Modern AI** (DALL·E 3, Midjourney, SD3, SDXL) | 300 | **0.3 %** [0.1, 1.9] | 1.0 % | 98.7 % [96.6, 99.5] |
+| **Unseen Flux** | 300 | **2.0 %** [0.9, 4.3] | 2.7 % | 95.3 % [92.3, 97.2] |
+| **2025-26 generators** (never seen) | 300 | 11.3 % [8.2, 15.4] | 24.0 % | 64.7 % [59.1, 69.9] |
+| Exact copy of a protected work | 300 | 0.0 % [0.0, 1.3] | 0.0 % | **100 %** [98.7, 100] |
+| Edited copy of a protected painting | 300 | 1.7 % [0.7, 3.8] | 30.7 % | 67.7 % [62.2, 72.7] |
+| Copy-move / spliced forgery | 295 / 295 | 0.7 % / **0.0 %** | 16.3 % / 78.3 % | 83.0 % / 21.7 % |
+| **Exact re-upload of an indexed Ethereum NFT** | 300 | **1.0 %** [0.3, 2.9] | 0.7 % | **98.3 %** [96.2, 99.3] |
+| Edited copy of an indexed Ethereum NFT | 300 | 65.7 % [60.1, 70.8] | 23.7 % | 10.7 % [7.7, 14.7] |
+| Edited copy of a generative-collection NFT | 300 | 60.7 % [55.0, 66.0] | 39.0 % | 0.3 % [0.1, 1.9] ² |
 
-Overall: **83 % of genuine uploads pass** (v1 77 %), **3.5 % are wrongly rejected** (v1 3.0 %: one
-genuine punk in 200 uploads); on the same forgery categories as v1, 84.9 % are stopped (v1 85.8 %).
-CPU-only deployment: **p50 1.10 s, p95 1.35 s per upload** (2 threads); search over the 285k-NFT
-index p95 15 ms.
+Pooled over all 20 categories: **78.5 % [76.6, 80.3] of genuine uploads pass** (n = 1,978) and
+6.8 % [5.8, 8.0] are rejected; **87.1 % [85.9, 88.2] of forgeries are stopped** (n = 3,448), 91.7 %
+[90.6, 92.7] on the categories v1 was measured on (v4: 82.7 %, n = 50 each). False alarms per domain
+(REVIEW or FAIL): collection NFTs 11.7 %, pixel art 11.9 %, paintings 19.5 %, photos 45.9 %.
 
-¹ v1 found that many of these are near-duplicates of protected paintings in a second source dataset.
+**CPU latency, the open issue:** the extra SigLIP 2 pass costs ~0.6 s on 2 CPU threads, so a CPU-only
+deployment now takes **p50 1.5-1.6 s, p95 1.9-2.0 s** per upload (n = 40 uploads per run, two runs), above the 1.5 s budget (v4: 1.10 /
+1.35 s). The GPU profile is unaffected; an ONNX Runtime export (-180 ms) is built and waits for a
+Linux check in Phase 7.
 
-² A known limitation. Genuine items of a generative collection share traits by design, so an
-edited copy can't be told apart from a new sibling by appearance alone. Only exact (pixel-identical)
-copies are blocked; letting similarity count would wrongly flag genuine NFTs.
+¹ 15 of the 18 are pixel-identical to a *different* protected punk (the source dataset holds the same
+image under two IDs), so blocking them is correct; 3 / 300 remain.
+
+³ micro-AP is a ranking statistic over all (query, reference) predictions; no CI was computed for it.
+
+² A known limitation. Genuine items of a generative collection share traits by design, so an edited
+copy can't be told apart from a new sibling by appearance alone; TruFor now sends a third of them to
+review, but only pixel-identical copies are blocked.
 
 ## How it works
 
 ```
-upload ─▶ preprocessing ─▶ ┌ CLIP-probe AI detector   (decides on AI content) ┐
- (validate, RGB,           │ ResNet-18                 (REVIEW-only signal)    │   policy engine ─▶ PASS ─▶ mint
+upload ─▶ provenance (raw bytes): C2PA, SD/SDXL watermark, generator metadata ─┐
+       ─▶ preprocessing ─▶ ┌ AI detector: probes on CLIP-B/32 + SigLIP 2        │
+ (validate, RGB,           │ TruFor manipulation map (GPU, REVIEW-only)        │   policy engine ─▶ PASS ─▶ mint
   SHA-256, identical       │ copy-move: block matching + shift voting          │─▶ calibrated     REVIEW ─▶ human reviewer
   normalisation to         │ copy engine: PDQ + SSCD/DINOv2 + region crops    │   risk + score   FAIL ─▶ blocked
   the training data)       │   vs pgvector: 15k protected works, 270k        │          │
@@ -129,7 +154,16 @@ Engineering decisions worth knowing:
   can learn "JPEG = real". Every image in both classes gets the same resize + JPEG re-encode,
   and uploads get the identical "detector view" at inference.
 - **Out-of-source evaluation.** In-distribution accuracy overstated the CNN. Testing on unseen
-  collections and a different Flux publisher exposed this and drove the policy design.
+  collections and a different Flux publisher exposed this and drove the policy design. Phase 5
+  rebuilt the test (2025-26 generators, 47 unseen NFT collections, museum paintings, new photos),
+  split it into a selection half and a reporting half, and gave every number a 95 % CI.
+- **Provenance first, then pixels.** C2PA credentials, invisible watermarks and generator metadata
+  are read from the raw upload: an intact AI claim fails the upload, trusted camera credentials
+  stop the AI probe from auto-rejecting a photo. OpenAI's manifests carry an expired certificate;
+  that is a credential problem, not tampering, and is handled as such.
+- **Licence-aware profiles.** TruFor is non-commercial: `MINTGATE_PERMISSIVE_ONLY=1` runs without it
+  and with a probe trained only on MIT / CDLA-Permissive / public-domain / CC BY data, under its own
+  calibrated policy.
 - **Benchmark-gated copy detection (Phase 4).** A copy-detection benchmark (14 attacks including
   collage and Stable-Diffusion re-generation, ~10 genuine distractors per copy, val/test split) was
   built *before* any new model. Every candidate had to beat the incumbent on it: SSCD + DINOv2-S +
@@ -163,8 +197,8 @@ Engineering decisions worth knowing:
 
 | Path | Purpose |
 |---|---|
-| `backend/detection/` | preprocessing, ResNet-18, AI detector, copy-move, pHash, CLIP, ORB, reference index, policy, pipeline |
-| `backend/training/` | dataset build (`fetch_realworld`, `fetch_v2`), training, index, calibration, evaluation, independent check |
+| `backend/detection/` | preprocessing, provenance (C2PA / watermark / metadata), AI detector + frozen backbones, TruFor, copy-move, copy engine + pgvector index, policy, pipeline |
+| `backend/training/` | dataset build, out-of-source set (`oos_data`), backbone benchmark (`ai_backbones`), LoRA, retraining gate, statistics, calibration, end-to-end evaluation |
 | `backend/chain/` | v2 registry client (`registry.py`, Redis nonce lock), networks, EIP-712 verdict signer (`eip712.py`), IPFS + metadata, `deployments/<network>.json` |
 | `backend/db/`, `backend/migrations/` | SQLAlchemy 2 models + repository layer, Alembic migrations, legacy JSON import (`db.migrate_json`) |
 | `backend/jobs/` | Redis + RQ queues, tasks (analysis, verdict anchoring, review mirroring), Windows-safe worker |
@@ -237,7 +271,7 @@ Secrets live in `backend/.env` and `Blockchain/.env` (templates: `.env.example`)
 
 NFT collections (huggingnft, MIT), Rapidata FLUX/SD3/MJ/DALL·E 3 (CDLA-Permissive-2.0), SDXL
 (MIT), WikiArt, Tiny-GenImage (CC BY-NC-SA 4.0), AI Art & Real Art / Real-VS-AI-Art (research
-use). This is a **non-commercial portfolio project**. Automated detection is probabilistic: a
+use). Evaluation only (never trained on): OpenFake (CC BY-NC 4.0), real forgery sets via the KhangTruong Tampered-Images bundle (CASIA v2, Columbia, COVERAGE, IMD2020, CocoGlide; research use), Rijksmuseum (CC0), COCO (CC BY), DOCCI (CC BY). Permissive extras: ArtBench public-domain paintings, COCO-train CC BY photos. **TruFor's code and weights are non-commercial** (GRIP-UNINA). This is a **non-commercial portfolio project**. Automated detection is probabilistic: a
 PASS is evidence, not a legal guarantee of authorship.
 
 Code: [MIT](LICENSE). The data licences above still apply to the datasets and to model weights trained on them.

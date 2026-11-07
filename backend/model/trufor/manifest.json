@@ -1,0 +1,7 @@
+{
+  "file": "trufor.safetensors",
+  "sha256": "7bcbcd31fc896f60cac56654cdf1d739a3aefb72b29fd583939d9cc6b0d92b4e",
+  "source": "https://www.grip.unina.it/download/prog/TruFor/TruFor_weights.zip",
+  "source_sha256": "ac1d90e329a72e0d66e8665e123a19e94bfae3209c3ef8a4f9ca3b91578c7844",
+  "licence": "GRIP-UNINA non-commercial"
+}

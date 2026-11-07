@@ -29,27 +29,36 @@ def test_clip_embeddings_are_normalised(clip):
     assert float(a @ b) < 0.9
 
 
-def test_ai_detector_separates_demo_samples(clip):
+def test_ai_detector_separates_demo_samples():
+    """The shipped detector (CLIP-B/32 + SigLIP 2 probes) on its own backbones."""
     from detection.ai_detector import AIDetector
 
     det = AIDetector()
-    assert det.ready and det.probe is not None
+    assert det.ready and det.keys == ["clip-b32", "siglip2-b16"]
 
     def p(name):
-        v = view(name)
-        return det.predict(v, clip.encode_one(v))["probability"]
+        return det.predict(view(name))["probability"]
 
     genuine = [p("01_genuine_painting.png"), p("02_genuine_photo.png"), p("03_genuine_nft_collection_art.png")]
     ai = [p("04_ai_generated_art.png"), p("05_flux_unseen_generator.png")]
     assert max(genuine) < min(ai)
 
 
-def test_resnet_outputs_probability():
-    from detection.resnet_classifier import ResNetClassifier
+def test_backbone_matches_v1_clip_encoder(clip):
+    """Backbone("clip-b32") reproduces the v1 ClipEncoder embedding (same probe inputs)."""
+    from detection.backbones import Backbone
 
-    m = ResNetClassifier()
-    assert m.classes.index("forged") == m.forged_idx
-    assert 0.0 <= m.predict(view("02_genuine_photo.png")) <= 1.0
+    v = view("01_genuine_painting.png")
+    assert float(clip.encode_one(v) @ Backbone("clip-b32").encode_one(v)) > 0.999
+
+
+def test_trufor_scores_and_localises():
+    from detection.trufor import WEIGHTS, TruFor
+
+    if not WEIGHTS.exists():
+        pytest.skip("TruFor weights not fetched (non-commercial; benchmark.forgery fetch)")
+    r = TruFor().analyse(load_path(DEMO_DIR / "02_genuine_photo.png"))
+    assert 0.0 <= r["score"] <= 1.0 and r["map"].shape == r["conf"].shape
 
 
 def test_copy_engine_real_models():

@@ -170,3 +170,24 @@ These are design limits, not bugs; the roadmap addresses them.
   governance; Phase 3 gave artists wallet identity, reviewers still use the key).
 - **Detection is off-chain and probabilistic.** The contract proves which verdict and policy were
   used (report hash, policy SHA-256), not that the verdict is right. See README for error rates.
+
+## Phase 5: model supply chain and provenance
+
+- **No pickle at runtime.** TruFor's published checkpoint is a pickle. It is loaded once, offline, with
+  `torch.load(weights_only=True)` (only `numpy.core.multiarray.scalar` and `numpy.dtype` allow-listed by
+  exact name, after inspecting the pickle's globals with `pickletools`), converted to safetensors and
+  SHA-256 pinned (`model/trufor/manifest.json`). Backbone vision towers and ONNX exports are pinned the same
+  way (`model/backbones/<key>/manifest.json`); a mismatch refuses to load.
+- **Vendored non-commercial code** (`backend/third_party/trufor/`): original notices kept (licence
+  condition ii), modifications listed in `NOTICE.md`; never imported with `MINTGATE_PERMISSIVE_ONLY=1`.
+- **Provenance parsing of untrusted files.** C2PA, EXIF / PNG text / XMP readers run on the raw upload
+  inside the worker; every parser error is caught and reported as "no evidence", never as a verdict.
+  XMP search is bounded to the first 4 MB; watermark decoding only runs on native generator sizes
+  (≤ 1.6 MP), so a large upload cannot make it expensive.
+- **C2PA trust.** An AI claim is accepted from any manifest whose hashes match (credential issues such as
+  an expired certificate are reported separately). Positive evidence (capping the AI detector at REVIEW)
+  requires a chain to a configured trust anchor (`C2PA_TRUST_ANCHORS`): a self-signed "camera" manifest
+  is trivial to forge and earns nothing. A trusted capture never overrides AI evidence or copy checks.
+- **Reverse image search sends the upload to a third party** (Google Vision / TinEye). It is off by default
+  and only enabled by explicit configuration (`REVERSE_SEARCH` + key); results are advisory (REVIEW), never
+  FAIL, and API errors are not evidence.

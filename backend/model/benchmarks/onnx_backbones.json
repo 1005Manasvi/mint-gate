@@ -1,0 +1,16 @@
+{
+  "clip-b32": {
+    "min_cosine": 1.0,
+    "pytorch_ms_p50": 166.9,
+    "onnx_ms_p50": 91.9,
+    "pytorch_ms_p95": 187.6,
+    "onnx_ms_p95": 105.8
+  },
+  "siglip2-b16": {
+    "min_cosine": 0.999999,
+    "pytorch_ms_p50": 573.6,
+    "onnx_ms_p50": 455.4,
+    "pytorch_ms_p95": 605.0,
+    "onnx_ms_p95": 496.4
+  }
+}

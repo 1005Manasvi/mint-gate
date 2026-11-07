@@ -1,116 +1,1297 @@
 {
-  "n_per_category": 50,
-  "policy_version": "4.0.0",
+  "n_per_category": 300,
+  "sampling": "without replacement, n = min(n, pool)",
+  "policy_version": "5.0.0",
   "copy_engine": "copy-engine-1.0.0+gpu",
-  "genuine_pass_rate": 0.83,
-  "genuine_wrongly_failed": 0.035,
-  "forgery_stopped_rate (REVIEW or FAIL)": 0.827,
-  "forgery_auto_failed_rate": 0.555,
+  "ai_detector": "ai-probe-clip-b32+siglip2-b16-20261106",
+  "genuine_pass_rate": {
+    "rate": 0.7851,
+    "k": 1553,
+    "n": 1978,
+    "ci95": [
+      0.7665,
+      0.8027
+    ]
+  },
+  "genuine_wrongly_failed": {
+    "rate": 0.0683,
+    "k": 135,
+    "n": 1978,
+    "ci95": [
+      0.058,
+      0.0802
+    ]
+  },
+  "forgery_stopped_rate (REVIEW or FAIL)": {
+    "rate": 0.8709,
+    "k": 3003,
+    "n": 3448,
+    "ci95": [
+      0.8593,
+      0.8817
+    ]
+  },
+  "forgery_auto_failed_rate": {
+    "rate": 0.6598,
+    "k": 2275,
+    "n": 3448,
+    "ci95": [
+      0.6438,
+      0.6754
+    ]
+  },
+  "v1_comparable_forgery_stopped": {
+    "rate": 0.9172,
+    "k": 2337,
+    "n": 2548,
+    "ci95": [
+      0.9059,
+      0.9273
+    ]
+  },
+  "false_alarm_by_domain": {
+    "collection NFTs": {
+      "flagged (REVIEW or FAIL)": {
+        "rate": 0.1167,
+        "k": 70,
+        "n": 600,
+        "ci95": [
+          0.0934,
+          0.1448
+        ]
+      },
+      "failed": {
+        "rate": 0.0217,
+        "k": 13,
+        "n": 600,
+        "ci95": [
+          0.0127,
+          0.0367
+        ]
+      },
+      "categories": [
+        "genuine_nft_collection",
+        "oos_nft_collection"
+      ]
+    },
+    "pixel art": {
+      "flagged (REVIEW or FAIL)": {
+        "rate": 0.1186,
+        "k": 42,
+        "n": 354,
+        "ci95": [
+          0.089,
+          0.1565
+        ]
+      },
+      "failed": {
+        "rate": 0.0791,
+        "k": 28,
+        "n": 354,
+        "ci95": [
+          0.0553,
+          0.1119
+        ]
+      },
+      "categories": [
+        "genuine_new_punk",
+        "oos_pixel_art"
+      ]
+    },
+    "paintings": {
+      "flagged (REVIEW or FAIL)": {
+        "rate": 0.195,
+        "k": 116,
+        "n": 595,
+        "ci95": [
+          0.1651,
+          0.2287
+        ]
+      },
+      "failed": {
+        "rate": 0.0336,
+        "k": 20,
+        "n": 595,
+        "ci95": [
+          0.0219,
+          0.0513
+        ]
+      },
+      "categories": [
+        "genuine_human_art",
+        "oos_painting"
+      ]
+    },
+    "photos": {
+      "flagged (REVIEW or FAIL)": {
+        "rate": 0.4592,
+        "k": 197,
+        "n": 429,
+        "ci95": [
+          0.4126,
+          0.5065
+        ]
+      },
+      "failed": {
+        "rate": 0.1725,
+        "k": 74,
+        "n": 429,
+        "ci95": [
+          0.1397,
+          0.2111
+        ]
+      },
+      "categories": [
+        "genuine_photo",
+        "oos_photo"
+      ]
+    }
+  },
   "per_category": {
     "genuine_human_art": {
-      "PASS": 0.72,
-      "REVIEW": 0.16,
-      "FAIL": 0.12,
-      "mean_score": 87.1,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 295,
+      "pool": 295,
+      "PASS": {
+        "rate": 0.7661,
+        "k": 226,
+        "n": 295,
+        "ci95": [
+          0.7146,
+          0.8108
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.1661,
+        "k": 49,
+        "n": 295,
+        "ci95": [
+          0.128,
+          0.2128
+        ]
+      },
+      "FAIL": {
+        "rate": 0.0678,
+        "k": 20,
+        "n": 295,
+        "ci95": [
+          0.0443,
+          0.1024
+        ]
+      },
+      "not_pass": {
+        "rate": 0.2339,
+        "k": 69,
+        "n": 295,
+        "ci95": [
+          0.1892,
+          0.2854
+        ]
+      },
+      "mean_score": 86.9,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 295,
+        "ci95": [
+          0.0,
+          0.0129
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 8,
+        "ai_detector:REVIEW": 15,
+        "copy_exact:FAIL": 9,
+        "copy_move:FAIL": 2,
+        "copy_move:REVIEW": 5,
+        "copy_semantic:FAIL": 9,
+        "copy_semantic:REVIEW": 18,
+        "manipulation:REVIEW": 18
+      }
     },
     "genuine_photo": {
-      "PASS": 0.68,
-      "REVIEW": 0.32,
-      "FAIL": 0.0,
-      "mean_score": 85.4,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 129,
+      "pool": 129,
+      "PASS": {
+        "rate": 0.814,
+        "k": 105,
+        "n": 129,
+        "ci95": [
+          0.7381,
+          0.8717
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.1705,
+        "k": 22,
+        "n": 129,
+        "ci95": [
+          0.1154,
+          0.2447
+        ]
+      },
+      "FAIL": {
+        "rate": 0.0155,
+        "k": 2,
+        "n": 129,
+        "ci95": [
+          0.0043,
+          0.0548
+        ]
+      },
+      "not_pass": {
+        "rate": 0.186,
+        "k": 24,
+        "n": 129,
+        "ci95": [
+          0.1283,
+          0.2619
+        ]
+      },
+      "mean_score": 87.2,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 129,
+        "ci95": [
+          0.0,
+          0.0289
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 2,
+        "ai_detector:REVIEW": 14,
+        "copy_move:REVIEW": 1,
+        "manipulation:REVIEW": 8
+      }
     },
     "genuine_new_punk": {
-      "PASS": 0.94,
-      "REVIEW": 0.04,
-      "FAIL": 0.02,
-      "mean_score": 95.7,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 300,
+      "pool": 892,
+      "PASS": {
+        "rate": 0.92,
+        "k": 276,
+        "n": 300,
+        "ci95": [
+          0.8837,
+          0.9457
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.02,
+        "k": 6,
+        "n": 300,
+        "ci95": [
+          0.0092,
+          0.0429
+        ]
+      },
+      "FAIL": {
+        "rate": 0.06,
+        "k": 18,
+        "n": 300,
+        "ci95": [
+          0.0383,
+          0.0928
+        ]
+      },
+      "not_pass": {
+        "rate": 0.08,
+        "k": 24,
+        "n": 300,
+        "ci95": [
+          0.0543,
+          0.1163
+        ]
+      },
+      "mean_score": 94.5,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "copy_exact:FAIL": 18,
+        "copy_exact:REVIEW": 1,
+        "copy_move:REVIEW": 5,
+        "copy_semantic:REVIEW": 1
+      }
     },
     "genuine_nft_collection": {
-      "PASS": 0.98,
-      "REVIEW": 0.02,
-      "FAIL": 0.0,
-      "mean_score": 95.4,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 300,
+      "pool": 353,
+      "PASS": {
+        "rate": 0.9267,
+        "k": 278,
+        "n": 300,
+        "ci95": [
+          0.8915,
+          0.9511
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.0633,
+        "k": 19,
+        "n": 300,
+        "ci95": [
+          0.0409,
+          0.0968
+        ]
+      },
+      "FAIL": {
+        "rate": 0.01,
+        "k": 3,
+        "n": 300,
+        "ci95": [
+          0.0034,
+          0.029
+        ]
+      },
+      "not_pass": {
+        "rate": 0.0733,
+        "k": 22,
+        "n": 300,
+        "ci95": [
+          0.0489,
+          0.1085
+        ]
+      },
+      "mean_score": 94.8,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "copy_move:FAIL": 3,
+        "copy_move:REVIEW": 8,
+        "manipulation:REVIEW": 12
+      }
+    },
+    "oos_nft_collection": {
+      "n": 300,
+      "pool": 947,
+      "PASS": {
+        "rate": 0.84,
+        "k": 252,
+        "n": 300,
+        "ci95": [
+          0.7943,
+          0.8771
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.1267,
+        "k": 38,
+        "n": 300,
+        "ci95": [
+          0.0937,
+          0.1691
+        ]
+      },
+      "FAIL": {
+        "rate": 0.0333,
+        "k": 10,
+        "n": 300,
+        "ci95": [
+          0.0182,
+          0.0603
+        ]
+      },
+      "not_pass": {
+        "rate": 0.16,
+        "k": 48,
+        "n": 300,
+        "ci95": [
+          0.1229,
+          0.2057
+        ]
+      },
+      "mean_score": 91.7,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 10,
+        "ai_detector:REVIEW": 10,
+        "copy_move:REVIEW": 5,
+        "manipulation:REVIEW": 24
+      }
+    },
+    "oos_pixel_art": {
+      "n": 54,
+      "pool": 54,
+      "PASS": {
+        "rate": 0.6667,
+        "k": 36,
+        "n": 54,
+        "ci95": [
+          0.5336,
+          0.7776
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.1481,
+        "k": 8,
+        "n": 54,
+        "ci95": [
+          0.077,
+          0.266
+        ]
+      },
+      "FAIL": {
+        "rate": 0.1852,
+        "k": 10,
+        "n": 54,
+        "ci95": [
+          0.1038,
+          0.3084
+        ]
+      },
+      "not_pass": {
+        "rate": 0.3333,
+        "k": 18,
+        "n": 54,
+        "ci95": [
+          0.2224,
+          0.4664
+        ]
+      },
+      "mean_score": 82.9,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 54,
+        "ci95": [
+          0.0,
+          0.0664
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 10,
+        "ai_detector:REVIEW": 5,
+        "copy_move:REVIEW": 2,
+        "manipulation:REVIEW": 4
+      }
+    },
+    "oos_painting": {
+      "n": 300,
+      "pool": 300,
+      "PASS": {
+        "rate": 0.8433,
+        "k": 253,
+        "n": 300,
+        "ci95": [
+          0.7979,
+          0.8801
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.1567,
+        "k": 47,
+        "n": 300,
+        "ci95": [
+          0.1199,
+          0.2021
+        ]
+      },
+      "FAIL": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "not_pass": {
+        "rate": 0.1567,
+        "k": 47,
+        "n": 300,
+        "ci95": [
+          0.1199,
+          0.2021
+        ]
+      },
+      "mean_score": 88.4,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:REVIEW": 26,
+        "copy_move:REVIEW": 2,
+        "manipulation:REVIEW": 20
+      }
+    },
+    "oos_photo": {
+      "n": 300,
+      "pool": 397,
+      "PASS": {
+        "rate": 0.4233,
+        "k": 127,
+        "n": 300,
+        "ci95": [
+          0.3687,
+          0.4799
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.3367,
+        "k": 101,
+        "n": 300,
+        "ci95": [
+          0.2856,
+          0.3919
+        ]
+      },
+      "FAIL": {
+        "rate": 0.24,
+        "k": 72,
+        "n": 300,
+        "ci95": [
+          0.1952,
+          0.2914
+        ]
+      },
+      "not_pass": {
+        "rate": 0.5767,
+        "k": 173,
+        "n": 300,
+        "ci95": [
+          0.5201,
+          0.6313
+        ]
+      },
+      "mean_score": 70.4,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 71,
+        "ai_detector:REVIEW": 90,
+        "copy_move:FAIL": 1,
+        "manipulation:REVIEW": 23
+      }
     },
     "ai_modern_generators": {
-      "PASS": 0.0,
-      "REVIEW": 0.12,
-      "FAIL": 0.88,
-      "mean_score": 43.3,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 300,
+      "pool": 520,
+      "PASS": {
+        "rate": 0.0033,
+        "k": 1,
+        "n": 300,
+        "ci95": [
+          0.0006,
+          0.0186
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.01,
+        "k": 3,
+        "n": 300,
+        "ci95": [
+          0.0034,
+          0.029
+        ]
+      },
+      "FAIL": {
+        "rate": 0.9867,
+        "k": 296,
+        "n": 300,
+        "ci95": [
+          0.9662,
+          0.9948
+        ]
+      },
+      "not_pass": {
+        "rate": 0.9967,
+        "k": 299,
+        "n": 300,
+        "ci95": [
+          0.9814,
+          0.9994
+        ]
+      },
+      "mean_score": 51.6,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 296,
+        "ai_detector:REVIEW": 3,
+        "copy_move:REVIEW": 1,
+        "manipulation:REVIEW": 16
+      }
     },
     "ai_art_generators": {
-      "PASS": 0.12,
-      "REVIEW": 0.44,
-      "FAIL": 0.44,
-      "mean_score": 57.5,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 300,
+      "pool": 356,
+      "PASS": {
+        "rate": 0.03,
+        "k": 9,
+        "n": 300,
+        "ci95": [
+          0.0159,
+          0.056
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.1833,
+        "k": 55,
+        "n": 300,
+        "ci95": [
+          0.1436,
+          0.231
+        ]
+      },
+      "FAIL": {
+        "rate": 0.7867,
+        "k": 236,
+        "n": 300,
+        "ci95": [
+          0.7368,
+          0.8292
+        ]
+      },
+      "not_pass": {
+        "rate": 0.97,
+        "k": 291,
+        "n": 300,
+        "ci95": [
+          0.944,
+          0.9841
+        ]
+      },
+      "mean_score": 51.7,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 235,
+        "ai_detector:REVIEW": 52,
+        "copy_exact:FAIL": 1,
+        "copy_move:REVIEW": 3,
+        "copy_semantic:FAIL": 1,
+        "copy_semantic:REVIEW": 1,
+        "manipulation:REVIEW": 18
+      }
     },
     "ai_older_generators": {
-      "PASS": 0.18,
-      "REVIEW": 0.5,
-      "FAIL": 0.32,
-      "mean_score": 60.8,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 158,
+      "pool": 158,
+      "PASS": {
+        "rate": 0.038,
+        "k": 6,
+        "n": 158,
+        "ci95": [
+          0.0175,
+          0.0804
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.1835,
+        "k": 29,
+        "n": 158,
+        "ci95": [
+          0.1309,
+          0.2512
+        ]
+      },
+      "FAIL": {
+        "rate": 0.7785,
+        "k": 123,
+        "n": 158,
+        "ci95": [
+          0.7076,
+          0.8362
+        ]
+      },
+      "not_pass": {
+        "rate": 0.962,
+        "k": 152,
+        "n": 158,
+        "ci95": [
+          0.9196,
+          0.9825
+        ]
+      },
+      "mean_score": 52.4,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 158,
+        "ci95": [
+          0.0,
+          0.0237
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 123,
+        "ai_detector:REVIEW": 29,
+        "copy_move:REVIEW": 3,
+        "manipulation:REVIEW": 13
+      }
     },
     "ai_unseen_flux": {
-      "PASS": 0.0,
-      "REVIEW": 0.24,
-      "FAIL": 0.76,
-      "mean_score": 44.1,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 300,
+      "pool": 1000,
+      "PASS": {
+        "rate": 0.02,
+        "k": 6,
+        "n": 300,
+        "ci95": [
+          0.0092,
+          0.0429
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.0267,
+        "k": 8,
+        "n": 300,
+        "ci95": [
+          0.0136,
+          0.0517
+        ]
+      },
+      "FAIL": {
+        "rate": 0.9533,
+        "k": 286,
+        "n": 300,
+        "ci95": [
+          0.9232,
+          0.972
+        ]
+      },
+      "not_pass": {
+        "rate": 0.98,
+        "k": 294,
+        "n": 300,
+        "ci95": [
+          0.9571,
+          0.9908
+        ]
+      },
+      "mean_score": 52.1,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 286,
+        "ai_detector:REVIEW": 8,
+        "copy_move:REVIEW": 1,
+        "manipulation:REVIEW": 13
+      }
+    },
+    "oos_ai_2025": {
+      "n": 300,
+      "pool": 733,
+      "PASS": {
+        "rate": 0.1133,
+        "k": 34,
+        "n": 300,
+        "ci95": [
+          0.0822,
+          0.1542
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.24,
+        "k": 72,
+        "n": 300,
+        "ci95": [
+          0.1952,
+          0.2914
+        ]
+      },
+      "FAIL": {
+        "rate": 0.6467,
+        "k": 194,
+        "n": 300,
+        "ci95": [
+          0.591,
+          0.6986
+        ]
+      },
+      "not_pass": {
+        "rate": 0.8867,
+        "k": 266,
+        "n": 300,
+        "ci95": [
+          0.8458,
+          0.9178
+        ]
+      },
+      "mean_score": 56.1,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 194,
+        "ai_detector:REVIEW": 69,
+        "manipulation:REVIEW": 14
+      }
     },
     "exact_duplicate": {
-      "PASS": 0.0,
-      "REVIEW": 0.0,
-      "FAIL": 1.0,
-      "mean_score": 82.3,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 300,
+      "pool": 15037,
+      "PASS": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "FAIL": {
+        "rate": 1.0,
+        "k": 300,
+        "n": 300,
+        "ci95": [
+          0.9874,
+          1.0
+        ]
+      },
+      "not_pass": {
+        "rate": 1.0,
+        "k": 300,
+        "n": 300,
+        "ci95": [
+          0.9874,
+          1.0
+        ]
+      },
+      "mean_score": 81.5,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:REVIEW": 3,
+        "copy_exact:FAIL": 300,
+        "copy_move:FAIL": 1,
+        "copy_move:REVIEW": 12,
+        "copy_semantic:FAIL": 52,
+        "copy_semantic:REVIEW": 4,
+        "manipulation:REVIEW": 4
+      }
     },
     "edited_copy_nft": {
-      "PASS": 1.0,
-      "REVIEW": 0.0,
-      "FAIL": 0.0,
-      "mean_score": 95.9,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 300,
+      "pool": 12347,
+      "PASS": {
+        "rate": 0.6067,
+        "k": 182,
+        "n": 300,
+        "ci95": [
+          0.5504,
+          0.6603
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.39,
+        "k": 117,
+        "n": 300,
+        "ci95": [
+          0.3365,
+          0.4463
+        ]
+      },
+      "FAIL": {
+        "rate": 0.0033,
+        "k": 1,
+        "n": 300,
+        "ci95": [
+          0.0006,
+          0.0186
+        ]
+      },
+      "not_pass": {
+        "rate": 0.3933,
+        "k": 118,
+        "n": 300,
+        "ci95": [
+          0.3397,
+          0.4496
+        ]
+      },
+      "mean_score": 90.5,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:REVIEW": 12,
+        "copy_exact:FAIL": 1,
+        "copy_move:REVIEW": 9,
+        "manipulation:REVIEW": 103
+      }
     },
     "edited_copy_painting": {
-      "PASS": 0.02,
-      "REVIEW": 0.26,
-      "FAIL": 0.72,
-      "mean_score": 74.6,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 300,
+      "pool": 2690,
+      "PASS": {
+        "rate": 0.0167,
+        "k": 5,
+        "n": 300,
+        "ci95": [
+          0.0071,
+          0.0384
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.3067,
+        "k": 92,
+        "n": 300,
+        "ci95": [
+          0.2572,
+          0.361
+        ]
+      },
+      "FAIL": {
+        "rate": 0.6767,
+        "k": 203,
+        "n": 300,
+        "ci95": [
+          0.6218,
+          0.7271
+        ]
+      },
+      "not_pass": {
+        "rate": 0.9833,
+        "k": 295,
+        "n": 300,
+        "ci95": [
+          0.9616,
+          0.9929
+        ]
+      },
+      "mean_score": 67.0,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 8,
+        "ai_detector:REVIEW": 34,
+        "copy_exact:FAIL": 63,
+        "copy_exact:REVIEW": 3,
+        "copy_move:FAIL": 1,
+        "copy_move:REVIEW": 3,
+        "copy_semantic:FAIL": 190,
+        "copy_semantic:REVIEW": 96,
+        "manipulation:REVIEW": 147
+      }
     },
     "copy_move_human_art": {
-      "PASS": 0.04,
-      "REVIEW": 0.18,
-      "FAIL": 0.78,
-      "mean_score": 66.7,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 295,
+      "pool": 295,
+      "PASS": {
+        "rate": 0.0068,
+        "k": 2,
+        "n": 295,
+        "ci95": [
+          0.0019,
+          0.0244
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.1627,
+        "k": 48,
+        "n": 295,
+        "ci95": [
+          0.125,
+          0.2091
+        ]
+      },
+      "FAIL": {
+        "rate": 0.8305,
+        "k": 245,
+        "n": 295,
+        "ci95": [
+          0.7835,
+          0.869
+        ]
+      },
+      "not_pass": {
+        "rate": 0.9932,
+        "k": 293,
+        "n": 295,
+        "ci95": [
+          0.9756,
+          0.9981
+        ]
+      },
+      "mean_score": 58.7,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 295,
+        "ci95": [
+          0.0,
+          0.0129
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 27,
+        "ai_detector:REVIEW": 43,
+        "copy_exact:REVIEW": 1,
+        "copy_move:FAIL": 232,
+        "copy_move:REVIEW": 22,
+        "copy_semantic:FAIL": 8,
+        "copy_semantic:REVIEW": 16,
+        "manipulation:REVIEW": 282
+      }
     },
     "splice_human_art": {
-      "PASS": 0.0,
-      "REVIEW": 0.84,
-      "FAIL": 0.16,
-      "mean_score": 64.2,
-      "blocked_as_existing_onchain_token": 0.0
+      "n": 295,
+      "pool": 295,
+      "PASS": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 295,
+        "ci95": [
+          0.0,
+          0.0129
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.7831,
+        "k": 231,
+        "n": 295,
+        "ci95": [
+          0.7325,
+          0.8263
+        ]
+      },
+      "FAIL": {
+        "rate": 0.2169,
+        "k": 64,
+        "n": 295,
+        "ci95": [
+          0.1737,
+          0.2675
+        ]
+      },
+      "not_pass": {
+        "rate": 1.0,
+        "k": 295,
+        "n": 295,
+        "ci95": [
+          0.9871,
+          1.0
+        ]
+      },
+      "mean_score": 60.4,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 295,
+        "ci95": [
+          0.0,
+          0.0129
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 48,
+        "ai_detector:REVIEW": 101,
+        "copy_exact:FAIL": 2,
+        "copy_move:FAIL": 2,
+        "copy_move:REVIEW": 4,
+        "copy_semantic:FAIL": 7,
+        "copy_semantic:REVIEW": 9,
+        "manipulation:REVIEW": 295
+      }
     },
     "exact_onchain_nft": {
-      "PASS": 0.0,
-      "REVIEW": 0.02,
-      "FAIL": 0.98,
-      "mean_score": 72.7,
-      "blocked_as_existing_onchain_token": 0.74
+      "n": 300,
+      "pool": 3000,
+      "PASS": {
+        "rate": 0.01,
+        "k": 3,
+        "n": 300,
+        "ci95": [
+          0.0034,
+          0.029
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.0067,
+        "k": 2,
+        "n": 300,
+        "ci95": [
+          0.0018,
+          0.024
+        ]
+      },
+      "FAIL": {
+        "rate": 0.9833,
+        "k": 295,
+        "n": 300,
+        "ci95": [
+          0.9616,
+          0.9929
+        ]
+      },
+      "not_pass": {
+        "rate": 0.99,
+        "k": 297,
+        "n": 300,
+        "ci95": [
+          0.971,
+          0.9966
+        ]
+      },
+      "mean_score": 78.8,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.76,
+        "k": 228,
+        "n": 300,
+        "ci95": [
+          0.7086,
+          0.8048
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 12,
+        "ai_detector:REVIEW": 23,
+        "copy_exact:FAIL": 293,
+        "copy_exact:REVIEW": 2,
+        "copy_move:FAIL": 1,
+        "copy_move:REVIEW": 2,
+        "manipulation:REVIEW": 5
+      }
     },
     "edited_onchain_nft": {
-      "PASS": 0.54,
-      "REVIEW": 0.4,
-      "FAIL": 0.06,
-      "mean_score": 84.9,
-      "blocked_as_existing_onchain_token": 0.06
+      "n": 300,
+      "pool": 3000,
+      "PASS": {
+        "rate": 0.6567,
+        "k": 197,
+        "n": 300,
+        "ci95": [
+          0.6013,
+          0.7081
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.2367,
+        "k": 71,
+        "n": 300,
+        "ci95": [
+          0.1921,
+          0.2879
+        ]
+      },
+      "FAIL": {
+        "rate": 0.1067,
+        "k": 32,
+        "n": 300,
+        "ci95": [
+          0.0766,
+          0.1467
+        ]
+      },
+      "not_pass": {
+        "rate": 0.3433,
+        "k": 103,
+        "n": 300,
+        "ci95": [
+          0.2919,
+          0.3987
+        ]
+      },
+      "mean_score": 83.6,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0167,
+        "k": 5,
+        "n": 300,
+        "ci95": [
+          0.0071,
+          0.0384
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 25,
+        "ai_detector:REVIEW": 33,
+        "copy_exact:FAIL": 7,
+        "copy_move:FAIL": 1,
+        "copy_move:REVIEW": 3,
+        "manipulation:REVIEW": 48
+      }
     }
   }
 }

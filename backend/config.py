@@ -40,8 +40,18 @@ MODEL_DIR = BACKEND_DIR / "model"
 SPLIT_FILE = MODEL_DIR / "split.json"
 RESNET_WEIGHTS = MODEL_DIR / "best_model.pt"
 RESNET_META = MODEL_DIR / "model_meta.json"
-AI_DETECTOR_FILE = MODEL_DIR / "ai_detector.json"
-POLICY_FILE = BACKEND_DIR / "policy.json"
+# Phase 5 model profile. MINTGATE_PERMISSIVE_ONLY=1: no non-commercial / research-only weights or
+# training data anywhere (TruFor off; the AI probe trained on permissive sources only, with its own
+# calibrated policy). MINTGATE_TRUFOR: "auto" (default) = on when a GPU is present and permitted;
+# "0" / "1" force it (TruFor needs 2-36 s per image on a CPU, see docs/models.md).
+PERMISSIVE_ONLY = env("MINTGATE_PERMISSIVE_ONLY", "0") == "1"
+TRUFOR_MODE = env("MINTGATE_TRUFOR", "auto")
+AI_DETECTOR_FILE = (
+    Path(env("AI_DETECTOR_FILE", ""))
+    if env("AI_DETECTOR_FILE")
+    else (MODEL_DIR / ("ai_detector.permissive.json" if PERMISSIVE_ONLY else "ai_detector.json"))
+)
+POLICY_FILE = BACKEND_DIR / ("policy.permissive.json" if PERMISSIVE_ONLY else "policy.json")
 
 # ---- Reference index (the "already minted" collection) -------------------------
 INDEX_DIR = BACKEND_DIR / "index"

@@ -110,7 +110,7 @@ def test_submit_is_async_and_fast(server, client, submit, run_jobs):
     assert done["status"] == "done" and r["report_id"] == job["job_id"]
     assert r["decision"] == r["status"] == "PASS", r["reasons"]
     assert r["artist"] == ARTIST
-    assert set(r["checks"]) == {"resnet", "ai_detector", "copy_move", "copy_exact", "copy_semantic"}
+    assert set(r["checks"]) == {"ai_detector", "manipulation", "copy_move", "copy_exact", "copy_semantic", "provenance"}
     assert (server.config.UPLOADS_DIR / f"{r['report_id']}.png").exists()
     assert not (server.config.INCOMING_DIR / job["job_id"]).exists()
     full = client.get(f"/api/report/{r['report_id']}").get_json()
@@ -205,10 +205,10 @@ def test_pass_attestation_is_bound_to_the_artist(server, client, analyse, fake_r
 def test_review_flow(server, client, analyse, run_jobs, reviewer_key, fake_registry):
     from jobs import tasks
 
-    tasks.pipeline().resnet.value = 0.99  # REVIEW-only check: may flag, never fail
+    tasks.pipeline().trufor.value = 0.99  # REVIEW-only check: may flag, never fail
     r = analyse("photo.png")
     rid = r["report_id"]
-    assert r["decision"] == "REVIEW" and r["checks"]["resnet"]["status"] == "REVIEW"
+    assert r["decision"] == "REVIEW" and r["checks"]["manipulation"]["status"] == "REVIEW"
     run_jobs()  # chain queue: the backend anchors the REVIEW verdict itself
     assert fake_registry.verdict_of(r["report_hash"])["decision"] == "REVIEW"
     assert fake_registry.verdict_of(r["report_hash"])["artist"] == ARTIST
@@ -245,7 +245,7 @@ def test_review_flow(server, client, analyse, run_jobs, reviewer_key, fake_regis
 def test_rejected_review_cannot_mint(server, client, analyse, run_jobs, reviewer_key):
     from jobs import tasks
 
-    tasks.pipeline().resnet.value = 0.99
+    tasks.pipeline().trufor.value = 0.99
     rid = analyse("photo.png")["report_id"]
     review(client, rid, reviewer_key, approve=False)
     run_jobs()
@@ -268,7 +268,7 @@ def test_anchoring_retries_when_the_chain_is_down(server, analyse, run_jobs, fak
 
     from jobs import tasks
 
-    tasks.pipeline().resnet.value = 0.99
+    tasks.pipeline().trufor.value = 0.99
     fake_registry.down = True
     r = analyse("photo.png")
     run_jobs()
@@ -287,7 +287,8 @@ def test_ai_generated_upload_fails(server, analyse):
     tasks.pipeline().ai.value = 0.97
     r = analyse("photo.png")
     assert r["decision"] == "FAIL"
-    assert "AI-generated probability (CLIP probe + spectral) crossed the hard-fail threshold" in r["reasons"]
+    label = tasks.pipeline().policy.checks["ai_detector"]["label"]
+    assert f"{label} crossed the hard-fail threshold" in r["reasons"]
 
 
 def test_minted_artwork_protects_against_reupload(server, client, analyse, wallet):

@@ -1,0 +1,7 @@
+{
+  "hub_id": "openai/clip-vit-base-patch32",
+  "family": "clip",
+  "tensors": 200,
+  "sha256": "0a636973ed15d5d8c7eea488b930d2fdef5b1d05ae04588f7bcacb38dd02414d",
+  "onnx_sha256": "afae9a92b7222fccbda7d4394eb78064b1201e7912122613fd553423736ac5fb"
+}

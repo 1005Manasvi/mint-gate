@@ -5,16 +5,27 @@ import { el, explorerLink, link, msg, short, tokenPath } from "./ui.js";
 import * as wallet from "./wallet.js";
 
 const $ = (id) => document.getElementById(id);
-const CHECK_ORDER = ["resnet", "ai_detector", "copy_move", "copy_exact", "copy_semantic", "copy_geometric"];
+const CHECK_ORDER = [
+  "provenance",
+  "ai_detector",
+  "manipulation",
+  "copy_move",
+  "copy_exact",
+  "copy_semantic",
+  "copy_geometric",
+];
 const CHECK_TITLE = {
-  resnet: "ResNet-18",
-  ai_detector: "GAN / AI detector",
+  provenance: "Provenance (C2PA, watermark, metadata)",
+  ai_detector: "AI-image detector",
+  manipulation: "Manipulation (TruFor)",
   copy_move: "Copy-move",
   copy_exact: "Exact copy (PDQ)",
   copy_semantic: "Edited copy (SSCD)",
   copy_geometric: "Partial copy (LightGlue)",
 };
 const CHAIN_NAMES = { 1: "Ethereum", 8453: "Base" };
+// provenance check values (detection/provenance.py)
+const PROVENANCE_TEXT = { 1: "AI evidence", 0.6: "advisory", 0: "none", "-1": "trusted capture" };
 const RISK_COLOR = (r, advisory) =>
   advisory && r >= 0.5 ? "#6366f1" : r >= 1 ? "var(--fail)" : r >= 0.5 ? "var(--review)" : "var(--pass)";
 const STATUS_TEXT = {
@@ -384,7 +395,8 @@ $("analyzeBtn").addEventListener("click", async () => {
 
 // ---------------- report rendering ----------------
 function fmtValue(name, v) {
-  if (name === "resnet" || name === "ai_detector") return `${(v * 100).toFixed(1)}%`;
+  if (name === "ai_detector" || name === "manipulation") return `${(v * 100).toFixed(1)}%`;
+  if (name === "provenance") return PROVENANCE_TEXT[v] ?? String(v);
   if (name === "copy_semantic") return v.toFixed(3);
   if (name === "copy_exact") return `${v} bits`;
   if (name === "copy_geometric") return `${v} inliers`;
@@ -403,6 +415,8 @@ function renderChecks(checks) {
       if (c.nearest) extra.push(`nearest: ${c.nearest}`);
       if (c.shift) extra.push(`shift (${c.shift.join(", ")}), ${c.votes} block pairs`);
       if (c.uploaded_pdq) extra.push(`PDQ ${c.uploaded_pdq.slice(0, 16)}…`);
+      if (k === "provenance" && c.reason) extra.push(c.reason);
+      if (c.capped_by) extra.push(`capped at REVIEW by trusted ${c.capped_by} evidence`);
       return el(
         "div",
         { className: "check" },
@@ -483,6 +497,8 @@ function renderSimilar(list) {
 
 function renderEvidence(ev) {
   $("cmHeat").src = `data:image/png;base64,${ev.copy_move_heatmap}`;
+  $("tfFig").hidden = !ev.manipulation_heatmap;
+  if (ev.manipulation_heatmap) $("tfImg").src = `data:image/png;base64,${ev.manipulation_heatmap}`;
   $("matchFig").hidden = !ev.copy_matches;
   if (ev.copy_matches) $("matchImg").src = `data:image/png;base64,${ev.copy_matches}`;
 }

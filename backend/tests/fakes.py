@@ -18,14 +18,18 @@ def fixture_image(name) -> Image.Image:
 # ---- tiny stand-ins for the learned models -------------------------------------------
 
 
-class FakeResNet:
-    version = "fake-resnet"
+class FakeTruFor:
+    """TruFor stand-in (REVIEW-only `manipulation` check): a flat map at `value`."""
+
+    version = "fake-trufor"
 
     def __init__(self):
         self.value = 0.05
 
-    def predict(self, img):
-        return self.value
+    def analyse(self, img):
+        w, h = min(img.width, 64), min(img.height, 64)
+        m = np.full((h, w), self.value, np.float32)
+        return {"score": self.value, "map": m, "conf": np.ones_like(m), "size": (w, h), "ms": 0}
 
 
 class FakeAIDetector:
@@ -36,7 +40,7 @@ class FakeAIDetector:
         self.value = 0.05
 
     def predict(self, img, clip_emb=None):
-        return {"spectral": self.value, "clip_probe": self.value, "probability": self.value}
+        return {"probability": self.value, "probes": {"fake": self.value}}
 
 
 class FakeClip:
@@ -104,9 +108,8 @@ def make_pipeline():
 
     p = MintGatePipeline.__new__(MintGatePipeline)
     p.policy = Policy()
-    p.resnet = FakeResNet()
+    p.trufor = FakeTruFor()
     p.ai = FakeAIDetector()
-    p.clip = FakeClip()
     p.copy = copy_engine()
     p.index = tiny_copy_index(p.copy)
     p._lock = threading.Lock()

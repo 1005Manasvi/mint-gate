@@ -1,0 +1,269 @@
+{
+  "version": "5.0.0-permissive",
+  "weights": {
+    "ai_detector": 0.45,
+    "copy_move": 0.15,
+    "copy_semantic": 0.2,
+    "copy_exact": 0.1,
+    "provenance": 0.0
+  },
+  "checks": {
+    "copy_exact": {
+      "label": "PDQ distance to the nearest protected work (bits, mirrored / rotated too)",
+      "review": 31.5,
+      "fail": 27.5
+    },
+    "copy_semantic": {
+      "label": "SSCD copy score vs protected works + on-chain NFTs (density-relative)",
+      "review": 0.1034,
+      "fail": 0.4462
+    },
+    "copy_move": {
+      "label": "Copy-move clone peak ratio",
+      "review": 3.8,
+      "fail": 6.0
+    },
+    "ai_detector": {
+      "label": "AI-generated probability (probes on frozen CLIP-B/32, permissive training data)",
+      "review": 0.5,
+      "fail": 0.706
+    },
+    "provenance": {
+      "label": "Provenance evidence (C2PA, AI watermark, generator metadata, web)",
+      "review": 0.5,
+      "fail": 0.9
+    }
+  },
+  "score": {
+    "pass_min": 70,
+    "review_min": 40
+  },
+  "positive_evidence": {
+    "check": "provenance",
+    "below": 0,
+    "cap": {
+      "ai_detector": "REVIEW"
+    }
+  },
+  "calibration": {
+    "copy": {
+      "source": "benchmark/copydet.py (val thresholds, test rates)",
+      "thresholds": {
+        "copy_exact": {
+          "review": 31.5,
+          "fail": 27.5,
+          "label": "PDQ distance to the nearest protected work (bits, mirrored / rotated too)"
+        },
+        "copy_semantic": {
+          "review": 0.1034,
+          "fail": 0.4462,
+          "label": "SSCD copy score vs protected works + on-chain NFTs (density-relative)"
+        }
+      },
+      "per_check": {
+        "copy_exact": {
+          "val_auc": 0.6749
+        },
+        "copy_semantic": {
+          "val_auc": 0.6364
+        }
+      },
+      "test": {
+        "painting": {
+          "copies": 144,
+          "genuine": 1486,
+          "copy_exact": {
+            "copies_flagged": 0.4236,
+            "copies_failed": 0.375,
+            "genuine_flagged": 0.0027,
+            "genuine_failed": 0.002
+          },
+          "copy_semantic": {
+            "copies_flagged": 0.9583,
+            "copies_failed": 0.6458,
+            "genuine_flagged": 0.0222,
+            "genuine_failed": 0.004
+          },
+          "engine": {
+            "copies_flagged": 0.9722,
+            "copies_flagged_right_reference": 0.9722,
+            "copies_failed": 0.7153,
+            "genuine_flagged": 0.0222,
+            "genuine_failed": 0.0047
+          },
+          "v1_policy_3.1.0": {
+            "copies_flagged": 0.9306,
+            "copies_failed": 0.5556,
+            "genuine_flagged": 0.0498,
+            "genuine_failed": 0.0135
+          }
+        },
+        "nft": {
+          "copies": 140,
+          "genuine": 1465,
+          "copy_exact": {
+            "copies_flagged": 0.1071,
+            "copies_failed": 0.1071,
+            "genuine_flagged": 0.0,
+            "genuine_failed": 0.0
+          },
+          "copy_semantic": {
+            "copies_flagged": 0.0,
+            "copies_failed": 0.0,
+            "genuine_flagged": 0.0,
+            "genuine_failed": 0.0
+          },
+          "engine": {
+            "copies_flagged": 0.1071,
+            "copies_flagged_right_reference": 0.0,
+            "copies_failed": 0.1071,
+            "genuine_flagged": 0.0,
+            "genuine_failed": 0.0
+          },
+          "v1_policy_3.1.0": {
+            "copies_flagged": 0.0643,
+            "copies_failed": 0.0,
+            "genuine_flagged": 0.0648,
+            "genuine_failed": 0.0
+          }
+        },
+        "all": {
+          "copies": 284,
+          "genuine": 2951,
+          "copy_exact": {
+            "copies_flagged": 0.2676,
+            "copies_failed": 0.243,
+            "genuine_flagged": 0.0014,
+            "genuine_failed": 0.001
+          },
+          "copy_semantic": {
+            "copies_flagged": 0.4859,
+            "copies_failed": 0.3275,
+            "genuine_flagged": 0.0112,
+            "genuine_failed": 0.002
+          },
+          "engine": {
+            "copies_flagged": 0.5458,
+            "copies_flagged_right_reference": 0.493,
+            "copies_failed": 0.4155,
+            "genuine_flagged": 0.0112,
+            "genuine_failed": 0.0024
+          },
+          "v1_policy_3.1.0": {
+            "copies_flagged": 0.5035,
+            "copies_failed": 0.2817,
+            "genuine_flagged": 0.0573,
+            "genuine_failed": 0.0068
+          }
+        }
+      },
+      "test_cpu_profile": {
+        "painting": {
+          "copies_flagged": 0.9167,
+          "copies_failed": 0.5694,
+          "genuine_flagged": 0.0202,
+          "genuine_failed": 0.0027
+        },
+        "nft": {
+          "copies_flagged": 0.1071,
+          "copies_failed": 0.1071,
+          "genuine_flagged": 0.0,
+          "genuine_failed": 0.0
+        }
+      }
+    },
+    "detectors": {
+      "ai_detector": {
+        "source": "ai_detector.permissive.json (ai-probe-clip-b32-permissive-20261106)",
+        "test_auc": {
+          "auc": 0.9218,
+          "n_pos": 1034,
+          "n_neg": 873,
+          "ci95": [
+            0.9088,
+            0.9344
+          ]
+        },
+        "test_unseen_flux": {
+          "flagged": {
+            "rate": 0.988,
+            "k": 988,
+            "n": 1000,
+            "ci95": [
+              0.9791,
+              0.9931
+            ]
+          },
+          "auc_vs_test_genuine": {
+            "auc": 0.9832,
+            "n_pos": 1000,
+            "n_neg": 873,
+            "ci95": [
+              0.9771,
+              0.9886
+            ]
+          }
+        },
+        "oos_report": {
+          "auc": {
+            "auc": 0.9293,
+            "n_pos": 364,
+            "n_neg": 827,
+            "ci95": [
+              0.9144,
+              0.9435
+            ]
+          },
+          "balanced_acc_at_review": 0.8307,
+          "ai_flagged": {
+            "rate": 0.8352,
+            "k": 304,
+            "n": 364,
+            "ci95": [
+              0.7936,
+              0.8697
+            ]
+          },
+          "genuine_flagged_by_domain": {
+            "nft_collection": {
+              "rate": 0.0791,
+              "k": 36,
+              "n": 455,
+              "ci95": [
+                0.0577,
+                0.1076
+              ]
+            },
+            "pixel_art": {
+              "rate": 0.3333,
+              "k": 8,
+              "n": 24,
+              "ci95": [
+                0.1797,
+                0.5329
+              ]
+            },
+            "painting": {
+              "rate": 0.0,
+              "k": 0,
+              "n": 150,
+              "ci95": [
+                0.0,
+                0.025
+              ]
+            },
+            "photo": {
+              "rate": 0.2828,
+              "k": 56,
+              "n": 198,
+              "ci95": [
+                0.2247,
+                0.3492
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

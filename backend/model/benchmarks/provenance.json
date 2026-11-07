@@ -1,0 +1,1083 @@
+{
+ "n": 2181,
+ "groups": {
+  "flux1-dev": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 200,
+    "ci95": [
+     0.0,
+     0.0188
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 200,
+    "ci95": [
+     0.0,
+     0.0188
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "nft_hf:cryptoadz-by-gremplin": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 100,
+    "ci95": [
+     0.0,
+     0.037
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 100,
+    "ci95": [
+     0.0,
+     0.037
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "nft_hf:cyberkongz": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 100,
+    "ci95": [
+     0.0,
+     0.037
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 100,
+    "ci95": [
+     0.0,
+     0.037
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "nft_hf:etherbears": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 100,
+    "ci95": [
+     0.0,
+     0.037
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 100,
+    "ci95": [
+     0.0,
+     0.037
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "nft_hf:theshiboshis": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 100,
+    "ci95": [
+     0.0,
+     0.037
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 100,
+    "ci95": [
+     0.0,
+     0.037
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Art Blocks": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 11,
+    "ci95": [
+     0.0,
+     0.2588
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 11,
+    "ci95": [
+     0.0,
+     0.2588
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Captainz": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 4,
+    "ci95": [
+     0.0,
+     0.4899
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 4,
+    "ci95": [
+     0.0,
+     0.4899
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:CloneX": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 2,
+    "ci95": [
+     0.0,
+     0.6576
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 2,
+    "ci95": [
+     0.0,
+     0.6576
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:DeGods": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Elemental": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Gutter Cat Gang": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Hashmasks": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 3,
+    "ci95": [
+     0.0,
+     0.5615
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 3,
+    "ci95": [
+     0.0,
+     0.5615
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:KaijuKingz": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Kanpai Pandas": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:LilPudgys": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Meebits": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Milady": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 5,
+    "ci95": [
+     0.0,
+     0.4345
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 5,
+    "ci95": [
+     0.0,
+     0.4345
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Moonbirds": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Moonbirds Oddities": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Otherdeed": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Pixelmon": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Potatoz": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:PudgyPenguins": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 1,
+    "ci95": [
+     0.0,
+     0.7935
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 1,
+    "ci95": [
+     0.0,
+     0.7935
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Rektguy": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 2,
+    "ci95": [
+     0.0,
+     0.6576
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 2,
+    "ci95": [
+     0.0,
+     0.6576
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:Valhalla": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "onchain:VeeFriends": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:aurora-20-1-25": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:docci": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 197,
+    "ci95": [
+     0.0,
+     0.0191
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 197,
+    "ci95": [
+     0.0,
+     0.0191
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:flux.2-klein-9b": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 118,
+    "ci95": [
+     0.0,
+     0.0315
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 118,
+    "ci95": [
+     0.0,
+     0.0315
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:frames-23-1-25": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 4,
+    "ci95": [
+     0.0,
+     0.4899
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 4,
+    "ci95": [
+     0.0,
+     0.4899
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:gpt-image-1.5": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.4754,
+    "k": 29,
+    "n": 61,
+    "ci95": [
+     0.3553,
+     0.5984
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.5082,
+    "k": 31,
+    "n": 61,
+    "ci95": [
+     0.386,
+     0.6294
+    ]
+   },
+   "signals": {
+    "c2pa": 28,
+    "metadata": 1
+   },
+   "examples": [
+    "C2PA credentials declare AI generation (API)",
+    "C2PA credentials declare AI generation (ChatGPT)",
+    "C2PA credentials declare AI generation (Sora)"
+   ]
+  },
+  "openfake:halfmoon-4-4-25": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 5,
+    "ci95": [
+     0.0,
+     0.4345
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 5,
+    "ci95": [
+     0.0,
+     0.4345
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:ideogram-2.0": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 4,
+    "ci95": [
+     0.0,
+     0.4899
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 4,
+    "ci95": [
+     0.0,
+     0.4899
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:illustrious": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.1375,
+    "k": 11,
+    "n": 80,
+    "ci95": [
+     0.0785,
+     0.2297
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 80,
+    "ci95": [
+     0.0,
+     0.0458
+    ]
+   },
+   "signals": {
+    "metadata": 11
+   },
+   "examples": [
+    "file metadata written by an AI generator: Automatic1111 / Forge generation parameters",
+    "file metadata written by an AI generator: Automatic1111 / Forge generation parameters, ComfyUI workflow"
+   ]
+  },
+  "openfake:imagenet": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 444,
+    "ci95": [
+     0.0,
+     0.0086
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 444,
+    "ci95": [
+     0.0,
+     0.0086
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:lumina-17-2-25": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 6,
+    "ci95": [
+     0.0,
+     0.3903
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:midjourney-7": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 1.0,
+    "k": 44,
+    "n": 44,
+    "ci95": [
+     0.9197,
+     1.0
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 44,
+    "ci95": [
+     0.0,
+     0.0803
+    ]
+   },
+   "signals": {
+    "metadata": 44
+   },
+   "examples": [
+    "XMP metadata declares AI generation (IPTC trainedAlgorithmicMedia)"
+   ]
+  },
+  "openfake:nano-banana-pro": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 1,
+    "ci95": [
+     0.0,
+     0.7935
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 1,
+    "ci95": [
+     0.0,
+     0.7935
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:recraft-v2": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 3,
+    "ci95": [
+     0.0,
+     0.5615
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 3,
+    "ci95": [
+     0.0,
+     0.5615
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:recraft-v3": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 14,
+    "ci95": [
+     0.0,
+     0.2153
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 14,
+    "ci95": [
+     0.0,
+     0.2153
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:seedream-v5.0": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 5,
+    "ci95": [
+     0.0,
+     0.4345
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 5,
+    "ci95": [
+     0.0,
+     0.4345
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "openfake:z-image-turbo": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.1798,
+    "k": 32,
+    "n": 178,
+    "ci95": [
+     0.1303,
+     0.2428
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 178,
+    "ci95": [
+     0.0,
+     0.0211
+    ]
+   },
+   "signals": {
+    "metadata": 32
+   },
+   "examples": [
+    "file metadata written by an AI generator: Automatic1111 / Forge generation parameters",
+    "file metadata written by an AI generator: Automatic1111 / Forge generation parameters, ComfyUI workflow",
+    "file metadata written by an AI generator: ComfyUI workflow"
+   ]
+  },
+  "photo:coco": {
+   "label": "authentic",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 299,
+    "ci95": [
+     0.0,
+     0.0127
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 299,
+    "ci95": [
+     0.0,
+     0.0127
+    ]
+   },
+   "signals": {},
+   "examples": []
+  }
+ },
+ "pooled": {
+  "ai": {
+   "ai_evidence": {
+    "rate": 0.1591,
+    "k": 116,
+    "n": 729,
+    "ci95": [
+     0.1344,
+     0.1875
+    ]
+   },
+   "any_evidence": {
+    "rate": 0.1591,
+    "k": 116,
+    "n": 729,
+    "ci95": [
+     0.1344,
+     0.1875
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0425,
+    "k": 31,
+    "n": 729,
+    "ci95": [
+     0.0301,
+     0.0597
+    ]
+   },
+   "signals": {
+    "metadata": 88,
+    "c2pa": 28
+   }
+  },
+  "authentic": {
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 1452,
+    "ci95": [
+     0.0,
+     0.0026
+    ]
+   },
+   "any_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 1452,
+    "ci95": [
+     0.0,
+     0.0026
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 1452,
+    "ci95": [
+     0.0,
+     0.0026
+    ]
+   },
+   "signals": {}
+  }
+ },
+ "ms_p50": 93,
+ "ms_p95": 1238
+}

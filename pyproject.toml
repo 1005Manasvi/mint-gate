@@ -14,6 +14,8 @@ filterwarnings = ["ignore::PIL.Image.DecompressionBombWarning"]
 line-length = 120
 target-version = "py312"
 src = ["backend"]
+# vendored third-party code is kept byte-close to upstream (licence: retain notices)
+extend-exclude = ["backend/third_party"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]

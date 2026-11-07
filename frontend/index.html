@@ -65,8 +65,9 @@
         <h2>2 · Pipeline</h2>
         <ol id="pipeline" class="pipeline" aria-label="Analysis steps">
           <li data-step="pre">Image preprocessing <small>validate · RGB · SHA-256</small></li>
-          <li data-step="resnet">ResNet-18 classification</li>
-          <li data-step="ai_detector">GAN / AI-generated detection <small>CLIP probe + spectrum</small></li>
+          <li data-step="provenance">Provenance <small>C2PA credentials · AI watermark · generator metadata</small></li>
+          <li data-step="ai_detector">AI-generated detection <small>probes on CLIP-B/32 + SigLIP 2</small></li>
+          <li data-step="manipulation">Manipulation forensics <small>TruFor, GPU profile</small></li>
           <li data-step="copy_move">Copy-move detection</li>
           <li data-step="copy_exact">Exact-copy hash <small>PDQ, mirrored + rotated</small></li>
           <li data-step="copy_semantic">Copy search <small>SSCD + DINOv2, region crops, vs protected works + on-chain NFTs</small></li>
@@ -101,6 +102,7 @@
           <h2>Visual evidence</h2>
           <div class="evidence">
             <figure><img id="cmHeat" alt="Copy-move heatmap"><figcaption>Copy-move heatmap (cloned blocks in red)</figcaption></figure>
+            <figure id="tfFig" hidden><img id="tfImg" alt="TruFor manipulation heatmap"><figcaption>TruFor manipulation map (red = likely edited, weighted by reliability)</figcaption></figure>
             <figure id="matchFig" hidden><img id="matchImg" alt="Keypoint matches with the nearest protected work"><figcaption>LightGlue inlier matches vs the nearest protected work</figcaption></figure>
           </div>
         </div>
@@ -209,12 +211,12 @@
       <ol>
         <li><b>Wallet identity</b>: Sign-In with Ethereum (EIP-4361); every upload is signed by the artist's wallet.</li>
         <li><b>Preprocessing</b>: validation, decompression-bomb guard, RGB normalisation, SHA-256 of the pixels.</li>
-        <li><b>ResNet-18</b>: fine-tuned on 17k real-world images; advisory (can flag for review, never fail).</li>
-        <li><b>GAN / AI detector</b>: linear probe on frozen CLIP features (generalises to unseen generators) + power-spectrum fingerprint.</li>
+        <li><b>Provenance</b>: C2PA Content Credentials (signature chain verified), Stable Diffusion / SDXL invisible watermarks, generator metadata (A1111, ComfyUI, IPTC "trainedAlgorithmicMedia"); optional reverse image search (advisory).</li>
+        <li><b>AI detector</b>: linear probes on frozen CLIP ViT-B/32 + SigLIP 2 B/16 features, chosen on an out-of-source benchmark of 2025-26 generators.</li>
+        <li><b>Manipulation forensics</b>: TruFor localisation + reliability map (GPU profile; can flag for review, never fail).</li>
         <li><b>Copy-move</b>: block matching with shift-vector voting; score = dominance of one displacement.</li>
-        <li><b>Perceptual hash</b>: 64-bit pHash, Hamming distance to every minted NFT.</li>
-        <li><b>CLIP copy score</b>: similarity to the protected collection, relative to each work's own nearest neighbour.</li>
-        <li><b>ORB</b>: keypoint matching with RANSAC homography on the CLIP/pHash shortlist.</li>
+        <li><b>Exact copy</b>: PDQ hash (mirrored / rotated too) against protected works and 270k indexed Ethereum NFTs.</li>
+        <li><b>Edited copy</b>: SSCD + DINOv2 descriptors with region crops, density-relative scoring; collection siblings are not copies.</li>
         <li><b>Policy engine</b>: data-calibrated thresholds → per-check risk → weighted score → PASS / REVIEW / FAIL.</li>
         <li><b>MintGateRegistry + MintGateNFTV2</b>: EIP-712 verdicts, one mint per image, artist-paid mints, disputes.</li>
       </ol>

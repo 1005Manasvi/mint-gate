@@ -37,6 +37,9 @@ class Policy:
         self.weights = self.data["weights"]
         self.pass_min = self.data["score"]["pass_min"]
         self.review_min = self.data["score"]["review_min"]
+        # {"check": "provenance", "below": 0, "cap": {"ai_detector": "REVIEW"}}: trusted positive
+        # evidence (C2PA capture chain) means the capped checks may ask for a human, never auto-reject
+        self.positive = self.data.get("positive_evidence")
 
     def risk(self, name, value):
         c = self.checks[name]
@@ -75,14 +78,24 @@ class Policy:
                 "review_at": self.checks[name]["review"],
                 "fail_at": self.checks[name]["fail"],
             }
-        score = 100.0 * (1.0 - sum(self.weights[n] * c["risk"] for n, c in per_check.items()))
+        score = 100.0 * (1.0 - sum(self.weights.get(n, 0.0) * c["risk"] for n, c in per_check.items()))
         score = int(round(max(0.0, min(100.0, score))))
 
+        pe = self.positive
+        positive = bool(pe and pe["check"] in values and values[pe["check"]] < pe["below"])
+        if positive:
+            for name, cap in pe["cap"].items():
+                if name in per_check and per_check[name]["status"] == FAIL:
+                    per_check[name]["status"] = cap
+                    per_check[name]["capped_by"] = pe["check"]
         failed = [n for n, c in per_check.items() if c["status"] == FAIL]
         flagged = [n for n, c in per_check.items() if c["status"] == REVIEW]
         if failed:
             decision = FAIL
             reasons += [f"{self.checks[n]['label']} crossed the hard-fail threshold" for n in failed]
+        elif score < self.review_min and positive:
+            decision = REVIEW  # trusted provenance: a low score alone sends it to a human, not to FAIL
+            reasons.append(f"authenticity score {score} < {self.review_min}, but trusted provenance evidence")
         elif score < self.review_min:
             decision = FAIL
             reasons.append(f"authenticity score {score} < {self.review_min}")

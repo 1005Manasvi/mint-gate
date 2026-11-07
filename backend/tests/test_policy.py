@@ -107,6 +107,54 @@ def test_shipped_policy_is_consistent():
     assert set(p.weights) == set(p.checks)
     assert sum(p.weights.values()) == pytest.approx(1.0)
     assert 0 < p.review_min < p.pass_min <= 100
-    assert p.checks["resnet"].get("max_status") == REVIEW  # ResNet-18 must stay REVIEW-only
+    assert "resnet" not in p.checks  # retired in Phase 5 (chance level on real forgeries)
+    assert p.checks["manipulation"].get("max_status") == REVIEW  # TruFor may flag, never fail alone
+    assert p.positive == {"check": "provenance", "below": 0, "cap": {"ai_detector": REVIEW}}
     for c in p.checks.values():
         assert c["review"] != c["fail"]
+
+
+@pytest.mark.parametrize("name", ["policy.json", "policy.permissive.json"])
+def test_permissive_policy_has_no_non_commercial_check(name):
+    from config import BACKEND_DIR
+
+    path = BACKEND_DIR / name
+    if not path.exists():
+        pytest.skip(f"{name} not calibrated")
+    p = Policy(path)
+    assert ("manipulation" in p.checks) == (name == "policy.json")  # TruFor is non-commercial
+
+
+# ---- positive evidence (Phase 5: trusted C2PA capture chain caps the AI detector) ----------------
+
+PE_POLICY = {
+    **POLICY,
+    "weights": {**POLICY["weights"], "prov": 0.0},
+    "checks": {**POLICY["checks"], "prov": {"label": "provenance", "review": 0.5, "fail": 0.9}},
+    "positive_evidence": {"check": "prov", "below": 0, "cap": {"high": "REVIEW"}},
+}
+
+
+@pytest.fixture
+def pe_policy(tmp_path):
+    path = tmp_path / "policy.json"
+    path.write_text(json.dumps(PE_POLICY))
+    return Policy(path)
+
+
+def test_positive_evidence_caps_the_detector_at_review(pe_policy):
+    d, score, checks, _ = pe_policy.decide({**CLEAN, "high": 1.0, "prov": -1.0})
+    assert d == REVIEW and checks["high"]["status"] == REVIEW and checks["high"]["capped_by"] == "prov"
+    assert pe_policy.decide({**CLEAN, "high": 1.0, "prov": 0.0})[0] == FAIL  # no evidence: unchanged
+
+
+def test_positive_evidence_never_lifts_other_checks_or_ai_evidence(pe_policy):
+    assert pe_policy.decide({**CLEAN, "low": 0, "prov": -1.0})[0] == FAIL  # uncapped check still fails
+    assert pe_policy.decide({**CLEAN, "prov": 1.0})[0] == FAIL  # AI provenance evidence fails
+
+
+def test_positive_evidence_turns_a_low_score_fail_into_review(pe_policy):
+    vals = {**CLEAN, "high": 1.0, "low": 9, "capped": 0.88}  # score 20: below review_min
+    d, score, checks, reasons = pe_policy.decide({**vals, "prov": -1.0})
+    assert score < 40 and d == REVIEW and "trusted provenance" in reasons[-1]
+    assert pe_policy.decide({**vals, "prov": 0.0})[0] == FAIL

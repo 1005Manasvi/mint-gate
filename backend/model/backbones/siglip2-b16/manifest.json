@@ -1,0 +1,7 @@
+{
+  "hub_id": "google/siglip2-base-patch16-256",
+  "family": "siglip",
+  "tensors": 208,
+  "sha256": "9375e9ec7ac63989dc898799d017653129b7c8e63d38a62b7d5724ecf6778dcc",
+  "onnx_sha256": "191d16da91257a477c3e4f650b85393e377353c81dc0f2b0d0a20ace8e2c5e9a"
+}

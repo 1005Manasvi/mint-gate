@@ -236,8 +236,12 @@ def status():
             "references": {"index": len(_json_file(config.INDEX_FILES) or []), "minted": minted_refs},
             "policy": POLICY.describe(),
             "models": {
-                "resnet18": {"results": _json_file(config.RESNET_META).get("results", {})},
-                "ai_detector": {"version": ai_meta.get("version"), "metrics": ai_meta.get("metrics")},
+                "ai_detector": {
+                    "version": ai_meta.get("version"),
+                    "backbones": ai_meta.get("backbones"),
+                    "metrics": ai_meta.get("metrics"),
+                },
+                "permissive_only": config.PERMISSIVE_ONLY,
             },
             "ipfs": ipfs.enabled(),
             "ipfs_gateway": config.IPFS_GATEWAY,

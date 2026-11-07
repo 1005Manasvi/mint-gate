@@ -204,3 +204,40 @@ and anything the next phase must know. Keep entries brief: this file is read at 
 - **For Phase 5/7:** deploy needs `pdqhash` built from source (no Linux wheel → `build-essential`),
   SSCD weights via `benchmark.fetch_models` (SHA-256 pinned, not in git), Postgres `shared_buffers` ≥ 1 GB.
   Recalibrate whenever the index grows a lot: thresholds from the 4k benchmark did not all transfer.
+
+## Phase 5: AI detection, manipulation forensics, provenance, statistics (done, 2026-11-07)
+- **Statistics everywhere** (`training/stats.py`): Wilson CIs for rates, stratified bootstrap for AUCs,
+  paired bootstrap for model comparisons. `evaluate_system` now samples **without replacement** (v4 drew
+  with replacement), n = 300 per category, resumable per category.
+- **OOS protocol v2** (`training/oos_data.py` → `data/oos/`, 2,431 images): v1 sample kept + 47 unseen NFT
+  collections (incl. 40 on-chain ones via Alchemy), Rijksmuseum, COCO / DOCCI photos, OpenFakeTiny 2025-26
+  generators (CC BY-NC, evaluation only). 50/50 select / report halves. Primary metric = balanced accuracy at
+  the deployed review threshold (genuine domains weighted equally).
+- **AI detector** (`training/ai_backbones.py`, `detection/backbones.py`, vision towers only via HTTP range
+  reads): shipped **CLIP-B/32 + SigLIP 2 B/16 probes (w 0.3/0.7)**, +4.6 pp [+1.8, +7.6] over v1 (select);
+  report half AUC 0.925 vs 0.894, AI flagged 88.7 % vs 75.8 %. CLIP-L/14 + So400m win but 4-5 s on CPU;
+  DINOv2 loses; LoRA (`training/lora_finetune.py`) rejected; int8 rejected (-14.8 pp, `benchmark/int8_gate.py`).
+  **Finding:** OOS photos flagged 45-53 % by every detector (DOCCI worst).
+- **Permissive profile** (`MINTGATE_PERMISSIVE_ONLY=1` → `ai_detector.permissive.json` + `policy.permissive.json`):
+  permissive-data probe flagged 100 % of paintings/photos until `training/fetch_permissive.py` added
+  ArtBench-PD paintings + CC BY COCO-train photos; now OOS AUC 0.929, no TruFor.
+- **Forgery benchmark** (`benchmark/build_forgery.py`, `benchmark/forgery.py`; CASIA v2, Columbia, COVERAGE,
+  IMD2020, CocoGlide with masks): ResNet-18 at chance → **retired**. **TruFor** adopted as REVIEW-only
+  `manipulation` check (+0.28 / +0.19 AUC on COVERAGE / CocoGlide, 6-8 % genuine flags), GPU profile only,
+  non-commercial (vendored `third_party/trufor/`, weights → safetensors with `weights_only=True`).
+- **Provenance** (`detection/provenance.py`, check `provenance` + policy `positive_evidence`): C2PA, SD/SDXL
+  watermarks, metadata, optional reverse search. Real files: 0 / 1,452 genuine false hits, 15.9 % of AI files
+  caught (MJ7 100 %, GPT-image 47.5 % via expired-cert C2PA). 23 tests with real signed fixtures.
+- **Policy 5.0.0** (`training/calibrate.py`): AI thresholds from the detector file, TruFor from the forgery
+  benchmark, provenance fixed, copy unchanged. **End to end (n = 300/category, GPU):** genuine PASS 78.5 %
+  [76.6, 80.3], wrongly failed 6.8 % [5.8, 8.0] (15 of 18 punk FAILs are dataset duplicates); forgeries stopped
+  87.1 % [85.9, 88.2]; per-domain false alarms NFT 11.7 %, pixel 11.9 %, paintings 19.5 %, photos 45.9 %.
+- **Retraining gate** (`training/retrain_gate.py`) + docs "Adding a new generator"; HiDream demo: refused
+  (photo FPR +2.01 pp > 2 pp; HiDream already caught 40/40).
+- **Tests:** 169 fast pytest (+ provenance 23, policy positive evidence 4), 5 slow (real backbones, TruFor).
+- **Open / for Phase 7:** **CPU profile exceeds the 1.5 s budget** (p50 1.5-1.6 s, p95 1.9-2.0 s; v4 1.10/1.35).
+  ONNX Runtime export (`benchmark/onnx_backbones.py`, `MINTGATE_CPU_ONNX=1`, −180 ms) crashes next to the copy
+  engine on Windows: verify on Linux. Deploy needs `training.ai_backbones fetch` (+ `benchmark.forgery fetch`
+  for the GPU profile), `c2pa-python`, `invisible-watermark`; `C2PA_TRUST_ANCHORS` for positive evidence.
+  The SD 1.5 HF cache (5.2 GB) is still present (owner's call). The laptop's commit memory is the bottleneck
+  for long jobs (see CLAUDE.md gotchas).

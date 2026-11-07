@@ -176,14 +176,19 @@ def copy_recall():
     (cd.OUT_DIR / "index_copy_recall.json").write_text(json.dumps(out, indent=2))
 
 
+def _png(im):
+    buf = io.BytesIO()
+    im.save(buf, format="PNG")
+    return buf.getvalue()
+
+
 def components(n=30):
     """CPU (2 threads) time of every per-upload step, to size the region-crop budget."""
     import torch
 
-    from detection import copy_move
+    from detection import copy_move, provenance
     from detection import fingerprints as fp
     from detection.ai_detector import AIDetector
-    from detection.clip_similarity import ClipEncoder
     from detection.preprocessing import detector_view
     from detection.resnet_classifier import ResNetClassifier
 
@@ -193,11 +198,14 @@ def components(n=30):
     rng = random.Random(9)
     imgs = [b.query_image(i) for i in rng.sample(range(len(b.queries)), n)]
     eng = json.loads((cd.MODEL_DIR / "copy_engine.json").read_text())
-    resnet, ai, clip = ResNetClassifier(), AIDetector(), ClipEncoder()
+    resnet, ai = ResNetClassifier(), AIDetector()
+    bbs = ai.backbones  # the shipped detector's own (no second copy in memory)
     sscd, dino = fp.SSCD(device="cpu"), fp.DinoV2("facebook/" + eng["dino"], device="cpu")
     steps = {
         "resnet18": lambda im: resnet.predict(detector_view(im)),
-        "clip_ai_probe": lambda im: ai.predict(detector_view(im), clip.encode_one(detector_view(im))),
+        "ai_detector_shipped": lambda im: ai.predict(detector_view(im)),
+        **{f"backbone_{k}": (lambda im, b=b: b.encode_one(detector_view(im))) for k, b in bbs.items()},
+        "provenance": lambda im: provenance.analyse(_png(im), im),
         "copy_move": copy_move.analyse,
         "pdq_dihedral": fp.pdq_dihedral,
         "sscd_full": sscd.encode_one,

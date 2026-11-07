@@ -7,10 +7,21 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 **Always read `docs/phases/PROGRESS.md` first** and update it when a phase finishes.
 
 ## Architecture (current state)
-- `backend/detection/`: preprocessing → 5 checks → `policy.py` (PASS / REVIEW / FAIL), policy **v4.0.0**.
-  - AI detector = CLIP ViT-B/32 linear probe (`ai_detector.py`, JSON weights). This is the main AI signal.
-  - ResNet-18 (`resnet_classifier.py`, `model/best_model.pt`) is **REVIEW-only**
-    (`max_status`): it generalises poorly to unseen NFT collections.
+- `backend/detection/`: provenance + preprocessing → checks → `policy.py` (PASS / REVIEW / FAIL), policy
+  **v5.0.0** (`policy.permissive.json` = `5.0.0-permissive` when `MINTGATE_PERMISSIVE_ONLY=1`).
+  - AI detector (Phase 5) = linear probes on frozen **CLIP-B/32 + SigLIP 2 B/16** (w 0.3 / 0.7),
+    `ai_detector.py` format 2 + `backbones.py` (vision towers only, fp16 safetensors in `model/backbones/`,
+    SHA-256 manifest, fetched by `python -m training.ai_backbones fetch`). Chosen by the out-of-source gate
+    (`training/ai_backbones.py`, OOS v2 set `training/oos_data.py` → `data/oos/`, select / report halves).
+    CPU: `MINTGATE_CPU_INT8=1` = dynamic int8 Linear layers (gated by `benchmark/int8_gate.py`).
+    Permissive profile: CLIP-B/32 probe on MIT / CDLA-P data + `training/fetch_permissive.py` extras.
+  - `provenance.py` (raw upload bytes): C2PA (`c2pa-python`; AI claim from any intact manifest, positive
+    evidence only from a trusted one: `C2PA_TRUST_ANCHORS`), SD/SDXL DWT-DCT watermarks (native sizes only),
+    generator metadata, optional reverse search (`REVERSE_SEARCH=vision|tineye`). Check `provenance`.
+  - TruFor (`trufor.py`, vendored `third_party/trufor/`, **non-commercial**): REVIEW-only `manipulation`
+    check + heatmap, GPU profile only (`MINTGATE_TRUFOR=auto`), never permissive. Weights converted once to
+    safetensors with `weights_only=True` (`python -m benchmark.forgery fetch`). ResNet-18 **retired** in
+    Phase 5 (chance on real forgeries); `resnet_classifier.py` / `best_model.pt` remain for history only.
   - Copy detection (Phase 4): `copy_engine.py` = PDQ (`copy_exact`, dihedral) + SSCD/DINOv2-S
     fusion + 18 SSCD region crops, density-relative (`copy_semantic`); params `model/copy_engine.json`
     are written by `benchmark.copydet evaluate` (val-tuned). Index: `copy_index.py` (`PgCopyIndex` =
@@ -67,10 +78,12 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
   `/token/<chain>/<contract>/<id>` (`token.html`) verifies chain + report hash in the browser;
   `js/canonical.js` must stay byte-compatible with `detection/report_hash.py` (shared vector
   `backend/tests/fixtures/canonical_vector.json`, regenerate with `python -m tests.test_canonical_vector`).
-- Training: `backend/training/` (fetch_realworld, fetch_v2, train_cnn, train_ai_detector,
-  build_index, calibrate, evaluate_system, independent_check). Data in
-  `backend/data/realworld/` (20,309 images, manifest.json); held-out generator = Flux.
-- Results: README.md, PROJECT_REPORT.md, `docs/models.md` (model register + benchmark). Policy v4.0.0. Tests: `backend/tests/` (pytest), `Blockchain/test/` (Hardhat) + `Blockchain/test/foundry/`; security review: `docs/security.md`.
+- Training: `backend/training/` (fetch_realworld, fetch_v2, ai_backbones, oos_data, lora_finetune,
+  fetch_permissive, retrain_gate, provenance_eval, stats (Wilson / bootstrap CIs), calibrate,
+  evaluate_system (n <= 300 per category, sampled without replacement, resumable), independent_check (v1)).
+  Data in `backend/data/realworld/` (20,309 images, manifest.json); held-out generator = Flux.
+  Forgery benchmark: `benchmark/build_forgery.py` + `benchmark/forgery.py` (`data/benchmark/forgery/`).
+- Results: README.md, PROJECT_REPORT.md, `docs/models.md` (model register + benchmark). Policy v5.0.0. Tests: `backend/tests/` (pytest), `Blockchain/test/` (Hardhat) + `Blockchain/test/foundry/`; security review: `docs/security.md`.
 
 ## Commands (Windows; venv = Python 3.12 + CUDA torch 2.6)
 - Python: `venv\Scripts\python.exe` (run from `backend/` as `-m training.xxx`).
@@ -101,6 +114,19 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - CI: `.github/workflows/ci.yml` (python, contracts [+ chain pytest], foundry, slither, e2e, lint). Accepted findings: `docs/security.md`.
 
 ## Hard-won gotchas (do not relearn these)
+- **Phase 5:** the laptop runs out of *commit* memory (page file can't grow when C: is full; another
+  project's jobs share the machine): long jobs crash with MemoryError / "bad allocation" / access
+  violations in MKL. Every long job checkpoints and resumes (`benchmark.forgery run`, `evaluate_system`,
+  `lora_finetune --score-only`); run GPU jobs one at a time; keep C: above ~3 GB free. Loading many
+  models into ONE CPU process crashes (`benchmark.latency components`): time new steps with
+  `benchmark.latency_ai` instead. Fetch only vision towers (`backbones.fetch_vision`, HTTP range reads:
+  SigLIP 2's checkpoint is 80 % text tower). transformers 5: SigLIP's vision class has no `vision_model.`
+  prefix and DINOv2 keys were renamed (load via `from_pretrained`). Never `torch.load(weights_only=False)`
+  a downloaded checkpoint (blocked, and rightly): allow-list globals by exact name, convert to safetensors.
+  OpenAI's C2PA certificates are *expired*: credential codes are not integrity failures. SD/SDXL
+  DWT-DCT watermarks die on one JPEG q90 save and need natural texture to decode. TruFor was trained on
+  CASIA v2 + IMD2020: those are not out-of-source for it. OOS photos (DOCCI) are flagged by every probe.
+  Bash heredocs collapse `\\n` too: patch files with Python scripts written by the Write tool.
 - **Phase 4:** SSCD TorchScript returns a constant vector in fp16: run it fp32 (SHA-256 pinned).
   SD 1.5 img2img overflows the 4 GB GPU into shared memory after a while (10× slower): restart it.
   The laptop **sleeps** during long jobs unless sleep-on-AC is off. Bulk pgvector loads: drop the

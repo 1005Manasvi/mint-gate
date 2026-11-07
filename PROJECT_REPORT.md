@@ -12,14 +12,17 @@ plus an on-chain rule that refuses to mint without a passing one.
 
 ## 2. System
 
-| Stage | Technique | Role in policy v4.0.0 |
+| Stage | Technique | Role in policy v5.0.0 |
 |---|---|---|
+| Provenance (Phase 5) | raw upload bytes: C2PA manifest (signature chain verified), Stable Diffusion / SDXL DWT-DCT watermark, generator metadata (A1111, ComfyUI, IPTC XMP), optional reverse image search | status only: AI evidence → FAIL, advisory → REVIEW, trusted capture → AI detector capped at REVIEW |
 | Preprocessing | format allow-list, decompression-bomb guard, RGB, SHA-256; *detector view* (same 256 px + JPEG normalisation as the training data) | — |
-| AI detector | linear probe on frozen CLIP ViT-B/32 features (Ojha et al., CVPR 2023); spectral fingerprint kept as an informational signal | weight 0.40, can FAIL |
-| ResNet-18 | ImageNet-pretrained, fully fine-tuned (GPU) on authentic vs AI + manipulated | weight 0.15, **REVIEW only** |
+| AI detector (Phase 5) | linear probes on frozen CLIP ViT-B/32 + SigLIP 2 B/16 (weights 0.3 / 0.7), UnivFD recipe, chosen out-of-source | weight 0.45, can FAIL |
+| `manipulation` (Phase 5) | TruFor (Noiseprint++ + SegFormer): score + localisation map; GPU profile only, non-commercial | weight 0.10, **REVIEW only** |
 | Copy-move | 16×16 block matching, shift-vector voting; score = dominance of one displacement | weight 0.15 |
 | `copy_semantic` (Phase 4) | SSCD + DINOv2-S fusion (+ 18 SSCD region crops on GPU), density-relative, vs one-off works | weight 0.20 |
 | `copy_exact` (Phase 4) | PDQ 256-bit (8 dihedral hashes), exact in-memory search; collection members only when pixel-identical | weight 0.10 |
+
+The ResNet-18 of policies 3.x / 4.0 is retired (section 4.6).
 
 Each check's value maps to a risk (0.5 at REVIEW, 1.0 at FAIL). The score is
 `100·(1 − Σ wᵢ·riskᵢ)`. Any FAIL-level check gives FAIL; any REVIEW-level check or a score
@@ -168,6 +171,57 @@ Policy v4.0.0 on the benchmark test split: paintings 97.2 % of copies flagged / 
 End-to-end against the live index: 83 % of genuine uploads pass (v1 77 %), 3.5 % wrongly failed
 (v1 3.0 %); exact re-uploads of indexed NFTs 98 % FAIL.
 
+### 4.6 Phase 5: AI detection, manipulation forensics and provenance, with 95 % CIs
+
+Every number here has n and a 95 % CI (Wilson for rates, stratified bootstrap for AUCs, paired
+bootstrap for model comparisons); full tables in `docs/models.md`.
+
+**Out-of-source protocol v2.** v1's check had saturated (CLIP-B/32 AUC 0.9998). The new set contains
+only sources absent from training: 1,698 genuine images (947 NFTs from 47 unseen collections incl.
+40 on-chain collections of the Phase 4 index, 54 pixel-art NFTs, 300 Rijksmuseum paintings, 397
+COCO / DOCCI photos) and 733 AI images (2025-26 generators from OpenFake + Flux.1-dev). It is split
+per group into a *select* half (ranking) and a *report* half (headline numbers). Primary metric:
+balanced accuracy at the deployed review threshold, with every genuine domain weighted equally.
+
+**AI detector.** Six frozen backbones (CLIP B/32 and L/14, SigLIP 2 B/16 and So400m, DINOv2 S and
+B), all 15 probe pairs and a LoRA fine-tune were compared. Every SigLIP 2 / CLIP-L variant beat
+B/32; DINOv2 lost; LoRA did not beat the frozen probe. The CPU budget excludes L/14 and So400m
+(4-5 s per image). Shipped: B/32 + SigLIP 2, +4.6 pp [+1.8, +7.6] over v1 on the select half and,
+on the report half (n = 1,191), AUC 0.925 [0.909, 0.938] vs 0.894 [0.875, 0.911], AI flagged
+88.7 % [85.1, 91.6] vs 75.8 % [71.2, 79.9]. **Finding:** genuine photographs from new sources are
+flagged 45-53 % by every detector (DOCCI 60-82 %), v1 included; adding permissively licensed
+high-resolution photos to training halves DOCCI auto-fails but costs AI recall (not significant
+overall, not adopted).
+
+**Permissive profile.** Trained only on MIT / CDLA-Permissive data, the probe flagged 100 % of
+paintings and photos (its only genuine class was NFT art). With 1,000 public-domain paintings and
+800 CC BY photos added, it reaches OOS AUC 0.929 [0.914, 0.944] and 83.5 % AI flagged.
+
+**Manipulation forensics.** On real forgeries ResNet-18 is at chance (AUC 0.486 COVERAGE, 0.579
+CocoGlide, 0.501 IMD2020) and flags 43 % of genuine out-of-source NFTs. TruFor scores 0.769 / 0.768
+(paired gain +0.28 / +0.19, CIs above 0), 98.3 % on Columbia, pixel F1 0.52 / 0.39 / 0.80, with 6-8 %
+genuine false alarms; CASIA v2 and IMD2020 are in its training data and not counted as evidence.
+Decision: ResNet-18 retired, TruFor REVIEW-only, GPU profile, never in the permissive profile.
+
+**Provenance.** On 2,181 original files: 0 false hits on 1,452 genuine files ([0, 0.3] %), AI evidence
+on 15.9 % [13.4, 18.8] of AI files (Midjourney 7 100 %, GPT-image-1.5 47.5 % via C2PA with an expired
+OpenAI certificate, ComfyUI / A1111 metadata on z-image and Illustrious).
+
+**End to end (policy 5.0.0, n = 300 per category, 20 categories).** Genuine PASS 78.5 % [76.6, 80.3]
+(n = 1,978), wrongly failed 6.8 % [5.8, 8.0]; forgeries stopped 87.1 % [85.9, 88.2] (n = 3,448);
+modern AI FAIL 98.7 %, unseen Flux 95.3 %, 2025-26 generators stopped 88.7 % (64.7 % FAIL); exact
+re-uploads of indexed Ethereum NFTs 98.3 % FAIL. False alarms (REVIEW or FAIL): collection NFTs
+11.7 %, pixel art 11.9 %, paintings 19.5 %, photos 45.9 %.
+
+**Retraining gate.** `training/retrain_gate.py` adds a new generator only if the OOS metric is
+non-inferior (CI above -1 pp), no genuine domain's false alarms rise by > 2 pp, and the new
+generator is caught at least as well. Demo with 420 HiDream-I1 images: already caught 40 / 40; the
+retrained probe raised photo false alarms by 2.01 pp, so the gate refused it.
+
+**CPU latency.** p50 1.5-1.6 s / p95 1.9-2.0 s on 2 threads: above the 1.5 s budget (v4 1.10 / 1.35 s).
+int8 quantisation was rejected (-14.8 pp); an ONNX Runtime export saves ~180 ms but crashes next to
+the copy engine on this Windows laptop and is deferred to the Linux container (Phase 7).
+
 ## 5. Blockchain layer
 
 `MintGateNFT.sol`: ERC-721 + OpenZeppelin AccessControl, Solidity 0.8.24. Deployed on
@@ -189,21 +243,21 @@ source verified on Sourcify (exact match).
 
 ## 6. Limitations and future work
 
-1. **Error rates.** About 5 % of genuine paintings are wrongly rejected, and 12–38 % of genuine
-   uploads go to human review (photos most often). 14 % of forgeries pass, mainly older-generator
-   images and edited copies of collection NFTs.
-2. **Generative collections.** Edited copies of collection items are indistinguishable from new
-   siblings by appearance alone; only pixel-identical copies are blocked (10.7 % of attacked NFT
-   copies on the benchmark, 0 % genuine flagged). Trait hashes are stored, but an identical trait
-   set means an identical image only in some collections (Pixelmon yes, Checks no).
-   JPEG re-uploads of textured collection art usually exceed the pixel budget.
-3. **Generators.** Coverage is 2024-era. New generators need periodic retraining; the
-   out-of-source protocol in `training/independent_check.py` is designed for exactly that.
-4. **Trust model.** The platform's verifier key mints on artists' behalf (sponsored gas).
-   Production would use separate verifier/reviewer keys behind a multisig, and EIP-712
-   attestations so artists can mint from their own wallets.
-5. **Data licensing.** Some training data is non-commercial (CC BY-NC-SA, research-use), so the
-   project is non-commercial.
+1. **Error rates (policy 5.0.0, n = 300 per category).** 6.8 % [5.8, 8.0] of genuine uploads are
+   wrongly rejected and 14.7 % go to human review; 12.9 % of forgeries pass, mainly 2025-26
+   generators (11.3 % PASS) and edited copies of collection NFTs.
+2. **Photographs.** Genuine photos from new sources are the weakest domain (42.3 % PASS, 24.0 %
+   FAIL out-of-source). Trusted C2PA camera credentials cap the AI detector at REVIEW; the real fix
+   is high-resolution genuine photos in training, gated by `retrain_gate.py`.
+3. **Generative collections.** Edited copies of collection items are indistinguishable from new
+   siblings by appearance alone; only pixel-identical copies are blocked (TruFor now sends 34 % to
+   review). JPEG re-uploads of textured collection art usually exceed the pixel budget.
+4. **Generators.** New generators appear monthly. The out-of-source protocol and the retraining gate
+   (`training/retrain_gate.py`) are the process for them; one generator must stay held out.
+5. **CPU budget.** The CPU profile is ~0.1 s (p50) to ~0.5 s (p95) over the 1.5 s target; the GPU
+   profile is not. TruFor needs a GPU.
+6. **Licensing.** Some training data and TruFor are non-commercial; the permissive profile
+   (`MINTGATE_PERMISSIVE_ONLY=1`) avoids both, at its own measured accuracy.
 
 ## 7. Reproducibility
 
@@ -213,7 +267,11 @@ From `backend/`:
 `benchmark.build_copydet` (+ `--regen`) → `benchmark.copydet features|crops|orb|lightglue|evaluate`
 → `benchmark.latency components` → `benchmark.copydet evaluate` → `calibrate --keep-detectors`;
 on-chain index: `ingest fetch` → `ingest seed` → `ingest embed` → `ingest embed --rebuild-nn`;
-then `evaluate_system --n 50`, `benchmark.latency index|pipeline|copy_recall`.
+Phase 5: `training.oos_data` → `training.ai_backbones fetch|features|evaluate|ship` (+ `--permissive-only`
+after `training.fetch_permissive`) → `training.lora_finetune` → `benchmark.build_forgery` →
+`benchmark.forgery fetch|run|evaluate` → `training.provenance_eval` → `calibrate` (+ `--permissive-only`)
+→ `evaluate_system --n 300` → `benchmark.latency pipeline`, `benchmark.latency_ai`, `benchmark.int8_gate`,
+`benchmark.onnx_backbones`; new generators: `training.retrain_gate`.
 
 Outputs are in `backend/model/` (`model_meta.json`, `metrics.json`, `ai_detector.json`,
 `system_eval.json`, `independent_check.json`) and `backend/policy.json`.

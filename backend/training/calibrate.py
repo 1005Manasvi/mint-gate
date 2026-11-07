@@ -1,21 +1,22 @@
-"""Calibrate Mint-Gate thresholds from data and write them into policy.json (policy 4.x).
+"""Calibrate Mint-Gate thresholds from data and write them into policy.json (policy 5.x, Phase 5).
 
-Copy checks (Phase 4 engine, detection/copy_engine.py) come from the copy-detection benchmark
-(benchmark/copydet.py; run its `features`, `lightglue` and `evaluate` steps first). Per benchmark
-query the three values are computed exactly as the engine computes them:
-  copy_exact      min PDQ distance (8 dihedral query hashes) to any reference; PDQ quality < 50 -> 256
-  copy_semantic   max gated retrieval score over references that are NOT generative-collection
-                  members (v1 lesson: siblings are not copies; members only count on copy_exact)
-  copy_geometric  max LightGlue inliers over the top-10 retrieved non-member references (only if the
-                  benchmark gate adopted LightGlue; copy-engine-1.0.0 rejected it)
-Thresholds: review / fail at the 1 % / 0.2 % false-positive rate of the genuine (distractor)
-queries of the VAL split; every rate below is measured on the TEST split, per domain. The v1
-checks (pHash / CLIP copy score / ORB, policy 3.1.0) are scored on the same test queries.
+Every threshold comes from a benchmark, never from hand-tuning:
+  copy_exact / copy_semantic  copy-detection benchmark (benchmark/copydet.py): review / fail at the
+                  1 % / 0.2 % false-positive rate of the genuine VAL distractors, rates on TEST.
+                  The copy engine did not change in Phase 5, so these are kept from the current
+                  policy unless `--recalibrate-copy` (needs the benchmark caches).
+  ai_detector     the shipped detector's own thresholds (model/ai_detector.json, written by
+                  `training.ai_backbones ship`): 95th / 99th percentile of genuine VAL probabilities,
+                  the operating point the out-of-source gate was scored at.
+  manipulation    TruFor (GPU profile; never in the permissive-only policy): the same percentile rule
+                  on genuine VAL images, from the forgery benchmark (model/benchmarks/forgery.json).
+                  REVIEW-only: artists legitimately composite / retouch their own work.
+  copy_move       block matching (unchanged): kept, or recomputed with `--recalibrate-copy-move`.
+  provenance      fixed by design: 1.0 = AI evidence (FAIL), 0.6 = advisory (REVIEW), 0 = nothing,
+                  -1 = trusted capture chain, which caps the AI detector at REVIEW (`positive_evidence`).
+The ResNet-18 check is retired (chance level on real forgeries, docs/models.md).
 
-Copy-move + learned detectors (models unchanged in Phase 4): review / fail at the 95th / 99th
-percentile of genuine validation art, as before; `--keep-detectors` reuses the stored values.
-
-Run from backend/:   python -m training.calibrate [--n 300] [--keep-detectors]
+Run from backend/:   python -m training.calibrate [--permissive-only] [--recalibrate-copy]
 """
 
 import argparse
@@ -37,14 +38,23 @@ from detection.preprocessing import load_path
 from training.realworld_data import open_image, records
 from training.split import load_split, paths
 
-POLICY_VERSION = "4.0.0"
+POLICY_VERSION = "5.0.0"
 COPY_FPR_REVIEW, COPY_FPR_FAIL = 0.01, 0.002
+# ResNet-18's 0.15 is split between the AI detector (+0.05) and TruFor (0.10). When a check does not
+# run (TruFor on CPU / permissive) its weight simply does not count. Provenance acts through its
+# status (FAIL / REVIEW / positive evidence), not through the score.
 WEIGHTS = {
-    "resnet": 0.15,
-    "ai_detector": 0.40,
+    "ai_detector": 0.45,
+    "manipulation": 0.10,
     "copy_move": 0.15,
-    "copy_semantic": 0.20,  # + v1 ORB's 0.05: LightGlue did not pass the benchmark gate
+    "copy_semantic": 0.20,
     "copy_exact": 0.10,
+    "provenance": 0.0,
+}
+LABELS_DET = {
+    "manipulation": "TruFor manipulation probability (REVIEW-only)",
+    "copy_move": "Copy-move clone peak ratio",
+    "provenance": "Provenance evidence (C2PA, AI watermark, generator metadata, web)",
 }
 LABELS = {
     "copy_exact": "PDQ distance to the nearest protected work (bits, mirrored / rotated too)",
@@ -232,13 +242,9 @@ def calibrate_copy():
 
 
 def calibrate_detectors(n, rng):
-    """copy_move, resnet, ai_detector: genuine-art false-positive rates (unchanged from policy 3.x)."""
+    """copy_move: genuine-art false-positive rates (review / fail = 95th / 99th percentile)."""
     from detection import copy_move
-    from detection.ai_detector import AIDetector
-    from detection.clip_similarity import ClipEncoder
     from detection.manipulations import copy_move as make_clone
-    from detection.preprocessing import detector_view
-    from detection.resnet_classifier import ResNetClassifier
 
     split = load_split()
     new_art = rng.sample(paths(split, "authentic", "test"), n)
@@ -258,59 +264,71 @@ def calibrate_detectors(n, rng):
             "fpr_at_review": round(float((cm_neg >= review).mean()), 4),
         }
     }
-    enc, resnet, ai = ClipEncoder(), ResNetClassifier(), AIDetector()
-    det = {"resnet": [], "ai_detector": []}
-    for r in tqdm(records("val", "authentic"), desc="detector FPR"):
-        view = detector_view(open_image(r))
-        det["resnet"].append(resnet.predict(view))
-        det["ai_detector"].append(ai.predict(view, enc.encode_one(view))["probability"])
-    for name, vals in det.items():
-        x = np.array(vals)
-        review = float(np.clip(np.percentile(x, 95), 0.5, 0.95))
-        fail = float(np.clip(np.percentile(x, 99), review + 0.02, 0.99))
-        th[name] = {"review": round(review, 3), "fail": round(fail, 3)}
-        cal[name] = {"genuine_fpr_at_review": round(float((x >= review).mean()), 4), "n": len(x)}
     return th, cal
 
 
 def main():
+    from config import AI_DETECTOR_FILE, MODEL_DIR
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=300)
-    ap.add_argument("--keep-detectors", action="store_true", help="reuse copy-move / ResNet / AI thresholds")
+    ap.add_argument("--permissive-only", action="store_true", help="write policy.permissive.json")
+    ap.add_argument("--recalibrate-copy", action="store_true", help="re-run the copy benchmark calibration")
+    ap.add_argument("--recalibrate-copy-move", action="store_true")
     args = ap.parse_args()
-    policy = json.loads(POLICY_FILE.read_text())
+    base_file = POLICY_FILE.with_name("policy.json")  # the copy calibration lives here
+    policy = json.loads(base_file.read_text())
+    out_file = POLICY_FILE.with_name("policy.permissive.json" if args.permissive_only else "policy.json")
+    det_file = AI_DETECTOR_FILE.with_name("ai_detector.permissive.json" if args.permissive_only else "ai_detector.json")
 
-    copy_th, copy_cal, values, b = calibrate_copy()
-    print(json.dumps(copy_cal, indent=2))
-    if args.keep_detectors:
-        det_th = {
-            k: {x: policy["checks"][k][x] for x in ("review", "fail")} for k in ("copy_move", "resnet", "ai_detector")
-        }
-        det_cal = {k: policy.get("calibration", {}).get("results", {}).get(k) for k in det_th}
+    if args.recalibrate_copy:
+        copy_th, copy_cal, values, b = calibrate_copy()
+        print(json.dumps(copy_cal, indent=2))
+        plot_copy(values, b, copy_th)
     else:
-        det_th, det_cal = calibrate_detectors(args.n, random.Random(7))
-
-    checks = {k: policy["checks"][k] for k in ("resnet", "ai_detector", "copy_move")}
-    for k, t in det_th.items():
-        checks[k].update(t)
-    checks["resnet"]["max_status"] = "REVIEW"
-    for k, t in copy_th.items():
-        checks[k] = {"label": t["label"], "review": t["review"], "fail": t["fail"]}
-    policy = {
-        "version": POLICY_VERSION,
-        # Weights reflect the out-of-source checks: the CLIP-probe AI detector generalises to unseen
-        # collections / generators, the ResNet-18 does not; copy weights mirror v1's pHash / CLIP / ORB.
-        "weights": WEIGHTS,
+        copy_th = {k: policy["checks"][k] for k in ("copy_exact", "copy_semantic")}
+        copy_cal = policy.get("calibration", {}).get("copy", {})
+    checks = {k: {"label": v["label"], "review": v["review"], "fail": v["fail"]} for k, v in copy_th.items()}
+    det_cal = {}
+    if args.recalibrate_copy_move:
+        th, cal = calibrate_detectors(args.n, random.Random(7))
+        checks["copy_move"], det_cal["copy_move"] = th["copy_move"], cal["copy_move"]
+    else:
+        checks["copy_move"] = {k: policy["checks"]["copy_move"][k] for k in ("review", "fail")}
+    det = json.loads(det_file.read_text())
+    checks["ai_detector"] = dict(det["thresholds"])
+    names = {"clip-b32": "CLIP-B/32", "siglip2-b16": "SigLIP 2 B/16"}
+    ai_label = "AI-generated probability (probes on frozen " + " + ".join(names.get(k, k) for k in det["backbones"])
+    ai_label += ", permissive training data)" if args.permissive_only else ")"
+    det_cal["ai_detector"] = {"source": f"{det_file.name} ({det['version']})", **det.get("metrics", {})}
+    weights = dict(WEIGHTS)
+    if not args.permissive_only:
+        fg = json.loads((MODEL_DIR / "benchmarks" / "forgery.json").read_text())["signals"]["trufor"]
+        checks["manipulation"] = {"review": fg["review"], "fail": fg["fail"], "max_status": "REVIEW"}
+        det_cal["manipulation"] = {
+            "source": "benchmark/forgery.py",
+            "datasets": fg["datasets"],
+            "genuine": fg["genuine"],
+        }
+    else:
+        weights.pop("manipulation")
+    checks["provenance"] = {"review": 0.5, "fail": 0.9}
+    for k, label in {**LABELS_DET, "ai_detector": ai_label}.items():
+        if k in checks:
+            checks[k] = {"label": label, **checks[k]}
+    new = {
+        "version": POLICY_VERSION + ("-permissive" if args.permissive_only else ""),
+        "weights": weights,
         "checks": checks,
         "score": policy["score"],
-        "calibration": {
-            "copy": {"source": "benchmark/copydet.py (val thresholds, test rates)", **copy_cal},
-            "detectors": det_cal,
-        },
+        "positive_evidence": {"check": "provenance", "below": 0, "cap": {"ai_detector": "REVIEW"}},
+        "calibration": {"copy": copy_cal, "detectors": det_cal},
     }
-    POLICY_FILE.write_text(json.dumps(policy, indent=2))
-    print("updated", POLICY_FILE, "->", POLICY_VERSION)
+    out_file.write_text(json.dumps(new, indent=2))
+    print("updated", out_file, "->", new["version"])
 
+
+def plot_copy(values, b, copy_th):
     fig, axes = plt.subplots(1, len(values), figsize=(5 * len(values), 3.8))
     genuine = b.gt < 0
     for ax, (name, vals) in zip(axes, values.items()):

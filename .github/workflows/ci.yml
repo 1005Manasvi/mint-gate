@@ -43,6 +43,7 @@ jobs:
         run: |
           pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu
           pip install -r deploy/requirements-deploy.txt -r requirements-dev.txt
+          pip install --no-deps invisible-watermark==0.2.0
       - name: pytest (fast tests; slow ones need the real models)
         run: pytest -m "not slow"
 
@@ -173,6 +174,7 @@ jobs:
         run: |
           pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu
           pip install -r deploy/requirements-deploy.txt -r requirements-dev.txt
+          pip install --no-deps invisible-watermark==0.2.0
       - run: npm ci && npx hardhat compile
         working-directory: Blockchain
       - run: npm ci && npx playwright install --with-deps chromium

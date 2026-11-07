@@ -30,3 +30,10 @@ backend/storage/
 backend/model/copydet/*.pt
 backend/model/copydet/*.part
 backend/model/copydet/*.onnx
+# vision towers of the AI-detector backbones: `python -m training.ai_backbones fetch` (SHA-256 in manifest.json)
+backend/model/backbones/*/model.safetensors
+# TruFor weights (non-commercial): `python -m benchmark.forgery fetch` (SHA-256 in manifest.json)
+backend/model/trufor/*.safetensors
+backend/model/trufor/*.pth.tar
+backend/model/backbones/*/vision.onnx
+backend/model/system_eval_progress.json

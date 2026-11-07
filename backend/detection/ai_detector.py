@@ -1,19 +1,14 @@
-"""AI-generated / GAN content detection: an ensemble of two complementary detectors.
+"""AI-generated image detection: linear probe(s) on frozen vision backbones (UnivFD recipe).
 
-1. Spectral fingerprint (Durall et al., CVPR 2020, "Watch your Up-Convolution"):
-   generators up-sample with transposed convolutions / interpolation, leaving
-   traces in the high-frequency power spectrum. Features = azimuthally
-   averaged log power spectrum (64 bins) + noise-residual statistics.
+Ojha et al. (CVPR 2023, "Towards Universal Fake Image Detectors"): a logistic regression on the
+embeddings of a frozen foundation model generalises to *unseen* generators far better than a
+fine-tuned CNN, because the feature space was never fitted to any generator. v1 used CLIP ViT-B/32;
+Phase 5 benchmarks CLIP-L/14, SigLIP 2, DINOv2, ensembles and a LoRA fine-tune on the out-of-source
+protocol (`training/ai_backbones.py`, docs/models.md) and ships the winner in model/ai_detector.json.
 
-2. CLIP linear probe (Ojha et al., CVPR 2023, "Towards Universal Fake Image
-   Detectors"): a linear classifier on frozen CLIP ViT-B/32 embeddings. CLIP's
-   feature space was never trained to separate real from fake, which makes the
-   probe generalise much better to *unseen* generators than a fine-tuned CNN.
-
-Both are logistic regressions trained by `training/train_ai_detector.py` and
-stored as plain JSON (no pickle), so loading the model can never execute code.
-The ensemble output is w * clip_probe + (1 - w) * spectral, with w chosen on the
-validation split (stored as `weight_clip`).
+Probes are stored as plain JSON (no pickle), so loading the model can never execute code.
+`spectral_features` (Durall et al., CVPR 2020) is the v1 spectral branch; its ensemble weight was
+0, it is kept for the training scripts only.
 """
 
 import json
@@ -73,34 +68,43 @@ class _LogReg:
 
 
 class AIDetector:
-    def __init__(self, path=AI_DETECTOR_FILE):
+    """Probability that an image is AI-generated: linear probe(s) on frozen backbone(s).
+
+    model/ai_detector.json, format 2 (Phase 5, `training.ai_backbones ship`):
+      {"format": 2, "version", "backbones": [key, ...], "probes": {key: LR params},
+       "weights": {key: w}, "metrics": {...}}   probability = sum_k w_k * probe_k(features_k)
+    The v1 file (spectral + CLIP-B/32 probe, `weight_clip` 1.0) still loads: it becomes the
+    single backbone "clip-b32" (its spectral branch had weight 0 and is dropped).
+    """
+
+    def __init__(self, path=AI_DETECTOR_FILE, backbones=None):
         self.ready = path.exists()
-        self.metrics = {}
+        self.metrics, self.keys, self.version = {}, [], "none"
         if not self.ready:
             return
         p = json.loads(path.read_text())
         self.metrics = p.get("metrics", {})
-        self.version = p.get("version", "spectral-only")
-        self.weight_clip = float(p.get("weight_clip", 0.5))
-        if "spectral" in p:  # ensemble format
-            self.spectral = _LogReg(p["spectral"])
-            self.probe = _LogReg(p["clip_probe"]) if "clip_probe" in p else None
-        else:  # legacy single-model file
-            self.spectral, self.probe = _LogReg(p), None
+        self.version = p.get("version", "unknown")
+        if p.get("format") == 2:
+            self.keys = list(p["backbones"])
+            self.probes = {k: _LogReg(p["probes"][k]) for k in self.keys}
+            self.weights = {k: float(p["weights"][k]) for k in self.keys}
+        else:  # v1 file
+            self.keys = ["clip-b32"]
+            self.probes = {"clip-b32": _LogReg(p["clip_probe"])}
+            self.weights = {"clip-b32": 1.0}
+        self.thresholds = p.get("thresholds")
+        if backbones is None:
+            from detection.backbones import Backbone
+
+            backbones = {k: Backbone(k) for k in self.keys}
+        self.backbones = backbones
 
     def predict(self, img: Image.Image, clip_emb=None) -> dict:
-        """Returns {'spectral', 'clip_probe', 'probability'} - probability the image is AI-generated.
-
-        `img` should be `preprocessing.detector_view(...)`; `clip_emb` the CLIP
-        embedding of that same view.
-        """
+        """{'probability', 'probes': {key: p}}. `img` = `preprocessing.detector_view(...)`.
+        (`clip_emb` is accepted for the old call signature and ignored.)"""
         if not self.ready:
-            return {"spectral": 0.0, "clip_probe": None, "probability": 0.0}
-        s = self.spectral(spectral_features(img))
-        c = self.probe(clip_emb) if (self.probe is not None and clip_emb is not None) else None
-        prob = s if c is None else self.weight_clip * c + (1 - self.weight_clip) * s
-        return {
-            "spectral": round(s, 4),
-            "clip_probe": None if c is None else round(c, 4),
-            "probability": round(prob, 4),
-        }
+            return {"probability": 0.0, "probes": {}}
+        per = {k: self.probes[k](self.backbones[k].encode_one(img)) for k in self.keys}
+        prob = sum(self.weights[k] * v for k, v in per.items())
+        return {"probability": round(float(prob), 4), "probes": {k: round(float(v), 4) for k, v in per.items()}}
