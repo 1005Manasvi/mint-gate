@@ -46,6 +46,13 @@ def enqueue_analysis(submission_id: str):
     )
 
 
+def enqueue_analysis_task(task: str, *args, job_id: str | None = None):
+    """Other model work (e.g. a dispute's backend evidence) on the analysis workers."""
+    return queue(ANALYSIS).enqueue(
+        f"jobs.tasks.{task}", *args, job_id=job_id, retry=CHAIN_RETRY, result_ttl=24 * 3600, failure_ttl=30 * 24 * 3600
+    )
+
+
 def enqueue_chain(task: str, *args):
     return queue(CHAIN).enqueue(
         f"jobs.tasks.{task}", *args, retry=CHAIN_RETRY, job_timeout=600, failure_ttl=30 * 24 * 3600

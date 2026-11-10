@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explorer · Mint-Gate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">◆</span> Mint-Gate</a>
+    <nav class="tabs" aria-label="Explorer sections">
+      <a class="tab" href="#stats">Statistics</a>
+      <a class="tab" href="#policies">Policy history</a>
+      <a class="tab" href="#governance">Governance</a>
+    </nav>
+    <div class="topbar-tools">
+      <button id="walletBtn" class="btn btn-wallet">Connect wallet</button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <div class="intro">
+    <h1>Public explorer</h1>
+    <p>What Mint-Gate decided, what was disputed and revoked, which rules applied, and who can change them.
+      Everything here comes from on-chain events (via the indexer); the policy files and Safe signatures can be
+      checked in your browser.</p>
+  </div>
+  <div id="globalMsg" class="txout" aria-live="assertive"></div>
+
+  <section id="stats" aria-labelledby="statsTitle">
+    <h2 class="section-title" id="statsTitle">Statistics per chain</h2>
+    <div id="statsBox" class="grid-2"><p class="hint">Loading…</p></div>
+  </section>
+
+  <section id="policies" aria-labelledby="polTitle">
+    <h2 class="section-title" id="polTitle">Policy history</h2>
+    <p class="hint">Every verdict carries the SHA-256 of the policy JSON it was decided with. The PolicyRegistry
+      announces each policy with its file; changes go through the Safe and a timelock, so they are public
+      before they take effect. "Verify" downloads the file and re-hashes it here.</p>
+    <div id="polBox"><p class="hint">Loading…</p></div>
+  </section>
+
+  <section id="governance" aria-labelledby="govTitle">
+    <h2 class="section-title" id="govTitle">Governance</h2>
+    <p class="hint">The registry admin and pauser roles belong to a Safe multisig: no single key can change roles,
+      parameters or the policy. Owners sign pending Safe transactions here with their own wallet (gasless,
+      EIP-712); anyone can execute once enough owners signed.</p>
+    <div id="govBox"><p class="hint">Loading…</p></div>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <a href="/">Mint-Gate</a> · AI forensics + blockchain provenance
+  <span class="foot-note">Automated detection is probabilistic: a PASS is not a legal guarantee of authorship.</span>
+</footer>
+<script type="module" src="/static/js/explorer.js"></script>
+</body>
+</html>

@@ -296,6 +296,114 @@ export async function mint(att, royaltyBps, onStep = () => {}) {
   return result;
 }
 
+// ---------------- disputes + governance (Phase 6) ----------------
+
+const REGISTRY_FRAGMENTS = [
+  "function openDispute(bytes32 imageHash, string evidenceURI) payable returns (uint256)",
+  "function withdraw()",
+  "function credits(address) view returns (uint256)",
+  "function disputeBond() view returns (uint256)",
+  "event DisputeOpened(uint256 indexed disputeId, bytes32 indexed imageHash, address indexed disputant, uint256 bond, string evidenceURI)",
+];
+const RESOLVER_FRAGMENTS = [
+  "function resolveDispute(uint256 disputeId, bool upheld, bytes32 reasonHash, string reasonURI)",
+  "error NotReviewer(address account)",
+  "error EmptyReason()",
+];
+const SAFE_FRAGMENTS = [
+  "function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures) payable returns (bool)",
+  "function nonce() view returns (uint256)",
+  "error GS013()",
+];
+
+/** Human-readable fragments + the registry's custom errors (decoded into sentences by explainError). */
+function iface(net, fragments) {
+  const errors = (net.abi?.registry || []).filter((x) => x.type === "error");
+  const names = new Set(fragments.filter((f) => f.startsWith("error ")).map((f) => f.split(/[ (]/)[1]));
+  return new Interface([...fragments, ...errors.filter((e) => !names.has(e.name))]);
+}
+
+/** Send `method(...args)` on `address` from the connected wallet on `net`, wait for confirmations. */
+async function send(net, address, fragments, method, args, { value = 0n, onStep = () => {} } = {}) {
+  onStep({ stage: "switching", network: net.label });
+  await ensureChain(net);
+  const provider = new BrowserProvider(eth(), "any");
+  const c = new Contract(address, iface(net, fragments), await provider.getSigner());
+  onStep({ stage: "estimating" });
+  const gas = await c[method].estimateGas(...args, { value }); // reverts are decoded here
+  onStep({ stage: "wallet", gas });
+  const tx = await c[method](...args, { value, gasLimit: (gas * 12n) / 10n });
+  onStep({ stage: "pending", hash: tx.hash });
+  const receipt = await tx.wait(1);
+  const needed = Math.max(1, net.confirmations || 1);
+  let confirmations = await receipt.confirmations();
+  while (confirmations < needed) {
+    onStep({ stage: "confirming", hash: tx.hash, confirmations, needed });
+    await sleep(2500);
+    confirmations = await receipt.confirmations();
+  }
+  const logs = receipt.logs
+    .map((l) => {
+      try {
+        return c.interface.parseLog(l);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+  onStep({ stage: "confirmed", hash: tx.hash });
+  return { hash: tx.hash, receipt, logs };
+}
+
+/** openDispute with the reporter's pinned evidence (POST /api/disputes/evidence) and the bond. */
+export async function openDispute(info, onStep) {
+  await loadNetworks();
+  const net = networkByChainId(info.chain_id);
+  if (!net) throw new WalletError(`Network ${info.network} is not configured.`);
+  const out = await send(net, info.registry, REGISTRY_FRAGMENTS, "openDispute", [info.image_hash, info.evidence_uri], {
+    value: BigInt(info.bond),
+    onStep,
+  });
+  const ev = out.logs.find((l) => l.name === "DisputeOpened");
+  return { ...out, disputeId: ev ? ev.args.disputeId.toString() : null };
+}
+
+/** DisputeResolver.resolveDispute(id, upheld, reasonHash, reasonURI) from the reviewer's wallet. */
+export async function resolveDispute(info, onStep) {
+  await loadNetworks();
+  const net = networkByChainId(info.chain_id);
+  return send(net, info.resolver, RESOLVER_FRAGMENTS, "resolveDispute", info.args, { onStep });
+}
+
+/** Pull payment of a returned (or, for the treasury, forfeited) bond. */
+export async function withdrawBond(net, onStep) {
+  return send(net, net.registry, REGISTRY_FRAGMENTS, "withdraw", [], { onStep });
+}
+
+export async function creditsOf(net, address, provider) {
+  const c = new Contract(net.registry, iface(net, REGISTRY_FRAGMENTS), provider);
+  return c.credits(address);
+}
+
+/** EIP-712 SafeTx signature by the connected owner (gasless). `typedData` comes from the API. */
+export async function signSafeTx(net, typedData) {
+  await ensureChain(net);
+  const s = await new BrowserProvider(eth(), "any").getSigner();
+  const types = { SafeTx: typedData.types.SafeTx }; // ethers derives EIP712Domain itself
+  const sig = await s.signTypedData(typedData.domain, types, typedData.message);
+  return { signer: getAddress(await s.getAddress()), signature: sig };
+}
+
+/** execTransaction with the collected signatures (ascending owner order). Anyone may send it. */
+export async function execSafeTx(net, proposal, onStep) {
+  const owners = Object.keys(proposal.signatures).sort((a, b) => (BigInt(a) < BigInt(b) ? -1 : 1));
+  const sigs = "0x" + owners.map((o) => proposal.signatures[o].slice(2)).join("");
+  const t = proposal.tx;
+  const z = "0x0000000000000000000000000000000000000000";
+  const args = [t.to, BigInt(t.value), t.data, t.operation, 0, 0, 0, z, z, sigs];
+  return send(net, proposal.safe, SAFE_FRAGMENTS, "execTransaction", args, { onStep });
+}
+
 // ---------------- errors ----------------
 
 const short = (a) => (a ? `${String(a).slice(0, 8)}…${String(a).slice(-4)}` : "");
@@ -315,6 +423,16 @@ const FRIENDLY = {
   EmptyURI: () => "The token metadata URI is missing.",
   EnforcedPause: () => "Mint-Gate is paused by its operators. Try again later.",
   ERC721InvalidReceiver: () => "Your wallet address cannot receive ERC-721 tokens.",
+  WrongBond: ([expected]) => `The dispute bond is ${Number(expected) / 1e18} ETH; reload the page and retry.`,
+  DisputeAlreadyOpen: ([id]) => `Dispute #${id} is already open for this artwork.`,
+  AlreadyRevoked: () => "This artwork is already revoked.",
+  NotMinted: () => "This artwork is not minted on this registry.",
+  EmptyEvidence: () => "The evidence link is empty.",
+  DisputeNotOpen: ([id]) => `Dispute #${id} is not open any more (already resolved?).`,
+  NotReviewer: ([who]) => `${short(who)} does not hold REVIEWER_ROLE on this registry.`,
+  EmptyReason: () => "A reason (hash + link) is required.",
+  NothingToWithdraw: () => "This wallet has nothing to withdraw.",
+  GS013: () => "The Safe transaction failed inside the target contract (e.g. a delay has not passed yet).",
 };
 
 /** A sentence a person can act on, from a wallet / RPC / contract error. */

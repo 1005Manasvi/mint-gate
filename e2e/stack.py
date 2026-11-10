@@ -39,6 +39,7 @@ os.environ.update(
         "PUBLIC_RPC_LOCALHOST": RPC,
         "CONFIRMATIONS_LOCALHOST": "2",
         "PINATA_JWT": "",
+        "DISCORD_WEBHOOK_URL": "",
         "PUBLIC_BASE_URL": f"http://127.0.0.1:{API_PORT}",
         "REVIEWER_KEY": "e2e-reviewer-key-0123456789",
         "VERIFIER_PRIVATE_KEY": "",
@@ -59,6 +60,74 @@ def wait_for_node(w3, seconds=120):
             return
         time.sleep(0.5)
     raise SystemExit(f"no Hardhat node at {RPC}")
+
+
+SAFE_OWNERS = (0, 2, 3)  # Hardhat accounts; 2-of-3
+
+
+def deploy_governance(w3, create, reg, art, block) -> dict:
+    """Phase 6: Safe 2-of-3 (vendored v1.4.1 bytecode), timelock, PolicyRegistry, DisputeResolver.
+    Account #0 stays reviewer; the admin hand-over to the Safe is begun and its delay skipped, so the
+    browser test can sign + execute `acceptDefaultAdminTransfer` from the explorer page."""
+    import hashlib
+
+    admin = w3.eth.accounts[0]
+    vendor = BACKEND.parent / "Blockchain" / "vendor" / "safe-1.4.1"
+    safe_art = {
+        n: json.loads((vendor / f"{n}.json").read_text())
+        for n in ("Safe", "SafeProxyFactory", "CompatibilityFallbackHandler")
+    }
+    single = {n: create(a)[0] for n, a in safe_art.items()}
+    owners = [w3.eth.accounts[i] for i in SAFE_OWNERS]
+    zero = "0x" + "00" * 20
+    setup = single["Safe"].encode_abi(
+        "setup", args=[owners, 2, zero, b"", single["CompatibilityFallbackHandler"].address, zero, 0, zero]
+    )
+    fn = single["SafeProxyFactory"].functions.createProxyWithNonce(single["Safe"].address, bytes.fromhex(setup[2:]), 6)
+    safe = fn.call({"from": admin})
+    w3.eth.wait_for_transaction_receipt(fn.transact({"from": admin}))
+
+    def load(n):
+        return json.loads((art / f"{n}.sol" / f"{n}.json").read_text())
+
+    tl, tl_block = create(load("MintGateTimelock"), 3600, [safe], [zero])
+    raw = (BACKEND / "policy.json").read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    version = json.loads(raw)["version"]
+    uri = f"http://127.0.0.1:{API_PORT}/api/policy/{digest}.json"
+    pol, pol_block = create(load("PolicyRegistry"), tl.address, [bytes.fromhex(digest)], [version], [uri])
+    res, res_block = create(load("DisputeResolver"), reg.address)
+    for tx in (
+        reg.functions.grantRole(reg.functions.REVIEWER_ROLE().call(), res.address).transact({"from": admin}),
+        reg.functions.beginDefaultAdminTransfer(safe).transact({"from": admin}),
+    ):
+        w3.eth.wait_for_transaction_receipt(tx)
+    w3.provider.make_request("evm_increaseTime", [3601])
+    w3.provider.make_request("evm_mine", [])
+    return {
+        "safe": {
+            "address": safe,
+            "owners": owners,
+            "threshold": 2,
+            "deployBlock": block,
+            "abi": safe_art["Safe"]["abi"],
+        },
+        "timelock": {"address": tl.address, "deployBlock": tl_block, "minDelay": 3600, "abi": tl.abi},
+        "policyRegistry": {"address": pol.address, "deployBlock": pol_block, "abi": pol.abi},
+        "disputeResolver": {"address": res.address, "deployBlock": res_block, "abi": res.abi},
+    }
+
+
+def propose_accept_admin():
+    import db
+    from chain import networks
+    from governance import actions, safe
+    from governance.safe import SafeTx
+
+    net = networks.get("localhost")
+    to, data, desc = actions.build(net, "accept-admin", [])
+    with db.session() as s:
+        safe.create(s, net, SafeTx(to=to, data=data, nonce=0), "accept-admin", desc)
 
 
 def deploy(w3) -> dict:
@@ -82,8 +151,10 @@ def deploy(w3) -> dict:
         "version": 2,
         "network": "localhost",
         "chainId": w3.eth.chain_id,
+        "disputeBond": str(BOND),
         "registry": {"address": reg.address, "deployBlock": reg_block, "abi": reg_art["abi"]},
         "nft": {"address": nft.address, "deployBlock": nft_block, "abi": nft_art["abi"]},
+        "governance": deploy_governance(w3, create, reg, art, reg_block),
     }
     d = Path(os.environ["DEPLOYMENTS_DIR"])
     d.mkdir(parents=True)
@@ -131,6 +202,7 @@ def main():
     dep = deploy(w3)
     w3.provider.make_request("evm_setIntervalMining", [1000])
     fresh_database()
+    propose_accept_admin()
 
     from rq import SimpleWorker
 

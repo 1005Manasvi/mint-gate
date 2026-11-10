@@ -7,3 +7,5 @@ Blockchain/coverage/
 Blockchain/contracts/MintGateNFT.sol
 # Vendored third-party builds stay byte-identical to the upstream release.
 frontend/vendor/
+# Vendored Safe v1.4.1 build artifacts (byte-identical to the npm release)
+Blockchain/vendor/

@@ -42,6 +42,7 @@ os.environ.update(
         "DEFAULT_NETWORK": TEST_NETWORK,
         "REVIEWER_KEY": "test-reviewer-key-0123456789",
         "PINATA_JWT": "",  # never pin to IPFS from tests
+        "DISCORD_WEBHOOK_URL": "",  # never post to Discord from tests
         "VERIFIER_PRIVATE_KEY": "",
         "PUBLIC_BASE_URL": "http://testserver",
     }
@@ -65,22 +66,52 @@ OTHER = Account.from_key(OTHER_KEY).address
 SIWE_DOMAIN = "testserver"  # host of PUBLIC_BASE_URL
 
 
+# Phase 6: owners of the test deployment's governance Safe (throwaway keys)
+OWNER_KEYS = ["0x" + "c3" * 32, "0x" + "d4" * 32, "0x" + "e5" * 32]
+OWNERS = [Account.from_key(k).address for k in OWNER_KEYS]
+SAFE_VENDOR = ROOT / "Blockchain" / "vendor" / "safe-1.4.1"
+
+
+def governance_abis() -> dict:
+    """Resolver / policy registry / timelock ABIs: from a real deployment file, else compiled artifacts."""
+    for f in sorted(REAL_DEPLOYMENT.parent.glob("*.json")):
+        gov = json.loads(f.read_text()).get("governance")
+        if gov and gov.get("disputeResolver"):
+            return {k: gov[k]["abi"] for k in ("disputeResolver", "policyRegistry", "timelock")}
+    names = {"disputeResolver": "DisputeResolver", "policyRegistry": "PolicyRegistry", "timelock": "MintGateTimelock"}
+    try:
+        return {k: artifact(n)["abi"] for k, n in names.items()}
+    except FileNotFoundError:
+        return {k: [] for k in names}
+
+
 def _write_test_deployment():
     """A chainId-31337 deployment with the real v2 ABIs; nothing is deployed at the addresses."""
     real = json.loads(REAL_DEPLOYMENT.read_text())
     d = Path(os.environ["DEPLOYMENTS_DIR"])
     d.mkdir(parents=True, exist_ok=True)
+    abis = governance_abis()
     dep = {
         "version": 2,
         "network": TEST_NETWORK,
         "chainId": 31337,
+        "disputeBond": str(10**15),
         "registry": {"address": "0x" + "11" * 20, "deployBlock": 1, "abi": real["registry"]["abi"]},
         "nft": {"address": "0x" + "22" * 20, "deployBlock": 1, "abi": real["nft"]["abi"]},
+        "governance": {
+            "safe": {
+                "address": Web3.to_checksum_address("0x" + "66" * 20),
+                "owners": OWNERS,
+                "threshold": 2,
+                "deployBlock": 1,
+                "abi": json.loads((SAFE_VENDOR / "Safe.json").read_text())["abi"],
+            },
+            "timelock": {"address": "0x" + "55" * 20, "deployBlock": 1, "minDelay": 3600, "abi": abis["timelock"]},
+            "policyRegistry": {"address": "0x" + "44" * 20, "deployBlock": 1, "abi": abis["policyRegistry"]},
+            "disputeResolver": {"address": "0x" + "33" * 20, "deployBlock": 1, "abi": abis["disputeResolver"]},
+        },
     }
     (d / f"{TEST_NETWORK}.json").write_text(json.dumps(dep))
-
-
-_write_test_deployment()
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -104,6 +135,11 @@ class FakeRegistry:
         self.net = net
         self.verdicts, self.nonces, self.txs = {}, set(), []
         self.down = False
+        self.roles = {"REVIEWER_ROLE": set()}  # tests add reviewer wallets here
+
+    def has_role(self, role, account):
+        self._check()
+        return account in self.roles.get(role, set())
 
     def _tx(self, kind):
         self.txs.append(kind)
@@ -176,7 +212,7 @@ def database():
 
 
 TABLES = (
-    "audit_log, reference_items, nft_collections, disputes, tokens, chain_events, indexer_cursors, attestations, reports, "
+    "audit_log, reference_items, nft_collections, safe_proposals, disputes, dispute_evidence, tokens, chain_events, indexer_cursors, attestations, reports, "
     "submissions, artists"
 )
 
@@ -387,3 +423,6 @@ def hardhat_node():
 
 def artifact(name):
     return json.loads((ARTIFACTS / f"{name}.sol" / f"{name}.json").read_text())
+
+
+_write_test_deployment()

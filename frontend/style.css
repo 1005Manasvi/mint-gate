@@ -263,3 +263,36 @@ a.brand { color: #fff; text-decoration: none; }
   .kv dt { margin-top: 6px; }
   .score-ring { width: 104px; height: 104px; }
 }
+
+/* ---- Phase 6: disputes, timeline, explorer ---- */
+.badge.dispute-open { background: var(--review-bg); color: var(--review); }
+.badge.dispute-upheld { background: var(--fail-bg); color: var(--fail); }
+.badge.dispute-rejected { background: #f1f5f9; color: var(--muted); }
+.banner-revoked { border-left: 4px solid var(--fail); background: var(--fail-bg); color: #7f1d1d; margin-bottom: 18px; }
+.timeline { list-style: none; display: grid; gap: 8px; font-size: .88rem; }
+.timeline .tl { display: grid; grid-template-columns: 170px 1fr; gap: 12px; padding-left: 12px; border-left: 2px solid var(--line); }
+.timeline .tl-time { color: var(--muted); font-size: .8rem; }
+.timeline .tl-DisputeOpened, .timeline .tl-DisputeReasoned { border-left-color: var(--review); }
+.timeline .tl-ImageRevoked { border-left-color: var(--fail); }
+.timeline .tl-ImageMinted { border-left-color: var(--pass); }
+.dispute-form { display: grid; gap: 6px; margin-top: 12px; }
+.dispute-form textarea, #decisionForm textarea { width: 100%; resize: vertical; font: inherit; }
+.grid-2.tight { gap: 12px; }
+#decisionForm fieldset { border: 0; display: grid; gap: 6px; margin: 8px 0; }
+.prewrap { white-space: pre-wrap; overflow-wrap: break-word; font-family: Inter, system-ui, sans-serif; }
+.sim small, .sim a { display: block; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.stat { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; }
+.stat-num { font-size: 1.35rem; font-weight: 800; }
+.stat-label { font-size: .72rem; color: var(--muted); }
+h4 { font-size: .82rem; font-weight: 700; margin: 14px 0 6px; }
+.table-wrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.table th, .table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.proposal { border: 1px solid var(--line); border-radius: 10px; padding: 10px; list-style: none; margin-bottom: 8px; }
+.small { font-size: .75rem; overflow-wrap: anywhere; }
+#view-disputes .card + .card, #disputeDetail .card { margin-top: 16px; }
+@media (max-width: 560px) {
+  .timeline .tl { grid-template-columns: 1fr; gap: 2px; }
+  .similar { grid-template-columns: repeat(2, 1fr); }
+}

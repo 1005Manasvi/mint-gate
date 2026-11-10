@@ -39,13 +39,19 @@ async function verify(chainId, address, fqn, creationTx) {
 async function main() {
   const file = path.join(__dirname, "..", "..", "backend", "chain", "deployments", `${hre.network.name}.json`);
   const dep = JSON.parse(fs.readFileSync(file, "utf8"));
-  for (const [key, fqn] of [
-    ["registry", "contracts/v2/MintGateRegistry.sol:MintGateRegistry"],
-    ["nft", "contracts/v2/MintGateNFTV2.sol:MintGateNFTV2"],
+  const gov = dep.governance || {};
+  for (const [obj, fqn] of [
+    [dep.registry, "contracts/v2/MintGateRegistry.sol:MintGateRegistry"],
+    [dep.nft, "contracts/v2/MintGateNFTV2.sol:MintGateNFTV2"],
+    // Phase 6 (the Safe itself is the canonical, already verified Safe v1.4.1 proxy)
+    [gov.timelock, "contracts/v2/MintGateTimelock.sol:MintGateTimelock"],
+    [gov.policyRegistry, "contracts/v2/PolicyRegistry.sol:PolicyRegistry"],
+    [gov.disputeResolver, "contracts/v2/DisputeResolver.sol:DisputeResolver"],
   ]) {
-    const match = await verify(dep.chainId, dep[key].address, fqn, dep[key].deployTx);
-    console.log(`${fqn} ${dep[key].address}: ${match}`);
-    dep[key].sourcify = match;
+    if (!obj) continue;
+    const match = await verify(dep.chainId, obj.address, fqn, obj.deployTx);
+    console.log(`${fqn} ${obj.address}: ${match}`);
+    obj.sourcify = match;
   }
   fs.writeFileSync(file, JSON.stringify(dep, null, 2) + "\n");
 }

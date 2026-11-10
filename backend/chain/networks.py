@@ -33,6 +33,11 @@ class Network:
     registry: Contract
     nft: Contract
     raw: dict = field(repr=False, compare=False, default_factory=dict)
+    # Phase 6 governance (scripts/deploy-governance.js); None until deployed on that chain
+    resolver: Contract | None = None
+    policies: Contract | None = None
+    timelock: Contract | None = None
+    safe: Contract | None = None
 
     @classmethod
     def from_file(cls, path: Path, rpc_url: str | None = None, confirmations: int | None = None):
@@ -43,9 +48,14 @@ class Network:
                 config.network_setting("CONFIRMATIONS", name, config.DEFAULT_CONFIRMATIONS.get(name, 5))
             )
 
-        def contract(key):
-            c = d[key]
-            return Contract(address=c["address"], abi=c["abi"], deploy_block=int(c["deployBlock"]))
+        def contract(key, src=d):
+            c = src.get(key)
+            if not c:
+                return None
+            block = c.get("deployBlock")
+            return Contract(address=c["address"], abi=c["abi"], deploy_block=int(block) if block is not None else 0)
+
+        gov = d.get("governance") or {}
 
         return cls(
             name=name,
@@ -56,6 +66,10 @@ class Network:
             registry=contract("registry"),
             nft=contract("nft"),
             raw=d,
+            resolver=contract("disputeResolver", gov),
+            policies=contract("policyRegistry", gov),
+            timelock=contract("timelock", gov),
+            safe=contract("safe", gov),
         )
 
     @property
@@ -74,6 +88,24 @@ class Network:
             "registry": self.registry.address,
             "nft": self.nft.address,
             "explorer": self.explorer,
+            "dispute_bond": str(self.raw.get("disputeBond", "")),
+            "governance": self.governance(),
+        }
+
+    def governance(self) -> dict | None:
+        """Addresses of the Phase 6 contracts (None before deploy-governance.js ran on this chain)."""
+        gov = self.raw.get("governance")
+        if not gov:
+            return None
+        safe = gov.get("safe") or {}
+        return {
+            "safe": safe.get("address"),
+            "owners": safe.get("owners"),
+            "threshold": safe.get("threshold"),
+            "timelock": (gov.get("timelock") or {}).get("address"),
+            "timelock_delay": (gov.get("timelock") or {}).get("minDelay"),
+            "policy_registry": (gov.get("policyRegistry") or {}).get("address"),
+            "dispute_resolver": (gov.get("disputeResolver") or {}).get("address"),
         }
 
     def public_rpc(self) -> str:

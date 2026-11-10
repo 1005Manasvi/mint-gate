@@ -18,6 +18,7 @@
       <button class="tab active" role="tab" id="tab-verify" data-view="verify" aria-controls="view-verify" aria-selected="true">Verify &amp; Mint</button>
       <button class="tab" role="tab" id="tab-mine" data-view="mine" aria-controls="view-mine" aria-selected="false" tabindex="-1">My artworks</button>
       <button class="tab" role="tab" id="tab-queue" data-view="queue" aria-controls="view-queue" aria-selected="false" tabindex="-1">Review queue</button>
+      <button class="tab" role="tab" id="tab-disputes" data-view="disputes" aria-controls="view-disputes" aria-selected="false" tabindex="-1">Disputes</button>
       <button class="tab" role="tab" id="tab-lookup" data-view="lookup" aria-controls="view-lookup" aria-selected="false" tabindex="-1">Provenance</button>
       <button class="tab" role="tab" id="tab-about" data-view="about" aria-controls="view-about" aria-selected="false" tabindex="-1">How it works</button>
     </nav>
@@ -132,8 +133,9 @@
             </ol>
           </div>
           <div id="reviewBox" hidden>
-            <p class="hint">This artwork needs human verification before it may be minted.</p>
-            <label class="lbl" for="reviewerKey">Reviewer key</label>
+            <p class="hint">This artwork needs human verification before it may be minted. Reviewers sign in with a
+              wallet that holds REVIEWER_ROLE; the shared key below is only a fallback for scripts.</p>
+            <label class="lbl" for="reviewerKey">Reviewer key (not needed with a reviewer wallet)</label>
             <input id="reviewerKey" type="password" class="input" placeholder="reviewer key" autocomplete="off">
             <label class="lbl" for="reviewNote">Note</label>
             <input id="reviewNote" class="input" placeholder="optional justification">
@@ -176,6 +178,73 @@
       <h2>Reports awaiting human review</h2>
       <p class="hint">Open a report to approve or reject it.</p>
       <div id="queue" class="queue" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ============ DISPUTES (reviewer dashboard) ============ -->
+  <section id="view-disputes" class="view" role="tabpanel" aria-labelledby="tab-disputes" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>Disputes</h2>
+        <div class="row row-tight">
+          <label class="sr-only" for="disputeFilter">Show</label>
+          <select id="disputeFilter" class="input input-narrow">
+            <option value="open">Open</option>
+            <option value="">All</option>
+            <option value="upheld">Upheld</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button id="disputeRefresh" class="btn btn-ghost btn-small">Refresh</button>
+        </div>
+      </div>
+      <p id="reviewerState" class="hint" role="status">Anyone can read disputes and their evidence. Deciding needs a wallet with REVIEWER_ROLE on that chain.</p>
+      <div id="disputes" class="queue" aria-live="polite"></div>
+    </div>
+
+    <div id="disputeDetail" hidden>
+      <h2 class="section-title" id="ddTitle">Dispute</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Disputed token</h3>
+          <figure class="token-art"><img id="ddImage" alt="The disputed artwork"><figcaption id="ddTokenCap"></figcaption></figure>
+          <dl id="ddToken" class="kv"></dl>
+        </div>
+        <div class="card">
+          <h3>Reporter's evidence</h3>
+          <figure class="token-art" id="ddOrigFig" hidden><img id="ddOriginal" alt="The reporter's original file"><figcaption>Original submitted by the reporter</figcaption></figure>
+          <dl id="ddReporter" class="kv"></dl>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Mint-Gate's evidence</h3>
+          <button id="ddRequeue" class="btn btn-ghost btn-small" hidden>Compute again</button>
+        </div>
+        <div id="ddBackend"></div>
+      </div>
+      <div class="card" id="ddDecide">
+        <h3>Decision</h3>
+        <div id="ddDecideBody"></div>
+        <form id="decisionForm" hidden>
+          <fieldset class="row row-tight">
+            <legend class="lbl">Outcome</legend>
+            <label><input type="radio" name="outcome" value="upheld"> Uphold: revoke the token, return the bond</label>
+            <label><input type="radio" name="outcome" value="rejected"> Reject: token stays, bond to the treasury</label>
+          </fieldset>
+          <label class="lbl" for="ddReason">Written reason (public, pinned to IPFS, its SHA-256 goes on chain)</label>
+          <textarea id="ddReason" class="input" rows="4" minlength="20" maxlength="10000" required></textarea>
+          <div class="row"><button id="ddResolveBtn" class="btn btn-primary">Pin reason &amp; resolve from my wallet</button></div>
+          <ol id="ddSteps" class="steps" aria-label="Resolution progress" hidden>
+            <li data-stage="pin">Reason pinned to IPFS</li>
+            <li data-stage="switching">Wallet on the right network</li>
+            <li data-stage="estimating">Gas estimate</li>
+            <li data-stage="wallet">Confirm in your wallet</li>
+            <li data-stage="pending">Transaction pending</li>
+            <li data-stage="confirming">Confirmations</li>
+          </ol>
+        </form>
+        <div id="ddOut" class="txout" aria-live="polite"></div>
+      </div>
     </div>
   </section>
 
@@ -227,7 +296,7 @@
 </main>
 
 <footer class="wrap foot">
-  Mint-Gate · AI forensics + blockchain provenance ·
+  Mint-Gate · <a href="/explorer">Explorer &amp; governance</a> · AI forensics + blockchain provenance ·
   <span id="footContract"></span>
   <span class="foot-note">Automated detection is probabilistic: a PASS is not a legal guarantee of authorship.</span>
 </footer>

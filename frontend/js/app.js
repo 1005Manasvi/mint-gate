@@ -1,7 +1,7 @@
 // Mint-Gate main page: sign in with a wallet, upload (signed), see the verdict, mint from the wallet.
 "use strict";
 
-import { el, explorerLink, link, msg, short, tokenPath } from "./ui.js";
+import { el, explorerLink, formatEth as fmtEth, link, markSteps, msg, short, tokenPath, when } from "./ui.js";
 import * as wallet from "./wallet.js";
 
 const $ = (id) => document.getElementById(id);
@@ -96,6 +96,7 @@ function openTab(view, focus = false) {
   if (view === "queue") loadQueue();
   if (view === "about") loadStatus(true);
   if (view === "mine") loadMine();
+  if (view === "disputes") loadDisputes();
 }
 
 tabs.forEach((t, i) => {
@@ -685,10 +686,9 @@ function formatEth(wei) {
 // ---------------- review / verify ----------------
 async function resolve(approve) {
   try {
-    await wallet.api(`/api/review/${current.report_id}`, {
-      method: "POST",
-      json: { approve, reviewer_key: $("reviewerKey").value, note: $("reviewNote").value },
-    });
+    const json = { approve, note: $("reviewNote").value };
+    if ($("reviewerKey").value) json.reviewer_key = $("reviewerKey").value; // else: the reviewer wallet session
+    await wallet.api(`/api/review/${current.report_id}`, { method: "POST", json });
     render(await wallet.api(`/api/report/${current.report_id}`));
   } catch (e) {
     msg($("txOut"), "err", e.message);
@@ -843,6 +843,317 @@ async function loadQueue() {
   );
 }
 
+// ---------------- disputes: reviewer dashboard (Phase 6) ----------------
+let roles = null; // {network: {reviewer: bool|null}} for the session wallet
+let shownDispute = null; // the dispute in the detail view
+const gw = (u) => httpUri(u);
+const RESOLVE_STAGES = ["pin", "switching", "estimating", "wallet", "pending", "confirming"];
+
+async function loadRoles() {
+  roles = null;
+  if (!wallet.getSession()) return;
+  try {
+    roles = (await wallet.api("/api/auth/roles")).roles;
+  } catch {
+    roles = null;
+  }
+}
+
+const reviewerOn = (network) => Boolean(roles?.[network]?.reviewer);
+
+async function loadDisputes() {
+  await loadRoles();
+  const nets = Object.entries(roles || {})
+    .filter(([, r]) => r.reviewer)
+    .map(([n]) => n);
+  $("reviewerState").textContent = !wallet.getSession()
+    ? "Anyone can read disputes and their evidence. Sign in with a wallet that holds REVIEWER_ROLE to decide."
+    : nets.length
+      ? `Signed in as a reviewer on ${nets.map((n) => wallet.networkByName(n)?.label || n).join(", ")}.`
+      : `${short(wallet.getSession().address, 8)} holds no REVIEWER_ROLE: read-only.`;
+  const status = $("disputeFilter").value;
+  let data;
+  try {
+    data = await wallet.api(`/api/disputes${status ? `?status=${status}` : ""}`);
+  } catch (e) {
+    msg($("disputes"), "err", `Could not load disputes: ${e.message}`);
+    return;
+  }
+  if (!data.disputes.length) {
+    const text = status === "open" ? "No open disputes." : "No disputes.";
+    $("disputes").replaceChildren(el("p", { className: "empty" }, text));
+    return;
+  }
+  $("disputes").replaceChildren(
+    ...data.disputes.map((d) => {
+      const open = el("button", { className: "btn btn-ghost" }, "Open");
+      open.addEventListener("click", () =>
+        openDisputeDetail(d.network, d.dispute_id).catch((e) => notify("err", e.message)),
+      );
+      const label = wallet.networkByName(d.network)?.label || d.network;
+      return el(
+        "div",
+        { className: "qrow" },
+        el("div", { className: "thumb-empty" }),
+        el(
+          "div",
+          {},
+          `#${d.dispute_id} on ${label}`,
+          el("small", {}, `opened ${when(d.opened_at)} by ${short(d.disputant, 8)} · bond ${fmtEth(d.bond)} ETH`),
+        ),
+        el("span", { className: `badge dispute-${d.status}` }, d.status),
+        open,
+      );
+    }),
+  );
+}
+$("disputeFilter").addEventListener("change", loadDisputes);
+$("disputeRefresh").addEventListener("click", loadDisputes);
+
+const kv = (rows) => rows.filter(Boolean).flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v ?? "–")]);
+
+function matchCard(m) {
+  const indexed = m.indexed_before_upload
+    ? "indexed before the disputed upload"
+    : m.indexed_at
+      ? `indexed ${when(m.indexed_at)}`
+      : "";
+  return el(
+    "div",
+    { className: "sim" },
+    el("img", { src: `/api/reference/${m.image || m.reference}`, alt: "", loading: "lazy" }),
+    el(
+      "div",
+      {},
+      el("b", {}, `copy score ${m.copy_score}`),
+      el("small", {}, m.contract ? `${short(m.contract, 8)} #${m.token_id}` : m.reference),
+      el("small", {}, indexed),
+      m.source_url ? link("source", m.source_url) : "",
+    ),
+  );
+}
+
+function renderBackendEvidence(be, net) {
+  if (!be)
+    return [
+      el("p", { className: "hint" }, "Not computed yet (the analysis worker runs it once the dispute is indexed)."),
+    ];
+  const out = [];
+  const cs = be.copy_search || {};
+  if (!cs.available) out.push(el("p", { className: "hint" }, `Copy search: ${cs.why || "unavailable"}`));
+  else {
+    out.push(el("h4", {}, "Most similar indexed works (the disputed token itself excluded)"));
+    out.push(
+      cs.matches.length
+        ? el("div", { className: "similar" }, ...cs.matches.map(matchCard))
+        : el("p", { className: "hint" }, "No similar indexed work."),
+    );
+  }
+  const subs = be.earliest_submissions || [];
+  out.push(el("h4", {}, "Earliest signed submissions of these pixels"));
+  out.push(
+    subs.length
+      ? el(
+          "ul",
+          { className: "mrow-list" },
+          ...subs.map((x) =>
+            el(
+              "li",
+              {},
+              `${when(x.created_at)} · `,
+              explorerLink(net, "address", x.wallet, short(x.wallet, 8)),
+              x.signed ? " · signed claim" : " · unsigned",
+              ` · ${x.status}`,
+            ),
+          ),
+        )
+      : el("p", { className: "hint" }, "None in this Mint-Gate instance."),
+  );
+  if (be.earliest_is_token_artist === false)
+    out.push(el("p", { className: "t-fail" }, "The earliest submission is NOT from the token's artist."));
+  if (be.original) {
+    const o = be.original;
+    const earlier = (o.earliest_submissions || []).length
+      ? when(o.earliest_submissions[0].created_at)
+      : "never uploaded here";
+    out.push(el("h4", {}, "Reporter's original vs the disputed image"));
+    out.push(
+      el(
+        "dl",
+        { className: "kv" },
+        ...kv([
+          ["Identical pixels", o.identical_pixels === undefined ? "–" : o.identical_pixels ? "yes" : "no"],
+          ["SSCD cosine", o.sscd_cosine],
+          ["PDQ distance (bits of 256)", o.pdq_bits],
+          ["Original submitted here", earlier],
+          o.error ? ["Error", o.error] : null,
+        ]),
+      ),
+    );
+  }
+  const rs = be.reverse_search || {};
+  out.push(el("h4", {}, "Reverse image search"));
+  out.push(
+    el(
+      "p",
+      { className: "hint" },
+      rs.configured === false
+        ? "Not configured on this server (REVERSE_SEARCH)."
+        : rs.error
+          ? `${rs.provider}: ${rs.error}`
+          : `${rs.provider}: ${rs.full_matches} full matches${rs.earliest ? `, earliest ${rs.earliest.crawl_date}` : ""}`,
+    ),
+  );
+  for (const pg of rs.pages || []) out.push(el("div", {}, link(pg.title || pg.url, pg.url)));
+  return out;
+}
+
+async function openDisputeDetail(network, id) {
+  const d = await wallet.api(`/api/disputes/${network}/${id}`);
+  shownDispute = d;
+  const net = wallet.networkByName(network);
+  $("disputeDetail").hidden = false;
+  $("ddTitle").textContent = `Dispute #${d.dispute_id} on ${net?.label || network}: ${d.status}`;
+  const r = d.report;
+  $("ddImage").hidden = !r;
+  if (r) $("ddImage").src = r.image_url;
+  $("ddTokenCap").replaceChildren(
+    d.token
+      ? el(
+          "a",
+          { href: tokenPath(network, d.token.contract, d.token.token_id) },
+          `Token #${d.token.token_id}: provenance page`,
+        )
+      : "Token not indexed",
+  );
+  $("ddToken").replaceChildren(
+    ...kv([
+      ["Artist", r?.artist ? explorerLink(net, "address", r.artist, short(r.artist, 8)) : "–"],
+      ["Verdict at mint", r ? `${r.decision}, score ${r.score} (policy ${r.policy_version})` : "–"],
+      ["Uploaded", r ? when(r.created_at) : "–"],
+      ["Token status", d.token?.status],
+      ["Report", r ? link("full verification report", `/?report=${r.report_id}`) : "–"],
+    ]),
+  );
+  const ev = d.reporter_evidence;
+  $("ddOrigFig").hidden = !d.original_url;
+  if (d.original_url) $("ddOriginal").src = d.original_url;
+  $("ddReporter").replaceChildren(
+    ...kv([
+      ["Reporter", explorerLink(net, "address", d.disputant, short(d.disputant, 8))],
+      ["Opened", `${when(d.opened_at)} · bond ${fmtEth(d.bond)} ETH`],
+      [
+        "Statement",
+        ev ? el("p", { className: "prewrap" }, ev.statement) : "(evidence not submitted through Mint-Gate)",
+      ],
+      ev?.urls?.length ? ["Links", el("ul", {}, ...ev.urls.map((u) => el("li", {}, link(u, gw(u)))))] : null,
+      ev?.first_published ? ["First published", ev.first_published] : null,
+      ev?.prior_claims?.length
+        ? ["Earlier claims", el("ul", {}, ...ev.prior_claims.map((c) => el("li", { className: "mono" }, c)))]
+        : null,
+      ["Pinned evidence", link(short(d.evidence_uri, 22), d.evidence_http)],
+    ]),
+  );
+  $("ddBackend").replaceChildren(...renderBackendEvidence(d.backend_evidence, net));
+  if (d.backend_evidence_uri)
+    $("ddBackend").append(
+      el("p", { className: "hint" }, link("pinned copy of this evidence", gw(d.backend_evidence_uri))),
+    );
+
+  await loadRoles();
+  const canDecide = d.status === "open" && reviewerOn(network) && Boolean(d.resolver);
+  $("ddRequeue").hidden = !(reviewerOn(network) && !d.backend_evidence);
+  $("decisionForm").hidden = !canDecide;
+  $("ddOut").replaceChildren();
+  let body;
+  if (d.status !== "open")
+    body = el(
+      "p",
+      {},
+      `${d.status === "upheld" ? "Upheld" : "Rejected"} ${when(d.resolved_at)} by `,
+      explorerLink(net, "address", d.reviewer, short(d.reviewer, 8)),
+      " · ",
+      d.reason_http ? link("written reason", d.reason_http) : "no reason recorded on chain",
+      " · ",
+      explorerLink(net, "tx", d.resolved_tx),
+    );
+  else if (canDecide)
+    body = el(
+      "p",
+      { className: "hint" },
+      "Read both sides, then decide. Your wallet signs the transaction: the decision is attributable to you.",
+    );
+  else
+    body = el(
+      "p",
+      { className: "hint" },
+      d.resolver
+        ? "Only wallets with REVIEWER_ROLE on this chain can decide."
+        : "No DisputeResolver is deployed on this chain yet.",
+    );
+  $("ddDecideBody").replaceChildren(body);
+  $("disputeDetail").scrollIntoView({
+    behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+  });
+}
+
+$("ddRequeue").addEventListener("click", async () => {
+  const d = shownDispute;
+  try {
+    await wallet.api(`/api/disputes/${d.network}/${d.dispute_id}/backend-evidence`, { method: "POST" });
+    msg($("ddOut"), "ok", "Queued. Reload the dispute in a minute.");
+  } catch (e) {
+    msg($("ddOut"), "err", e.message);
+  }
+});
+
+$("decisionForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const d = shownDispute;
+  const outcome = new FormData($("decisionForm")).get("outcome");
+  if (!outcome) {
+    msg($("ddOut"), "err", "Choose uphold or reject.");
+    return;
+  }
+  const steps = $("ddSteps");
+  const net = wallet.networkByName(d.network);
+  let stage = "pin";
+  const step = (st, extra = "", failed = false) => markSteps(steps, RESOLVE_STAGES, st, extra, failed);
+  steps.hidden = false;
+  $("ddResolveBtn").disabled = true;
+  try {
+    step("pin");
+    const info = await wallet.api(`/api/disputes/${d.network}/${d.dispute_id}/reason`, {
+      method: "POST",
+      json: { upheld: outcome === "upheld", reason: $("ddReason").value },
+    });
+    step("pin", link("pinned", gw(info.reason_uri)));
+    const out = await wallet.resolveDispute(info, (s) => {
+      stage = s.stage;
+      const extra =
+        s.stage === "pending"
+          ? explorerLink(net, "tx", s.hash)
+          : s.stage === "confirming"
+            ? `${s.confirmations} / ${s.needed}`
+            : "";
+      step(s.stage, extra);
+    });
+    msg(
+      $("ddOut"),
+      "ok",
+      `Dispute ${outcome}. `,
+      explorerLink(net, "tx", out.hash),
+      " The indexer updates the token in a few blocks.",
+    );
+    setTimeout(() => openDisputeDetail(d.network, d.dispute_id).catch(() => {}), 6000);
+  } catch (err) {
+    step(stage, "", true);
+    msg($("ddOut"), "err", wallet.explainError(err));
+  } finally {
+    $("ddResolveBtn").disabled = false;
+  }
+});
+
 // ---------------- provenance lookup ----------------
 $("lookupForm").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -853,9 +1164,17 @@ $("lookupForm").addEventListener("submit", (e) => {
   location.href = tokenPath(n.network, contract, id);
 });
 
-// Deep link: /?report=<id> opens a stored report (e.g. shared with a reviewer).
+// Deep links: /?report=<id> opens a stored report (e.g. shared with a reviewer);
+// /?view=disputes&dispute=<network>:<id> opens a dispute (Discord alerts link there).
 async function openFromUrl() {
-  const rid = new URLSearchParams(location.search).get("report");
+  const q = new URLSearchParams(location.search);
+  if (q.get("view") === "disputes") {
+    openTab("disputes");
+    const m = /^([A-Za-z0-9]+):(\d+)$/.exec(q.get("dispute") || "");
+    if (m) openDisputeDetail(m[1], m[2]).catch((e) => notify("err", e.message));
+    return;
+  }
+  const rid = q.get("report");
   if (!rid || !/^[0-9a-f]{32}$/.test(rid)) return;
   try {
     await openReport(rid);

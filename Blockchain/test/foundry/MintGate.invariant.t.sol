@@ -6,6 +6,7 @@ import {IMintGate} from "../../contracts/v2/IMintGate.sol";
 import {MintGateRegistry} from "../../contracts/v2/MintGateRegistry.sol";
 import {MintGateNFTV2} from "../../contracts/v2/MintGateNFTV2.sol";
 import {ThirdPartyCollection} from "../../contracts/mocks/ThirdPartyCollection.sol";
+import {DisputeResolver, IDisputeRegistry} from "../../contracts/v2/DisputeResolver.sol";
 import {MintGateBase} from "./Base.t.sol";
 
 /// @dev Random sequences of every user / role action. A small pool of images and artists makes
@@ -42,8 +43,18 @@ contract Handler is Test {
     bool public replayAccepted;
     uint256 public calls;
 
+    // Phase 6 bond accounting (ghost state)
+    DisputeResolver public resolver;
+    uint256 public deposited; // every bond ever paid in
+    uint256 public totalWithdrawn;
+    mapping(address => uint256) public withdrawnBy;
+    mapping(uint256 => uint256) public bondAtOpen; // disputeId -> msg.value when opened
+    uint256 public bondChanges;
+    uint256 public viaResolver;
+
     constructor(MintGateRegistry r, MintGateNFTV2 n, ThirdPartyCollection t, uint256 key, address[4] memory roles) {
         (registry, nft, tp, verifierKey) = (r, n, t, key);
+        resolver = new DisputeResolver(IDisputeRegistry(address(r)));
         (admin, reviewer, pauser, treasury) = (roles[0], roles[1], roles[2], roles[3]);
         for (uint256 i; i < 5; i++) images[i] = keccak256(abi.encode("image", i));
         for (uint256 i; i < 3; i++) {
@@ -148,8 +159,10 @@ contract Handler is Test {
         uint256 bond = registry.disputeBond();
         vm.deal(d, bond);
         vm.prank(d);
-        try registry.openDispute{value: bond}(images[(seed >> 8) % 5], "ipfs://e") {
+        try registry.openDispute{value: bond}(images[(seed >> 8) % 5], "ipfs://e") returns (uint256 id) {
             disputesOk++;
+            deposited += bond;
+            bondAtOpen[id] = bond;
         } catch {}
     }
 
@@ -160,17 +173,38 @@ contract Handler is Test {
         uint256 id = 1 + (seed % n);
         bytes32 image = registry.disputeOf(id).imageHash;
         vm.prank(reviewer);
-        try registry.resolveDispute(id, upheld) {
-            if (upheld) revokedSeen.push(image);
-            resolvedOk++;
-        } catch {}
+        if ((seed >> 128) % 2 == 0) {
+            try registry.resolveDispute(id, upheld) {
+                if (upheld) revokedSeen.push(image);
+                resolvedOk++;
+            } catch {}
+        } else {
+            // the Phase 6 path: reviewer resolves through the resolver, with a reason hash
+            try resolver.resolveDispute(id, upheld, keccak256(abi.encode(id)), "ipfs://reason") {
+                if (upheld) revokedSeen.push(image);
+                resolvedOk++;
+                viaResolver++;
+            } catch {}
+        }
     }
 
     function withdraw(uint256 seed) external {
         calls++;
         address who = seed % 4 == 3 ? treasury : disputants[seed % 3];
+        uint256 owed = registry.credits(who);
         vm.prank(who);
-        try registry.withdraw() {} catch {}
+        try registry.withdraw() {
+            withdrawnBy[who] += owed;
+            totalWithdrawn += owed;
+        } catch {}
+    }
+
+    /// Admin changes the bond while disputes are open: open disputes must keep their snapshot.
+    function setBond(uint256 seed) external {
+        calls++;
+        vm.prank(admin);
+        registry.setDisputeBond(bound(seed, 0, 0.01 ether));
+        bondChanges++;
     }
 
     function transfer(uint256 seed) external {
@@ -235,6 +269,10 @@ contract MintGateInvariantTest is MintGateBase {
         vm.prank(admin);
         registry.grantRole(collectionRole, address(tp));
         handler = new Handler(registry, nft, tp, VERIFIER_KEY, [admin, reviewer, pauser, treasury]);
+        bytes32 reviewerRole = registry.REVIEWER_ROLE();
+        address resolver = address(handler.resolver());
+        vm.prank(admin);
+        registry.grantRole(reviewerRole, resolver);
         targetContract(address(handler));
         excludeSender(address(handler));
     }
@@ -309,25 +347,84 @@ contract MintGateInvariantTest is MintGateBase {
         assertEq(address(registry).balance, owed);
     }
 
+    // ---- Phase 6: bond accounting ----------------------------------------------------------
+
+    /// 5. Conservation: every wei paid in as a bond is either still in the registry or withdrawn.
+    function invariant_BondConservation() public view {
+        assertEq(address(registry).balance + handler.totalWithdrawn(), handler.deposited(), "bond leak");
+    }
+
+    /// 6. Each dispute keeps the bond it was opened with, whatever the admin sets later.
+    function invariant_BondSnapshot() public view {
+        for (uint256 id = 1; id <= registry.totalDisputes(); id++) {
+            assertEq(registry.disputeOf(id).bond, handler.bondAtOpen(id), "bond changed after opening");
+        }
+    }
+
+    /// 7. Payouts follow the outcome: a disputant's credits + withdrawals equal the bonds of their
+    ///    upheld disputes; the treasury's equal the bonds of all rejected disputes. Open bonds are
+    ///    nobody's yet.
+    function invariant_PayoutsFollowOutcome() public view {
+        uint256[3] memory earned;
+        uint256 forfeited;
+        for (uint256 id = 1; id <= registry.totalDisputes(); id++) {
+            MintGateRegistry.Dispute memory d = registry.disputeOf(id);
+            if (d.status == MintGateRegistry.DisputeStatus.REJECTED) forfeited += d.bond;
+            if (d.status != MintGateRegistry.DisputeStatus.UPHELD) continue;
+            for (uint256 i; i < 3; i++) if (d.disputant == handler.disputants(i)) earned[i] += d.bond;
+        }
+        for (uint256 i; i < 3; i++) {
+            address who = handler.disputants(i);
+            assertEq(registry.credits(who) + handler.withdrawnBy(who), earned[i], "disputant payout");
+        }
+        assertEq(registry.credits(treasury) + handler.withdrawnBy(treasury), forfeited, "treasury payout");
+    }
+
+    /// 8. At most one open dispute per image, and the image points at exactly that dispute.
+    function invariant_OneOpenDisputePerImage() public view {
+        for (uint256 i; i < 5; i++) {
+            bytes32 image = handler.images(i);
+            uint256 open;
+            uint256 openId;
+            for (uint256 id = 1; id <= registry.totalDisputes(); id++) {
+                MintGateRegistry.Dispute memory d = registry.disputeOf(id);
+                if (d.imageHash == image && d.status == MintGateRegistry.DisputeStatus.OPEN)
+                    (open, openId) = (open + 1, id);
+            }
+            assertLe(open, 1, "two open disputes on one image");
+            (, , , uint256 active) = registry.mintOf(image);
+            assertEq(active, openId, "image points at the wrong dispute");
+        }
+    }
+
     /// The handler reaches deep states (mints in both collections, disputes, revocations), so
     /// the invariants above are not passing on an empty system.
     function test_HandlerReachesDeepStates() public {
-        for (uint256 i; i < 600; i++) {
+        for (uint256 i; i < 800; i++) {
             uint256 seed = uint256(keccak256(abi.encode(i)));
-            uint256 action = i % 6;
+            uint256 action = i % 8;
             if (action == 0 || action == 1) handler.submit(seed);
             else if (action == 2) handler.mint(seed, seed % 3 == 0);
             else if (action == 3) handler.openDispute(seed);
             else if (action == 4) handler.resolveDispute(seed, seed % 2 == 0);
+            else if (action == 5) handler.withdraw(seed);
+            else if (action == 6 && i % 48 == 6) handler.setBond(seed);
             else handler.resolveReview(seed, true);
         }
         assertGt(handler.mintsOk(), 4, "mints");
         assertGt(handler.tpCount(), 0, "third-party mints");
         assertGt(handler.disputesOk(), 2, "disputes");
         assertGt(handler.revokedCount(), 0, "revocations");
+        assertGt(handler.viaResolver(), 0, "resolutions through the resolver");
+        assertGt(handler.totalWithdrawn(), 0, "withdrawals");
+        assertGt(handler.bondChanges(), 0, "bond changes");
         invariant_OneTokenPerImage();
         invariant_NoMintWithoutValidVerdict();
         invariant_RevokedStaysRevoked();
         invariant_Solvency();
+        invariant_BondConservation();
+        invariant_BondSnapshot();
+        invariant_PayoutsFollowOutcome();
+        invariant_OneOpenDisputePerImage();
     }
 }

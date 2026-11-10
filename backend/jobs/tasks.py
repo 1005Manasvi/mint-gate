@@ -10,6 +10,7 @@ import logging
 
 import config
 import db
+import notify
 from chain import networks, registry
 from chain.eip712 import Verdict, sign_verdict
 from chain.registry import ChainUnavailable
@@ -118,6 +119,11 @@ def analyse_submission(sid: str) -> dict:
     raw_path.unlink(missing_ok=True)
 
     decision = report["decision"]
+    if decision == "REVIEW" and notify.enabled("review"):
+        try:
+            jq.enqueue_chain("notify_review", sid)
+        except Exception as exc:
+            log.warning("could not queue the review alert for %s: %s", sid, exc)
     if decision == "REVIEW" or (decision == "FAIL" and config.ANCHOR_FAILED_VERDICTS):
         if config.DEFAULT_NETWORK in networks.available():
             try:
@@ -177,3 +183,77 @@ def resolve_review(rid: str, approved: bool, network: str) -> dict:
         if tx["tx_hash"]:
             repo.audit(s, "worker", "review.resolved_on_chain", rid, approved=approved, network=network, **tx)
     return tx
+
+
+# ---- Phase 6: disputes + notifications ---------------------------------------------------------
+
+
+def dispute_evidence(network: str, dispute_id: int) -> dict:
+    """The backend's own evidence for an on-chain dispute (copy search, earliest signed submission,
+    reverse search), stored on the dispute and pinned next to the reporter's evidence."""
+    from decimal import Decimal
+
+    from sqlalchemy import select
+
+    from db.models import Dispute
+    from disputes.evidence import backend_evidence, doc_bytes, pin_document
+
+    net = networks.get(network)
+    p = pipeline()
+    sync_references(p)
+    with db.session() as s:
+        d = s.scalars(
+            select(Dispute).where(Dispute.chain_id == net.chain_id, Dispute.dispute_id == Decimal(dispute_id))
+        ).first()
+        if d is None:  # not committed / indexed yet: RQ retries
+            raise RuntimeError(f"dispute {network}:{dispute_id} not indexed yet")
+        if d.backend_evidence is not None:
+            return {"skipped": "done"}
+        doc = backend_evidence(s, p, d)
+    raw = doc_bytes(doc)
+    name = f"mintgate-dispute-{net.chain_id}-{dispute_id}-backend.json"
+    (config.STORAGE_DIR / "disputes").mkdir(exist_ok=True)
+    (config.STORAGE_DIR / "disputes" / name).write_bytes(raw)
+    uri = pin_document(raw, name, f"{config.PUBLIC_BASE_URL}/api/disputes/file/{name}")
+    with db.session() as s:
+        d = s.scalars(
+            select(Dispute).where(Dispute.chain_id == net.chain_id, Dispute.dispute_id == Decimal(dispute_id))
+        ).first()
+        d.backend_evidence, d.backend_evidence_uri = doc, uri
+        repo.audit(s, "worker", "dispute.backend_evidence", f"{net.chain_id}:{dispute_id}", uri=uri)
+    return {"uri": uri, "matches": len((doc.get("copy_search") or {}).get("matches", []))}
+
+
+def notify_dispute(network: str, dispute_id: int) -> bool:
+    from decimal import Decimal
+
+    from sqlalchemy import select
+
+    from db.models import Dispute, Token
+
+    net = networks.get(network)
+    with db.session() as s:
+        d = s.scalars(
+            select(Dispute).where(Dispute.chain_id == net.chain_id, Dispute.dispute_id == Decimal(dispute_id))
+        ).first()
+        if d is None:
+            raise RuntimeError(f"dispute {network}:{dispute_id} not indexed yet")
+        t = s.scalars(select(Token).where(Token.chain_id == net.chain_id, Token.image_sha256 == d.image_sha256)).first()
+        info = {
+            "dispute_id": dispute_id,
+            "image_sha256": d.image_sha256,
+            "disputant": d.disputant,
+            "bond": str(d.bond),
+            "evidence_uri": d.evidence_uri,
+            "token": {"contract": t.contract, "token_id": str(t.token_id)} if t else None,
+        }
+    return notify.post(notify.dispute_text(network, info))
+
+
+def notify_review(rid: str) -> bool:
+    with db.session() as s:
+        rep = repo.get_report(s, rid)
+        if rep is None:
+            return False
+        report = repo.report_dict(rep)
+    return notify.post(notify.review_text(report))

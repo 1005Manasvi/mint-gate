@@ -284,3 +284,51 @@ and anything the next phase must know. Keep entries brief: this file is read at 
   (WinError 4551): run the linters directly or rely on CI.
 - **Next: Phase 6** (owner inputs above). Open for a later phase: larger references for copymint auto-FAIL,
   mirrored-punk copymints, BGAN-style GAN pixel art.
+
+## Phase 6: Disputes, governance, public explorer (done, 2026-11-11)
+- **Contracts** (`Blockchain/contracts/v2/`, registry + NFT unchanged): `DisputeResolver` (holds REVIEWER_ROLE;
+  registry reviewers call `resolveDispute(id, upheld, sha256(reason), reasonURI)`, `DisputeReasoned` event,
+  ERC-4906 refresh after revocation), `PolicyRegistry` (`setPolicy(sha256, version, uri)`, history,
+  `policyActiveAt(t)`, owned by the timelock), `MintGateTimelock` (OZ TimelockController, 1 h, proposer = Safe,
+  executor = anyone, no admin). Safe v1.4.1 2-of-3 from the owner's addresses (canonical factory; vendored
+  artifacts `Blockchain/vendor/safe-1.4.1/` for tests, runtime code checked against the chain before deploying).
+- **Deployed 2026-11-11** (addresses in docs/governance.md + `deployments/<net>.json` `governance` block):
+  Sepolia Safe `0xEdE58D8Ff74e72fc7568e68c8927a68884a290Fb`, Base Sepolia Safe `0x66bf57DC8ea2bE63dCa3CA4791d438FC38b02C67`.
+  Sourcify: PolicyRegistry + DisputeResolver exact match on both chains, timelock partial `match` (runtime code
+  byte-identical to the local build incl. metadata hash). Policies 5.1.0 + 5.1.0-permissive pinned as exact bytes
+  (`backend/chain/policies.json`) and announced at deployment. Hand-over (`scripts/handover.js`): PAUSER + treasury
+  → Safe, deployer's pauser role revoked, `beginDefaultAdminTransfer(Safe)` on both chains.
+- **Off-chain flow:** reporter (SIWE) pins evidence (statement, links, dates, prior claims, original file) →
+  wallet `openDispute` with bond → indexer queues `dispute_evidence` (analysis worker: copy search without the
+  token itself, original vs disputed image, earliest signed submissions, reverse search; pinned) + Discord alert
+  (`notify.py`, also on REVIEW uploads) → Disputes tab (reviewer = wallet with REVIEWER_ROLE, read live) pins a
+  written reason → reviewer wallet resolves through the resolver → token revoked / bond refunded or forfeited;
+  audit log entries. Token page: timeline, "Report this token", bond withdrawal. `/explorer`: stats per chain,
+  policy history (re-hashed in the browser), pending timelock ops ("Execute now"), Safe proposals: owners sign
+  EIP-712 SafeTx in their wallet (gasless), anyone executes. CLI `python -m governance` (policies, propose, sign,
+  exec, timelock-exec, list). REVIEW queue accepts reviewer wallets; `REVIEWER_KEY` = fallback
+  (`REVIEWER_KEY_DISABLED=1`). Migration 0006.
+- **Acceptance run on Sepolia (live stack, real models):** token #1 of `0x5990…4f22` minted by a throwaway artist
+  wallet (PASS 98; mint tx `0xcd4f5c77…5e14e`, 2.17M gas), dispute #1 opened by a throwaway reporter
+  (`0x809047aa…6fda91`, bond 0.001 ETH), backend evidence (identical pixels, SSCD 1.0, PDQ 0, earliest signed
+  submission = the artist), reason pinned (`ipfs://Qmf1MB9c…NC1i`, sha256 `1c00e8c0…e043`) and resolved through
+  the resolver by `0xeed8…eD7F` (`0x148b6faa…ea19e9`, 315k gas): token revoked, bond withdrawn (`0x2319a0c2…f4cc`),
+  Discord alert sent, explorer shows 1 mint / 1 upheld / 1 revocation. The reason document links the first
+  backend-evidence document; it was recomputed once after a lookup bug (on-chain matches lacked token details).
+- **Tests:** Hardhat 118 (+27: PolicyRegistry 8, DisputeResolver 7, Governance 12 with the real Safe), 100 %
+  coverage; Foundry +3 fuzz properties, +4 invariants (bond conservation, bond snapshot, payouts follow the
+  outcome, one open dispute per image); Slither `--fail-medium` clean (one accepted informational:
+  `missing-inheritance` on the immutable NFT). pytest 192 fast (+16: disputes 9, governance 7 incl. 2 chain tests
+  that run the Safe from Python on a Hardhat node). Playwright 4 (+2: dispute → reasoned uphold → revoked → bond
+  back → explorer verifies policy; two Safe owners sign the admin hand-over on /explorer, a third party executes).
+- **Sepolia gas finding:** a plain ETH transfer to a new address costs 204,600 gas there (state-creation
+  repricing); never hard-code 21,000.
+- **OWNER ACTION (blocks "ADMIN is held by a Safe"):** the `accept-admin` proposals (Sepolia
+  `0xccd5a9e0…dc913`, Base Sepolia `0x06987d71…84e9`) are signed by owner 1; a second owner (`0x1F79…E2E2` or
+  `0xCb03…57c2`) must sign: start the stack with `CHAIN_NETWORKS=sepolia,baseSepolia` (server + indexer), open
+  http://127.0.0.1:5000/explorer with that wallet in MetaMask → Governance → "Sign as owner" (gasless) → "Execute"
+  (any wallet with a little ETH). Until then the deployer is still admin; pauser and treasury are already the Safe.
+  The proposals live in the local dev DB (`safe_proposals`).
+- **Open / for Phase 7:** run the indexer for Base Sepolia (never indexed yet, ~3.6M blocks); disputes have no
+  on-chain timeout (immutable registry); testnet verifier + reviewer are still the deployer key; Safe proposals are
+  stored in the app DB (no Safe Transaction Service, which needs an API key); larger copymint references (5b).

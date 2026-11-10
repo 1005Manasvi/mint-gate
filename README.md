@@ -23,7 +23,21 @@ ERC-721 can reuse the registry through `MintGated`. All source-verified (Sourcif
 | Ethereum Sepolia | [`0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB`](https://sepolia.etherscan.io/address/0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB) | [`0x59900d4F93fAb95F3B8aFBD4E9fEbF15Fa0F4f22`](https://sepolia.etherscan.io/address/0x59900d4F93fAb95F3B8aFBD4E9fEbF15Fa0F4f22) |
 | Base Sepolia | [`0xae989b374DF85a942b4caE07940713Ff89418F32`](https://sepolia.basescan.org/address/0xae989b374DF85a942b4caE07940713Ff89418F32) | [`0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB`](https://sepolia.basescan.org/address/0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB) |
 
-v1 (`MintGateNFT`, which the current app still uses) stays on Ethereum Sepolia at
+**Governance + disputes (Phase 6, [runbooks](docs/governance.md)):** no single key controls the system.
+Registry admin, pauser and treasury go to a **2-of-3 Safe**; the decision policy is announced in a
+**PolicyRegistry** behind a **1-hour timelock** (the Safe is the only proposer), so every policy change is
+public before it applies and every verdict's policy hash can be checked against it. Anyone can **dispute** a
+token with a bond and pinned evidence; Mint-Gate adds its own evidence (copy search, earliest signed
+submission, reverse search); a reviewer wallet decides with a **written reason whose SHA-256 goes on chain**;
+an upheld dispute revokes the token and refunds the bond. A public **explorer** (`/explorer`) shows statistics,
+the policy history and pending Safe transactions, which owners sign there with their own wallet.
+
+| Network | Safe 2-of-3 | `PolicyRegistry` | `DisputeResolver` | `MintGateTimelock` |
+|---|---|---|---|---|
+| Ethereum Sepolia | [`0xEdE5…90Fb`](https://sepolia.etherscan.io/address/0xEdE58D8Ff74e72fc7568e68c8927a68884a290Fb) | [`0xaa3d…78Fe`](https://sepolia.etherscan.io/address/0xaa3d83420EB3f46C9765DF991F4559D04BF178Fe) | [`0xdb04…48Cc`](https://sepolia.etherscan.io/address/0xdb0490759F59dc31dd44a3A2d4F05756b37f48Cc) | [`0xC568…104F`](https://sepolia.etherscan.io/address/0xC56840B470611668521fA00cA1d911f57431104F) |
+| Base Sepolia | [`0x66bf…2C67`](https://sepolia.basescan.org/address/0x66bf57DC8ea2bE63dCa3CA4791d438FC38b02C67) | [`0x7d56…A017`](https://sepolia.basescan.org/address/0x7d56206Fa46A7Cd90c36E6588Cba407949e9A017) | [`0xC568…104F`](https://sepolia.basescan.org/address/0xC56840B470611668521fA00cA1d911f57431104F) | [`0x1B2c…1c7d`](https://sepolia.basescan.org/address/0x1B2c47088CaE82b17690DF461FD05Fb3146a1c7d) |
+
+v1 (`MintGateNFT`, retired from the app in Phase 2) stays on Ethereum Sepolia at
 [`0xae989b374DF85a942b4caE07940713Ff89418F32`](https://sepolia.etherscan.io/address/0xae989b374DF85a942b4caE07940713Ff89418F32)
 · [Sourcify](https://sourcify.dev/#/lookup/0xae989b374DF85a942b4caE07940713Ff89418F32).
 Same deployer and nonce, so v1 on Sepolia and the v2 registry on Base Sepolia share an address.
@@ -172,7 +186,10 @@ upload ─▶ provenance (raw bytes): C2PA, SD/SDXL watermark, generator metadat
    analysis worker (models loaded once) ─▶ verdict ─▶ PASS: EIP-712 attestation for the artist's wallet
    chain worker: submits REVIEW / FAIL verdicts, mirrors reviewer decisions (resolveReview)
    artist wallet: MintGateNFTV2.submitAndMint ─▶ MintGateRegistry (one mint per image, disputes, revocation)
-   indexer: registry + NFT events ─▶ chain_events ─▶ tokens / disputes (reorg-safe, rebuildable)
+   indexer: registry + NFT + governance events ─▶ chain_events ─▶ tokens / disputes (reorg-safe, rebuildable)
+   dispute: reporter pins evidence + openDispute(bond) ─▶ worker adds Mint-Gate's evidence ─▶ Discord alert
+            ─▶ reviewer wallet: DisputeResolver.resolveDispute(id, upheld, sha256(reason), reasonURI) ─▶ revoked
+   governance: Safe 2-of-3 = registry admin + pauser + treasury; Safe ─▶ timelock (1 h) ─▶ PolicyRegistry
    IPFS: artwork + ERC-721 metadata + full verification report
    /token/<chain>/<contract>/<id>: public page that re-checks chain + report hash in the browser
 ```
@@ -218,6 +235,10 @@ Engineering decisions worth knowing:
   sign each upload; only that wallet receives the attestation and mints (paying gas, with live
   confirmations and decoded contract errors). A token's public page re-reads the chain and
   recomputes the report hash in the browser, so it does not have to trust the Mint-Gate server.
+- **Contestable, explained decisions (Phase 6).** A revocation needs a bonded dispute, evidence from both
+  sides and a reviewer whose written reason is pinned and hashed on chain. Bond accounting is checked by
+  Foundry invariants (conservation, snapshot, payouts follow the outcome); the whole dispute and the Safe
+  hand-over run in a Playwright browser test against the real Safe v1.4.1 bytecode.
 - **Asynchronous and stateless.** Uploads return `202 {job_id}` in ~50 ms; RQ workers run the
   models. A killed worker's job is retried automatically; API restarts lose nothing.
 
@@ -231,15 +252,20 @@ Engineering decisions worth knowing:
 | `backend/db/`, `backend/migrations/` | SQLAlchemy 2 models + repository layer, Alembic migrations, legacy JSON import (`db.migrate_json`) |
 | `backend/jobs/` | Redis + RQ queues, tasks (analysis, verdict anchoring, review mirroring), Windows-safe worker |
 | `backend/indexer/` | chain indexer: events → `chain_events` → `tokens` / `disputes`, block cursor in Postgres |
+| `backend/disputes/`, `backend/explorer.py` | dispute API (reporter evidence, backend evidence, reviewer reasons), public explorer + Safe-signature API |
+| `backend/governance/` | Safe proposals (EIP-712 SafeTx), policy pinning, CLI `python -m governance` |
+| `backend/notify.py` | Discord webhook alerts for disputes and REVIEW items |
 | `backend/server.py`, `wsgi.py` | stateless Flask API (Redis rate limits, CSP, proxy-aware), gunicorn entry point |
 | `Blockchain/contracts/MintGateNFT.sol` | v1: ERC-721 + AccessControl provenance contract |
-| `Blockchain/contracts/v2/` | v2: `MintGateRegistry` (EIP-712 verdicts, disputes, revocation, pause), `MintGateNFTV2` (artist self-mint, ERC-2981), `MintGated` / `IMintGate` (reuse by other collections) |
+| `Blockchain/contracts/v2/` | v2: `MintGateRegistry` (EIP-712 verdicts, disputes, revocation, pause), `MintGateNFTV2` (artist self-mint, ERC-2981), `MintGated` / `IMintGate` (reuse by other collections); Phase 6: `DisputeResolver`, `PolicyRegistry`, `MintGateTimelock` |
+| `Blockchain/vendor/safe-1.4.1/` | Safe v1.4.1 artifacts (LGPL-3.0) for local tests; testnets use the canonical deployments |
 | `Blockchain/test/` | Hardhat unit tests (v1 + v2, 100 % coverage) and Foundry fuzz / invariant suites (`test/foundry/`) |
 | `docs/contracts.md` | v2 state machines, interface, roles, upgrade strategy, threat model, gas |
 | `backend/tests/` | pytest suite: policy, preprocessing, reference index, copy-move, repository layer, API + job flow, indexer on a Hardhat node |
 | `docs/security.md` | Slither results, coverage, known limitations |
+| `docs/governance.md` | Safe / timelock / policy registry, role map, dispute process, key-rotation and emergency runbooks |
 | `backend/auth.py` | Sign-In with Ethereum, Redis sessions, CSRF, signed-upload verification |
-| `frontend/` | vanilla-JS ES modules (`js/`), vendored ethers v6 (`vendor/`), main app + public token page (`token.html`) |
+| `frontend/` | vanilla-JS ES modules (`js/`), vendored ethers v6 (`vendor/`), main app (incl. reviewer dashboard), public token page (`token.html`: timeline, report a token), explorer (`explorer.html`) |
 | `e2e/` | Playwright browser test against a local Hardhat node (`stack.py` = whole stack with fake models) |
 | `deploy/` | production Dockerfile and deploy tooling |
 | `PROJECT_REPORT.md` | full methodology and results |
@@ -289,9 +315,12 @@ Secrets live in `backend/.env` and `Blockchain/.env` (templates: `.env.example`)
   rejects UPDATE / DELETE). Backend transactions take a Redis lock per sender (no nonce races).
 - All data rendered with `textContent`. Errors to clients are generic.
 - In production the server refuses to start without a strong reviewer key and a verifier key.
-  The reviewer key is checked in constant time.
+  Reviewers are wallets holding `REVIEWER_ROLE` on chain (SIWE); the shared key is a fallback
+  that `REVIEWER_KEY_DISABLED=1` turns off.
+- Governance: registry admin / pauser / treasury held by a 2-of-3 Safe; policy changes through a 1 h
+  timelock; a single leaked key cannot change roles or the policy (tested in `Governance.test.js`).
 - Model weights load with `torch.load(weights_only=True)`. Classical models are stored as JSON, never pickle.
-- Contracts: Slither 0 high / 0 medium (v2: no findings; v1: 2 justified lows), 100 % test
+- Contracts: Slither 0 high / 0 medium (v2: one accepted informational; v1: 2 justified lows), 100 % test
   coverage (CI gate 95 %), Foundry fuzz + invariant suites in CI. Details and the trust model's
   known limits: [docs/security.md](docs/security.md); v2 threat model: [docs/contracts.md](docs/contracts.md).
 

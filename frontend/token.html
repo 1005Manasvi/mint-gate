@@ -47,16 +47,72 @@
       </div>
     </div>
 
+    <div id="revokedBanner" class="card banner-revoked" role="alert" hidden>
+      <b>Revoked.</b> A reviewer upheld a dispute against this artwork. The token still exists, but its
+      metadata now says "revoked" and it pays no royalties. The decision, its written reason and the
+      evidence are linked below.
+    </div>
+
     <section class="card" aria-labelledby="checksTitle">
       <h2 id="checksTitle">Independent verification</h2>
       <p id="verifySummary" class="hint" role="status" aria-live="polite">Not run yet.</p>
       <ol id="checkList" class="checklist"></ol>
     </section>
+
+    <section class="card" aria-labelledby="timelineTitle">
+      <h2 id="timelineTitle">Provenance timeline</h2>
+      <p class="hint">Every on-chain event about this artwork, from the Mint-Gate indexer.</p>
+      <ol id="timeline" class="timeline"><li class="hint">Loading…</li></ol>
+    </section>
+
+    <section class="card" aria-labelledby="disputeTitle">
+      <h2 id="disputeTitle">Disputes</h2>
+      <div id="disputeList"></div>
+      <div id="bondBox" class="txout" hidden>
+        <p id="bondText"></p>
+        <button id="withdrawBtn" class="btn btn-ghost">Withdraw to my wallet</button>
+      </div>
+      <details id="reportBox" class="raw">
+        <summary>Report this token (copied art, undetected AI, stolen work)</summary>
+        <form id="disputeForm" class="dispute-form">
+          <p class="hint">Your evidence is pinned to IPFS, then <b>your wallet</b> opens the dispute on chain and
+            pays a refundable bond of <b id="bondAmount">–</b>. If a reviewer upholds the dispute you get the bond
+            back and the token is marked revoked; if it is rejected the bond goes to the Mint-Gate treasury.</p>
+          <label class="lbl" for="dStatement">What is wrong? (required, at least 20 characters)</label>
+          <textarea id="dStatement" class="input" rows="4" required minlength="20" maxlength="5000"></textarea>
+          <label class="lbl" for="dUrls">Links proving it (one per line: where the original was published, ...)</label>
+          <textarea id="dUrls" class="input mono" rows="3" spellcheck="false"></textarea>
+          <div class="grid-2 tight">
+            <div>
+              <label class="lbl" for="dFirst">Original first published (date)</label>
+              <input id="dFirst" class="input" type="date">
+            </div>
+            <div>
+              <label class="lbl" for="dOriginal">Original file (optional, max 10 MB)</label>
+              <input id="dOriginal" class="input" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+            </div>
+          </div>
+          <label class="lbl" for="dClaims">Earlier on-chain claims (chain:contract:token id, one per line)</label>
+          <textarea id="dClaims" class="input mono" rows="2" spellcheck="false"></textarea>
+          <div class="row"><button id="disputeBtn" class="btn btn-primary">Sign in, pin evidence &amp; open dispute</button></div>
+        </form>
+        <ol id="disputeSteps" class="steps" aria-label="Dispute progress" hidden>
+          <li data-stage="signin">Wallet sign-in</li>
+          <li data-stage="pin">Evidence pinned to IPFS</li>
+          <li data-stage="switching">Wallet on the right network</li>
+          <li data-stage="estimating">Gas estimate</li>
+          <li data-stage="wallet">Confirm in your wallet (bond + gas)</li>
+          <li data-stage="pending">Transaction pending</li>
+          <li data-stage="confirming">Confirmations</li>
+        </ol>
+        <div id="disputeOut" class="txout" aria-live="polite"></div>
+      </details>
+    </section>
   </div>
 </main>
 
 <footer class="wrap foot">
-  <a href="/">Mint-Gate</a> · AI forensics + blockchain provenance
+  <a href="/">Mint-Gate</a> · <a href="/explorer">Explorer</a> · AI forensics + blockchain provenance
   <span class="foot-note">Automated detection is probabilistic: a PASS is not a legal guarantee of authorship.</span>
 </footer>
 <script type="module" src="/static/js/token.js"></script>

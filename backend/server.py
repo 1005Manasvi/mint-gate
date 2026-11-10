@@ -14,6 +14,9 @@
     GET  /api/token/[<net>/[<contract>/]]<id>   indexed provenance of a minted token
     GET  /token/<net>/<contract>/<id>          public provenance page (checks the chain itself)
     GET  /api/status               policy, models, networks, indexer, queues
+    /api/disputes/...              dispute flow: reporter evidence, reviewer reasons (disputes/api.py)
+    /api/explorer/..., /api/governance/...   public explorer + Safe proposals (explorer.py)
+    GET  /explorer                 public explorer page (stats, policy history, governance)
     GET  /healthz                  liveness probe
 
 The models run in workers (`python -m jobs.worker`), chain state comes from the indexer
@@ -44,6 +47,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import auth
 import config
 import db
+import explorer
 from chain import ipfs, metadata, networks, registry
 from chain.eip712 import Verdict, sign_verdict
 from chain.registry import ChainUnavailable
@@ -51,6 +55,7 @@ from db import repo
 from db.models import IndexerCursor, Token
 from detection.policy import Policy
 from detection.report_hash import canonical_hash
+from disputes import api as disputes_api
 from jobs import queue as jq
 
 # Windows can map .js to text/plain via the registry; with nosniff, browsers then refuse ES modules.
@@ -78,6 +83,10 @@ limiter = Limiter(
 
 app.register_blueprint(auth.bp)
 limiter.limit("30/minute")(auth.bp)
+app.register_blueprint(disputes_api.bp)
+app.register_blueprint(explorer.bp)
+limiter.limit("60/minute")(explorer.bp)
+limiter.limit("30/minute")(disputes_api.bp)
 
 FRONTEND_DIR = config.PROJECT_DIR / "frontend"
 REPORT_ID = re.compile(r"^[0-9a-f]{32}$")
@@ -138,6 +147,11 @@ def index():
 @app.get("/token/<network>/<contract>/<int:token_id>")
 def token_page(network, contract, token_id):
     return send_from_directory(FRONTEND_DIR, "token.html")
+
+
+@app.get("/explorer")
+def explorer_page():
+    return send_from_directory(FRONTEND_DIR, "explorer.html")
 
 
 @app.get("/static/<path:name>")
@@ -371,9 +385,9 @@ def list_reports():
 def review(rid):
     _check_id(rid)
     body = request.get_json(silent=True) or {}
-    key = str(body.get("reviewer_key", ""))
-    if not hmac.compare_digest(key.encode(), config.REVIEWER_KEY.encode()):
-        return error("invalid reviewer key", 403)
+    actor = _review_actor(body)
+    if isinstance(actor, tuple):
+        return actor
     approve = bool(body.get("approve"))
     with db.session() as s:
         rep = repo.get_report(s, rid, lock=True)
@@ -383,11 +397,40 @@ def review(rid):
         if sub.status != "REVIEW":
             return error(f"report status is {sub.status}, not REVIEW", 409)
         sub.status = "REVIEW_APPROVED" if approve else "REVIEW_REJECTED"
-        rep.review = {"approved": approve, "note": str(body.get("note", ""))[:500], "at": int(time.time())}
-        repo.audit(s, "reviewer", "review.resolved", rid, approved=approve)
+        rep.review = {
+            "approved": approve,
+            "note": str(body.get("note", ""))[:500],
+            "at": int(time.time()),
+            "reviewer": actor,
+        }
+        repo.audit(s, actor, "review.resolved", rid, approved=approve)
         new_status, review_info, has_artist = sub.status, rep.review, sub.artist is not None
     job_id = _queue_review(rid, approve) if has_artist else None
     return jsonify({"success": True, "status": new_status, "review": review_info, "chain_job_id": job_id})
+
+
+def _review_actor(body):
+    """Phase 6: a signed-in wallet with REVIEWER_ROLE on the default chain's registry (CSRF-checked).
+    The shared REVIEWER_KEY still works for scripts, unless REVIEWER_KEY_DISABLED=1."""
+    sess = auth.current_session()
+    if sess is not None:
+        sent = request.headers.get(auth.CSRF_HEADER, "")
+        if not hmac.compare_digest(sent.encode(), sess["csrf"].encode()):
+            return error("CSRF check failed - reload the page", 403)
+        net = networks.available().get(config.DEFAULT_NETWORK)
+        try:
+            ok = net is not None and disputes_api.is_reviewer(net, sess["address"])
+        except Exception as exc:
+            log.warning("review: role check: %s", exc)
+            return error("blockchain temporarily unavailable", 503)
+        if ok:
+            return sess["address"]
+        if "reviewer_key" not in body:
+            return error(f"{sess['address']} does not hold REVIEWER_ROLE on {config.DEFAULT_NETWORK}", 403)
+    key = str(body.get("reviewer_key", ""))
+    if config.REVIEWER_KEY_DISABLED or not hmac.compare_digest(key.encode(), config.REVIEWER_KEY.encode()):
+        return error("invalid reviewer key", 403)
+    return "reviewer"
 
 
 def _queue_review(rid, approve):

@@ -75,6 +75,11 @@ class RegistryClient:
             "expires_at": expires,
         }
 
+    def has_role(self, role: str, account: str) -> bool:
+        """`role` by name (REVIEWER_ROLE, ...). Read live: the Safe may have granted / revoked it."""
+        rid = b"\x00" * 32 if role == "DEFAULT_ADMIN_ROLE" else Web3.keccak(text=role)
+        return bool(self.registry.functions.hasRole(rid, Web3.to_checksum_address(account)).call())
+
     # ---- writes --------------------------------------------------------------------------
 
     def _lock(self):

@@ -10,10 +10,10 @@ roles and threat model are in [contracts.md](contracts.md).
 
 | Check | Tool | Command (from `Blockchain/`) | Result |
 |---|---|---|---|
-| Unit tests | Hardhat 2.29, chai | `npx hardhat test` | 91 passing (13 v1, 78 v2) |
+| Unit tests | Hardhat 2.29, chai | `npx hardhat test` | 118 passing (13 v1, 105 v2 incl. Phase 6 governance with the real Safe v1.4.1 bytecode) |
 | Coverage | solidity-coverage 0.8.17 | `npm run coverage` (fails below 95 %) | 100 % statements, branches, functions, lines |
-| Fuzz + invariants | Foundry (forge 1.8.7) | `forge test` (CI: `FOUNDRY_PROFILE=ci`) | 11 fuzz properties, 4 invariants, all passing |
-| Static analysis | Slither 0.11.6 | `slither . --fail-medium` (config: `slither.config.json`) | v2: no findings. v1: 0 high, 0 medium, 2 low |
+| Fuzz + invariants | Foundry (forge 1.8.7) | `forge test` (CI: `FOUNDRY_PROFILE=ci`) | 14 fuzz properties, 8 invariants (4 on bond accounting, Phase 6), all passing |
+| Static analysis | Slither 0.11.6 | `slither . --fail-medium` (config: `slither.config.json`) | v2: 1 informational (accepted, below). v1: 0 high, 0 medium, 2 low |
 
 All run in CI (`.github/workflows/ci.yml`). Slither analyses our own contracts only
 (`exclude_dependencies`; the test fixtures in `contracts/mocks/` are filtered out);
@@ -29,6 +29,19 @@ with the reason next to it in the source:
 | `MintGateRegistry.submitVerdict` (2 lines) | `timestamp` | Expiry and the 30-day / 15-minute windows are hours to days long; validators can move block time by seconds. |
 | `MintGateRegistry.withdraw` | `incorrect-equality`, `timestamp` | `amount == 0` compares a credit balance that only `resolveDispute` / `withdraw` change (not `address(this).balance`, which could be forced), so an exact comparison is correct. Slither links it to `timestamp` because the same struct stores `openedAt`. |
 | `MintGateNFTV2.submitAndMint` | `unused-return` | The returned signer is not needed: `submitVerdict` reverts unless the signer is a verifier. |
+| `PolicyRegistry.policyAt / current / isRegistered / policyActiveAt` | `incorrect-equality`, `timestamp` | Array lengths and a 1-based index, not times or balances; Slither taints them because the `Policy` struct stores `activatedAt`. |
+| `DisputeResolver.resolveDispute` | `unused-return` | Only the collection and token id of `mintOf` are needed. |
+| `IDisputeRegistry.REVIEWER_ROLE` | `naming-convention` | Must match the registry's getter name. |
+
+**Accepted (informational):** `missing-inheritance`: "`MintGateNFTV2` should inherit from
+`IRefreshableMetadata`". True (it implements `refreshMetadata`), but its source must stay byte-identical
+to the Sourcify-verified deployment, so the interface lives in `DisputeResolver.sol` only.
+
+`DisputeResolver` calls the registry (trusted, immutable) and then, after an upheld dispute, the token's
+collection (`refreshMetadata`, inside `try/catch`). The collection holds `COLLECTION_ROLE`, i.e. was vetted
+by the admin; a reverting collection cannot block the resolution, and the resolver holds no funds or state
+a re-entrant call could use. `DisputeReasoned` is emitted before the registry call, so the event order in
+one transaction is `DisputeReasoned`, `ImageRevoked`, `DisputeResolved` (the indexer relies on it).
 
 The v2 mint follows checks-effects-interactions: all NFT state, the `Transfer` and `VerifiedMint`
 events are written first, then the registry is called (`consume`, which reverts the whole mint
@@ -160,14 +173,18 @@ These are design limits, not bugs; the roadmap addresses them.
   (playbook tested in `test/v2/MintGateRegistry.test.js`).
 - **v2 signing key is still a hot key.** A leaked verifier key can sign PASS verdicts until it is
   revoked; signatures are valid for at most 30 days. Phase 7 moves the key to Azure Key Vault.
-- **v2 disputes have no timeout.** A dispute nobody resolves keeps its bond locked (Phase 6).
-- **Admin is an EOA.** `DEFAULT_ADMIN_ROLE` sits on the deployer wallet; v2 uses a two-step admin
-  transfer with a delay, and Phase 6 moves admin to a Safe multisig.
-- **Testnet roles are all one wallet** (`0xeed8…eD7F`: admin, verifier, reviewer, pauser, treasury).
-  Production needs separate keys.
-- **The reviewer key is a shared secret** in the API (`REVIEWER_KEY`), compared in constant time
-  and rate-limited. To be replaced with wallet signatures from REVIEWER_ROLE holders (Phase 6
-  governance; Phase 3 gave artists wallet identity, reviewers still use the key).
+- **v2 disputes have no timeout.** A dispute nobody resolves keeps its bond locked (the registry is
+  immutable; Phase 6 adds a 7-day review target and Discord alerts, docs/governance.md § 3).
+- **Admin → Safe (Phase 6).** Admin, pauser and treasury move to a 2-of-3 Safe on both testnets; the
+  admin transfer is two-step (1 h) and completes when a second owner signs `accept-admin`
+  (docs/governance.md § 4.1). Until then the deployer is still admin.
+- **Testnet verifier and reviewer are still one wallet** (`0xeed8…eD7F`, also Safe owner 1).
+  Production needs separate keys; the Safe can rotate both without a redeploy.
+- **Reviewers are wallets (Phase 6).** Disputes and the REVIEW queue accept SIWE sessions whose wallet
+  holds `REVIEWER_ROLE` on chain (read live, cached 60 s). The old shared `REVIEWER_KEY` still works
+  for the REVIEW queue (scripts) unless `REVIEWER_KEY_DISABLED=1`.
+- **A pause needs two Safe owners** (owner's choice): slower than a hot pauser key, but a stolen key
+  cannot freeze the registry either.
 - **Detection is off-chain and probabilistic.** The contract proves which verdict and policy were
   used (report hash, policy SHA-256), not that the verdict is right. See README for error rates.
 
@@ -191,3 +208,26 @@ These are design limits, not bugs; the roadmap addresses them.
 - **Reverse image search sends the upload to a third party** (Google Vision / TinEye). It is off by default
   and only enabled by explicit configuration (`REVERSE_SEARCH` + key); results are advisory (REVIEW), never
   FAIL, and API errors are not evidence.
+
+## Phase 6: disputes and governance
+
+- **Pinned documents are exact bytes.** Reporter evidence, the backend's evidence and reviewer reasons are
+  serialised once (`sort_keys`), pinned with `pinFileToIPFS` and hashed; the reason's SHA-256 is what the
+  resolver records on chain, so a swapped reason document is detectable.
+- **Uploads in disputes.** The reporter's original goes through the same decoder guards as artist
+  uploads (`prepare`: size, pixel count, format) before it is stored or pinned; stored under a name derived
+  from its SHA-256 (no user-controlled paths). Evidence files are served only for names matching
+  `mintgate-[a-z0-9-]+.(json|png|jpg|jpeg|webp|gif)`.
+- **No HTML from evidence.** Statements, URLs and claims are rendered with `textContent` (ui.js `el`);
+  URLs must start with `https://`, `http://` or `ipfs://` (no `javascript:`). Discord messages disable
+  all mentions (`allowed_mentions.parse = []`), so a statement cannot ping `@everyone`.
+- **Reviewer authorisation is on chain.** `/api/disputes/<net>/<id>/reason` needs a SIWE session, CSRF
+  and `REVIEWER_ROLE` on that chain's registry; the API only pins the reason. The transaction comes from
+  the reviewer's own wallet through `DisputeResolver`, which re-checks the role: the API cannot resolve
+  anything by itself.
+- **Safe signatures are verified before storage.** `POST /api/governance/<net>/<hash>/signatures` recovers
+  the EIP-712 SafeTx signer and stores it only for a current owner (from the deployment file); the CLI checks
+  our SafeTx hash against the Safe's own `getTransactionHash` before storing a proposal. A forged or
+  replayed signature would also fail in the Safe itself (`GS026`).
+- **Webhook secret.** `DISCORD_WEBHOOK_URL` is read from the environment and never logged; tests and the
+  E2E stack pin it empty.

@@ -15,7 +15,7 @@ import logging
 from decimal import Decimal
 
 from eth_utils import event_abi_to_log_topic
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from web3 import Web3
 from web3.exceptions import BlockNotFound
@@ -23,7 +23,7 @@ from web3.exceptions import BlockNotFound
 import db
 from chain.networks import Network
 from db import repo
-from db.models import ChainEvent, Dispute, IndexerCursor, Report, Submission, Token
+from db.models import ChainEvent, Dispute, DisputeEvidence, IndexerCursor, Report, Submission, Token
 
 log = logging.getLogger("mintgate.indexer")
 REWIND_BLOCKS = 64
@@ -35,8 +35,22 @@ REGISTRY_EVENTS = (
     "DisputeOpened",
     "DisputeResolved",
     "ImageRevoked",
+    "Withdrawal",
+    # governance history (explorer): who holds which role, pauses, parameters
+    "RoleGranted",
+    "RoleRevoked",
+    "DefaultAdminTransferScheduled",
+    "Paused",
+    "Unpaused",
+    "DisputeBondChanged",
+    "TreasuryChanged",
 )
 NFT_EVENTS = ("VerifiedMint", "Transfer")
+# Phase 6 contracts (deploy-governance.js), indexed when the deployment file lists them
+RESOLVER_EVENTS = ("DisputeReasoned",)
+POLICY_EVENTS = ("PolicySet", "OwnershipTransferred")
+TIMELOCK_EVENTS = ("CallScheduled", "CallSalt", "CallExecuted", "Cancelled", "MinDelayChange")
+SAFE_EVENTS = ("ExecutionSuccess", "ExecutionFailure", "AddedOwner", "RemovedOwner", "ChangedThreshold")
 ZERO = "0x" + "00" * 20
 
 
@@ -61,10 +75,20 @@ class Indexer:
         self.registry = Web3.to_checksum_address(net.registry.address)
         self.nft = Web3.to_checksum_address(net.nft.address)
         self._decoders = {}
-        for address, abi, names in (
-            (self.registry, net.registry.abi, REGISTRY_EVENTS),
-            (self.nft, net.nft.abi, NFT_EVENTS),
+        self._hooks = []  # run after the transaction that applied the events commits
+        self._block_times = {}
+        sources = [(net.registry, REGISTRY_EVENTS), (net.nft, NFT_EVENTS)]
+        for c, names in (
+            (net.resolver, RESOLVER_EVENTS),
+            (net.policies, POLICY_EVENTS),
+            (net.timelock, TIMELOCK_EVENTS),
+            (net.safe, SAFE_EVENTS),
         ):
+            if c is not None:
+                sources.append((c, names))
+        self.addresses = [Web3.to_checksum_address(c.address) for c, _ in sources]
+        for c, names in sources:
+            address, abi = Web3.to_checksum_address(c.address), c.abi
             contract = self.w3.eth.contract(address=address, abi=abi)
             for item in abi:
                 if item.get("type") == "event" and item["name"] in names:
@@ -115,7 +139,7 @@ class Indexer:
     # ---- fetching ------------------------------------------------------------------------------
 
     def _fetch(self, frm: int, to: int) -> list[dict]:
-        logs = self.w3.eth.get_logs({"fromBlock": frm, "toBlock": to, "address": [self.registry, self.nft]})
+        logs = self.w3.eth.get_logs({"fromBlock": frm, "toBlock": to, "address": self.addresses})
         out = []
         for lg in logs:
             topic = "0x" + bytes(lg["topics"][0]).hex() if lg["topics"] else None
@@ -133,10 +157,26 @@ class Indexer:
                     "contract": Web3.to_checksum_address(lg["address"]),
                     "event": ev["event"],
                     "args": {k: _jsonable(v) for k, v in ev["args"].items()},
+                    "block_time": self._block_time(lg["blockNumber"]),
                 }
             )
         out.sort(key=lambda e: (e["block"], e["log_index"]))
         return out
+
+    def _block_time(self, n: int) -> int:
+        if n not in self._block_times:
+            if len(self._block_times) > 4096:
+                self._block_times.clear()
+            self._block_times[n] = int(self.w3.eth.get_block(n)["timestamp"])
+        return self._block_times[n]
+
+    def _run_hooks(self):
+        hooks, self._hooks = self._hooks, []
+        for fn in hooks:
+            try:
+                fn()
+            except Exception as exc:  # a queue outage must not stop indexing; the API can re-queue
+                log.warning("%s: post-commit hook failed: %s", self.net.name, exc)
 
     def run_once(self) -> int:
         """Index up to the confirmed head. Returns the number of new events."""
@@ -145,6 +185,7 @@ class Indexer:
         with db.session() as s:
             self._check_reorg(s, self._cursor(s))
         while True:
+            self._hooks = []  # hooks of a chunk that failed (rolled back) must never run
             with db.session() as s:
                 cur = self._cursor(s)
                 if cur.block >= safe:
@@ -157,6 +198,7 @@ class Indexer:
                         self.apply(s, e)
                         new += 1
                 cur.block, cur.block_hash = to, self._block_hash(to)
+            self._run_hooks()
         if new:
             log.info("%s: %d new events", self.net.name, new)
         return new
@@ -166,6 +208,11 @@ class Indexer:
     def rebuild(self, s):
         """Recompute tokens / disputes for this chain from chain_events (after a reorg or reset)."""
         cid = self.net.chain_id
+        # the backend's evidence is computed off chain (models): keep it across a rebuild
+        kept = {
+            (d.registry_address, d.dispute_id): (d.backend_evidence, d.backend_evidence_uri)
+            for d in s.scalars(select(Dispute).where(Dispute.chain_id == cid, Dispute.backend_evidence.is_not(None)))
+        }
         s.execute(delete(Token).where(Token.chain_id == cid))
         s.execute(delete(Dispute).where(Dispute.chain_id == cid))
         rows = s.scalars(
@@ -176,6 +223,12 @@ class Indexer:
                 s,
                 {"block": ev.block, "tx": ev.tx, "contract": ev.contract, "event": ev.event, "args": ev.args},
                 replay=True,
+            )
+        for (reg, did), (ev, uri) in kept.items():
+            s.execute(
+                update(Dispute)
+                .where(Dispute.chain_id == cid, Dispute.registry_address == reg, Dispute.dispute_id == did)
+                .values(backend_evidence=ev, backend_evidence_uri=uri)
             )
         # Submissions marked MINTED whose token disappeared (reorged out) go back to their verdict.
         minted = {t for (t,) in s.execute(select(Token.report_hash))}
@@ -219,23 +272,43 @@ class Indexer:
                 .values(owner=a["to"])
             )
         elif name == "DisputeOpened":
+            image = _h(a["imageHash"])
+            # the reporter's evidence draft (POST /api/disputes/evidence), matched by URI + wallet
+            ev = s.scalars(
+                select(DisputeEvidence).where(
+                    DisputeEvidence.evidence_uri == a["evidenceURI"],
+                    DisputeEvidence.chain_id == cid,
+                    DisputeEvidence.disputant == a["disputant"],
+                )
+            ).first()
             s.execute(
                 insert(Dispute)
                 .values(
                     chain_id=cid,
                     registry_address=e["contract"],
                     dispute_id=Decimal(a["disputeId"]),
-                    image_sha256=_h(a["imageHash"]),
+                    image_sha256=image,
                     disputant=a["disputant"],
                     bond=Decimal(a["bond"]),
                     evidence_uri=a["evidenceURI"],
                     status="open",
                     opened_block=e["block"],
                     opened_tx=e["tx"],
+                    evidence_id=ev.id if ev else None,
                 )
                 .on_conflict_do_nothing()
             )
-            self._set_token_status(s, _h(a["imageHash"]), "flagged")
+            self._set_token_status(s, image, "flagged")
+            if not replay:
+                did = int(a["disputeId"])
+                repo.audit(s, "indexer", "dispute.opened", f"{cid}:{did}", disputant=a["disputant"], tx=e["tx"])
+                self._hooks.append(lambda: self._dispute_jobs(did, a, image))
+        elif name == "DisputeReasoned":  # DisputeResolver: emitted before the registry's DisputeResolved
+            s.execute(
+                update(Dispute)
+                .where(Dispute.chain_id == cid, Dispute.dispute_id == Decimal(a["disputeId"]))
+                .values(reason_uri=a["reasonURI"], reason_hash=_h(a["reasonHash"]), reviewer=a["reviewer"])
+            )
         elif name == "DisputeResolved":
             s.execute(
                 update(Dispute)
@@ -244,13 +317,32 @@ class Indexer:
                     status="upheld" if a["upheld"] else "rejected",
                     resolved_block=e["block"],
                     resolved_tx=e["tx"],
-                    reviewer=a["reviewer"],
+                    # through the resolver, msg.sender is the resolver: keep the human from DisputeReasoned
+                    reviewer=func.coalesce(Dispute.reviewer, a["reviewer"]),
                 )
             )
             if not a["upheld"]:
                 self._set_token_status(s, _h(a["imageHash"]), "active")
+            if not replay:
+                repo.audit(s, "indexer", "dispute.resolved", f"{cid}:{a['disputeId']}", upheld=a["upheld"], tx=e["tx"])
         elif name == "ImageRevoked":  # emitted before DisputeResolved in the same tx; revoked is final
             self._set_token_status(s, _h(a["imageHash"]), "revoked")
+            if not replay:
+                repo.audit(s, "indexer", "token.revoked", _h(a["imageHash"]), chain_id=cid, tx=e["tx"])
+        elif name == "ExecutionSuccess" and self.net.safe is not None:
+            from governance.safe import mark_executed
+
+            mark_executed(s, cid, e["contract"], a["txHash"], e["tx"])
+
+    def _dispute_jobs(self, dispute_id: int, a: dict, image: str):
+        """After DisputeOpened commits: the backend's evidence (analysis worker: models) + the alert."""
+        from jobs import queue as jq
+
+        jq.enqueue_analysis_task("dispute_evidence", self.net.name, dispute_id)
+        import notify
+
+        if notify.enabled("dispute"):
+            jq.enqueue_chain("notify_dispute", self.net.name, dispute_id)
 
     def _set_token_status(self, s, image: str, status: str):
         q = update(Token).where(Token.chain_id == self.net.chain_id, Token.image_sha256 == image)

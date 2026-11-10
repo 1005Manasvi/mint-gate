@@ -49,6 +49,8 @@ function watchCsp(page) {
   return violations;
 }
 
+test.describe.configure({ mode: "serial" });
+
 test("no session: submitting and attesting are refused", async ({ request }) => {
   expect((await request.post("/api/analyze")).status()).toBe(401);
   expect((await request.post(`/api/attest/${"0".repeat(32)}`, { data: {} })).status()).toBe(401);
@@ -112,4 +114,112 @@ test("artist signs in, uploads, mints from their wallet, and the token verifies"
   await expect(page.locator("#checkList")).toContainText("recomputed in your browser");
 
   expect(violations).toEqual([]);
+});
+
+// ---- Phase 6: dispute -> reasoned resolution -> revoked token -> bond back; Safe signs on /explorer ----
+const REVIEWER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"; // Hardhat #0: holds REVIEWER_ROLE in the stack
+const OWNER_B = "0x90F79bf6EB2c4f870365E785982E1f101E93b906"; // Hardhat #3: Safe owners are #0, #2, #3
+
+test("a reporter disputes token #1, a reviewer upholds it with a reason, the bond comes back", async ({ browser }) => {
+  const reporterCtx = await browser.newContext();
+  const page = await reporterCtx.newPage();
+  const violations = watchCsp(page);
+  await installWallet(page, OTHER);
+  await page.goto("/");
+  const nft = (await (await page.request.get("/api/networks")).json()).networks[0].nft;
+
+  await page.goto(`/token/localhost/${nft}/1`);
+  await expect(page.locator("#timeline")).toContainText("Minted as token #1");
+  await page.locator("#reportBox summary").click();
+  await expect(page.locator("#bondAmount")).toHaveText("0.001 ETH");
+  await page.locator("#dStatement").fill("I painted this in 2019; the minter copied it from my portfolio.");
+  await page.locator("#dUrls").fill("https://example.org/portfolio/painting");
+  await page.locator("#dOriginal").setInputFiles(PHOTO);
+  await page.locator("#disputeBtn").click();
+  await expect(page.locator("#disputeOut")).toContainText("Dispute #1 opened", { timeout: 90_000 });
+  await expect(async () => {
+    await page.reload();
+    await expect(page.locator("#disputeList")).toContainText("#1: open", { timeout: 2_000 });
+  }).toPass({ timeout: 60_000 });
+
+  // the reviewer: side-by-side evidence, then a written reason resolved from their own wallet
+  const revCtx = await browser.newContext();
+  const rev = await revCtx.newPage();
+  const revViolations = watchCsp(rev);
+  await installWallet(rev, REVIEWER);
+  await rev.goto("/?view=disputes&dispute=localhost:1");
+  await rev.locator("#walletBtn").click();
+  await expect(rev.locator("#identity")).toContainText("Signed in as");
+  await expect(async () => {
+    await rev.goto("/?view=disputes&dispute=localhost:1");
+    await expect(rev.locator("#ddBackend")).toContainText("Earliest signed submissions", { timeout: 3_000 });
+  }).toPass({ timeout: 60_000 });
+  await expect(rev.locator("#ddReporter")).toContainText("I painted this in 2019");
+  await expect(rev.locator("#ddBackend")).toContainText("Identical pixels");
+  await expect(rev.locator("#decisionForm")).toBeVisible();
+  await rev.locator('input[name="outcome"][value="upheld"]').check();
+  await rev.locator("#ddReason").fill("The reporter's original is pixel-identical and was published before the mint.");
+  await rev.locator("#ddResolveBtn").click();
+  await expect(rev.locator("#ddOut")).toContainText("Dispute upheld", { timeout: 90_000 });
+  await expect(async () => {
+    await rev.goto("/?view=disputes&dispute=localhost:1");
+    await expect(rev.locator("#ddDecideBody")).toContainText("written reason", { timeout: 3_000 });
+  }).toPass({ timeout: 60_000 });
+
+  // the token is revoked everywhere; the reporter withdraws the returned bond
+  await page.reload();
+  await expect(page.locator("#revokedBanner")).toBeVisible();
+  await expect(page.locator("#timeline")).toContainText("written reason");
+  await expect(page.locator("#timeline")).toContainText("Artwork revoked");
+  await expect(page.locator("#bondBox")).toBeVisible();
+  await page.locator("#withdrawBtn").click();
+  await expect(page.locator("#bondText")).toContainText("Withdrawn", { timeout: 60_000 });
+
+  // explorer: statistics + the policy announced on chain, verified in the browser
+  await page.goto("/explorer");
+  await expect(page.locator("#statsBox")).toContainText("upheld");
+  await expect(page.locator("#statsBox")).toContainText("Artwork revoked");
+  await expect(page.locator("#polBox")).toContainText("is announced on chain");
+  await page.locator("#polBox button", { hasText: "Verify" }).first().click();
+  await expect(page.locator("#polBox")).toContainText("file matches the on-chain hash");
+
+  expect([...violations, ...revViolations]).toEqual([]);
+  await reporterCtx.close();
+  await revCtx.close();
+});
+
+test("two Safe owners sign the admin hand-over on /explorer, a third party executes it", async ({ browser }) => {
+  const sign = async (account) => {
+    const ctx = await browser.newContext();
+    const p = await ctx.newPage();
+    await installWallet(p, account);
+    await p.goto("/explorer");
+    await p.locator("#govBox button", { hasText: "Sign as owner" }).click();
+    await expect(p.locator("#govBox")).toContainText("Signature stored");
+    return ctx;
+  };
+  const a = await sign(REVIEWER); // owner #0
+  // a non-owner cannot sign
+  const ctx = await browser.newContext();
+  const p = await ctx.newPage();
+  await installWallet(p, ARTIST);
+  await p.goto("/explorer");
+  await p.locator("#govBox button", { hasText: "Sign as owner" }).click();
+  await expect(p.locator("#govBox")).toContainText("is not an owner");
+  const b = await sign(OWNER_B);
+  // anyone executes (here the artist's wallet pays the gas)
+  await p.reload();
+  await p.locator("#govBox button", { hasText: "Execute" }).click();
+  await expect(p.locator("#govBox")).toContainText("Executed", { timeout: 60_000 });
+  await expect(async () => {
+    await p.reload();
+    await expect(p.locator("#govBox")).toContainText("accept-admin · executed", { timeout: 3_000 });
+  }).toPass({ timeout: 60_000 });
+  const gov = (await (await p.request.get("/api/networks")).json()).networks[0].governance;
+  const admin = await rpc("eth_call", [
+    { to: (await (await p.request.get("/api/networks")).json()).networks[0].registry, data: "0x84ef8ffc" },
+    "latest",
+  ]);
+  expect(admin.result.slice(-40).toLowerCase()).toBe(gov.safe.slice(2).toLowerCase()); // defaultAdmin() == Safe
+  for (const c of [a, b, ctx]) await c.close();
 });

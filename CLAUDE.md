@@ -74,6 +74,28 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
   Sepolia registry `0xf45c9cB2358f1FC2D977Cff6d6661521e16349fB`, NFT `0x59900d4F93fAb95F3B8aFBD4E9fEbF15Fa0F4f22`;
   Base Sepolia registry `0xae989b374DF85a942b4caE07940713Ff89418F32` (= v1's Sepolia address!), NFT `0xf45c9cB2…49fB`.
   Python signer: `backend/chain/eip712.py` (`Verdict.from_report`, `sign_verdict`).
+- **Governance + disputes (Phase 6, `docs/governance.md`):** next to the immutable v2 contracts:
+  `DisputeResolver` (holds REVIEWER_ROLE; `resolveDispute(id, upheld, reasonHash, reasonURI)` for registry
+  reviewers, emits `DisputeReasoned` *before* the registry's events, ERC-4906 refresh), `PolicyRegistry`
+  (`setPolicy(sha256, version, uri)`, owner = timelock), `MintGateTimelock` (OZ TimelockController, 1 h,
+  proposer = Safe, executor = anyone, no admin), Safe v1.4.1 2-of-3 (canonical proxy; owners `0xeed8…eD7F`,
+  `0x1F79…E2E2`, `0xCb03…57c2`). Deployments in the `governance` block of `deployments/<net>.json`:
+  Sepolia Safe `0xEdE58D8Ff74e72fc7568e68c8927a68884a290Fb`, timelock `0xC56840B4…104F`, PolicyRegistry
+  `0xaa3d8342…78Fe`, resolver `0xdb049075…48Cc`; Base Sepolia Safe `0x66bf57DC…2C67`, timelock `0x1B2c4708…1c7d`,
+  PolicyRegistry `0x7d56206F…A017`, resolver `0xC56840B4…104F` (= Sepolia's timelock address!).
+  Hand-over done 2026-11-11 (pauser + treasury = Safe; admin transfer begun): **admin becomes the Safe only
+  when a second owner signs the `accept-admin` proposal on `/explorer`**. Scripts: `deploy-governance.js`,
+  `handover.js`, `scripts/lib/safe.js` (vendored artifacts `Blockchain/vendor/safe-1.4.1/`, LGPL-3.0).
+  Backend: `backend/governance/` (`safe.py` EIP-712 SafeTx + proposals table `safe_proposals`, `actions.py`,
+  CLI `python -m governance policies|propose|sign|exec|timelock-exec|list`), `backend/disputes/` (`api.py`
+  blueprint: reporter evidence, reviewer reasons; `evidence.py`: documents + the backend's evidence = copy
+  search / earliest signed submission / original comparison / reverse search, job `dispute_evidence` on the
+  analysis queue, queued by the indexer after `DisputeOpened` commits), `backend/explorer.py` (stats, policy
+  history, governance, token timeline, Safe signatures), `backend/notify.py` (Discord, `NOTIFY_DISPUTES`,
+  `NOTIFY_REVIEWS`, chain-queue jobs). Reviewers = SIWE wallets with on-chain REVIEWER_ROLE (cached 60 s);
+  `REVIEWER_KEY` is a fallback (`REVIEWER_KEY_DISABLED=1`). Migration 0006 (`dispute_evidence`, dispute
+  reason / backend evidence columns, `safe_proposals`, `chain_events.block_time`). Pages: `/explorer`,
+  Disputes tab, token page timeline + "Report this token". Policies pinned: `backend/chain/policies.json`.
 - `frontend/`: vanilla-JS ES modules in `js/` (app, wallet, provenance, canonical, ui, token), strict CSP
   (script-src 'self': no CDN scripts). ethers **6.17.0** vendored as `vendor/ethers-6.17.0.min.js` (copied
   from `Blockchain/node_modules/ethers/dist/ethers.min.js`; prettier-ignored). Public token page
@@ -90,7 +112,7 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
   miss causes; `--copy-params` for before/after), `training/ai_nft_data.py` (12 BrainDrops projects +
   Bastard GAN Punks V2 → OOS group `ai_nft:*`, originals in `data/ai_nft/raw/`, `as_upload` for > 10 MB
   files), `training.provenance_eval --nft`, `evaluate_system` categories `copymint_*` / `ai_nft_collection`.
-- Results: README.md, PROJECT_REPORT.md, `docs/models.md` (model register + benchmark). Policy v5.1.0. Tests: `backend/tests/` (pytest), `Blockchain/test/` (Hardhat) + `Blockchain/test/foundry/`; security review: `docs/security.md`.
+- Results: README.md, PROJECT_REPORT.md, `docs/models.md` (model register + benchmark). Policy v5.1.0. Tests: `backend/tests/` (pytest), `Blockchain/test/` (Hardhat) + `Blockchain/test/foundry/`; security review: `docs/security.md`; governance + runbooks: `docs/governance.md`.
 
 ## Commands (Windows; venv = Python 3.12 + CUDA torch 2.6)
 - Python: `venv\Scripts\python.exe` (run from `backend/` as `-m training.xxx`).
@@ -99,6 +121,9 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - Server: `cd backend; ..\venv\Scripts\python.exe server.py` → http://127.0.0.1:5000. Also needed:
   `-m jobs.worker analysis` (GPU, `--preload`), `-m jobs.worker chain`, `-m indexer` (`--once`,
   `--from-deploy`, `--network`). Local run: `CHAIN_NETWORKS=localhost DEFAULT_NETWORK=localhost`.
+- Governance (Phase 6): `npx hardhat run scripts/deploy-governance.js --network <net>` (env `SAFE_OWNERS`,
+  `SAFE_THRESHOLD`, `TIMELOCK_DELAY`; needs `python -m governance policies --pin` first), then `scripts/handover.js`;
+  Safe actions: `cd backend; ..\venv\Scripts\python.exe -m governance propose <net> <action> --sign`.
 - Contracts: `cd Blockchain; npx hardhat test`; deploy v1: `npx hardhat run scripts/deploy.js --network sepolia`;
   v2: `npx hardhat run scripts/deploy-v2.js --network <sepolia|baseSepolia>` then
   `npx hardhat run scripts/verify-sourcify.js --network <...>` (Sourcify **v2 API**; Hardhat's
@@ -121,6 +146,17 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - CI: `.github/workflows/ci.yml` (python, contracts [+ chain pytest], foundry, slither, e2e, lint). Accepted findings: `docs/security.md`.
 
 ## Hard-won gotchas (do not relearn these)
+- **Phase 6:** Sepolia now charges ~204,600 gas for a plain ETH transfer to a *new* address (state-creation
+  repricing; also why contract creation costs 7×): never hard-code 21,000, always `eth_estimateGas`.
+  Node's `fetch` to sourcify.dev fails intermittently (`UND_ERR_CONNECT_TIMEOUT`) while curl works: retry
+  `verify-sourcify.js` (it skips verified contracts). Sourcify reports the timelock as a partial `match`
+  although its runtime code is byte-identical to the local build. `vm.prank` is consumed by the *first*
+  external call, including a getter in the argument list (`grantRole(role, address(handler.resolver()))`
+  pranks the getter). `flushall()` on the test fakeredis also wipes SIWE sessions: delete only the
+  `mintgate:role:*` keys. A Slither `incorrect-equality` hit on an array length is Medium (fails CI): suppress
+  inline with a reason. The test deployment in conftest has a `governance` block (owners = `OWNER_KEYS`;
+  ABIs from a real deployment file or compiled artifacts). Requests drops `__Host-` (Secure) cookies on
+  http://127.0.0.1: scripts must clear `cookie.secure` after SIWE login.
 - **Phase 5b:** `repo.add_nft_items` must set `collection_member` (before 5b only migration 0004 did, so
   every later backfill / sync row was a one-off and its siblings "copied" it). Plain `ingest embed` does
   not fill `nn_sscd` (only `--follow` / `--rebuild-nn`): it now warns; `ingest.embed.update_nn` repairs a

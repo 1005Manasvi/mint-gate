@@ -113,10 +113,20 @@ CHAIN_LABELS = {"localhost": "Hardhat (local)", "sepolia": "Sepolia", "baseSepol
 PINATA_JWT = env("PINATA_JWT", "")
 IPFS_GATEWAY = env("IPFS_GATEWAY", "https://gateway.pinata.cloud/ipfs/")
 
+# ---- Notifications (Phase 6) -----------------------------------------------------
+DISCORD_WEBHOOK_URL = env("DISCORD_WEBHOOK_URL", "")  # secret: never log it
+NOTIFY_DISPUTES = env("NOTIFY_DISPUTES", "1") == "1"
+NOTIFY_REVIEWS = env("NOTIFY_REVIEWS", "1") == "1"
+# Disputes: largest original file a reporter may attach, and the reason length a reviewer must write.
+MAX_EVIDENCE_BYTES = 10 * 1024 * 1024
+MIN_REASON_CHARS = 20
+
 # ---- Web server -----------------------------------------------------------------------
 PUBLIC_BASE_URL = env("PUBLIC_BASE_URL", "http://127.0.0.1:5000")
 PORT = int(env("PORT", "5000"))
 REVIEWER_KEY = env("REVIEWER_KEY", "reviewer-demo-key")
+# Phase 6: reviewers are wallets holding REVIEWER_ROLE (SIWE); 1 turns the shared key off entirely.
+REVIEWER_KEY_DISABLED = env("REVIEWER_KEY_DISABLED", "0") == "1"
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_IMAGE_PIXELS = 40_000_000  # decompression-bomb guard
 RATE_ANALYZE_PER_HOUR = int(env("RATE_ANALYZE_PER_HOUR", "60"))  # per client IP

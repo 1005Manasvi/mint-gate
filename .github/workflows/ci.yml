@@ -89,8 +89,9 @@ jobs:
       - name: EIP-712 signer + chain indexer + chain worker on a Hardhat node (pytest -m chain)
         working-directory: .
         run: |
-          pip install web3==8.0.0 numpy==2.5.3 Pillow==12.3.0 SQLAlchemy==2.1.6 alembic==1.20.1             "psycopg[binary]==3.3.6" pgvector==0.5.1 redis==8.1.0 rq==3.0.0 -r requirements-dev.txt
+          pip install web3==8.0.0 numpy==2.5.3 Pillow==12.3.0 SQLAlchemy==2.1.6 alembic==1.20.1             "psycopg[binary]==3.3.6" pgvector==0.5.1 redis==8.1.0 rq==3.0.0 Flask==3.1.3 Flask-Limiter==4.1.1 requests==2.34.2 -r requirements-dev.txt
           pytest backend/tests/test_eip712.py backend/tests/test_indexer.py
+          pytest -m chain backend/tests/test_governance.py
 
   foundry:
     name: Foundry fuzz + invariant tests

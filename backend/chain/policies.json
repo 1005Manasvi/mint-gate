@@ -1,0 +1,16 @@
+{
+  "policies": [
+    {
+      "version": "5.1.0-permissive",
+      "file": "policy.permissive.json",
+      "sha256": "13125ec1da65f074fa9fff4e0fe45f073bdb3fef545e6aedd1dccc9d1d2b40e5",
+      "uri": "ipfs://QmT1ii29NWJ3JdP8EhWs5sqk6M9WSjEjArypNvWyfqc9f9"
+    },
+    {
+      "version": "5.1.0",
+      "file": "policy.json",
+      "sha256": "0f3564681df55ebe41bfc8a709edf7bae9c2b08ad528376398928e5d25f3ca10",
+      "uri": "ipfs://QmPidod6dvJLhm6iYPY89Pes8Qa8B5u3XEsRseGyfAnsjY"
+    }
+  ]
+}

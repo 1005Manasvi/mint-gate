@@ -290,3 +290,28 @@ Testnet roles: the deployer `0xeed8…eD7F` holds admin, verifier, reviewer, pau
 admin delay 1 hour; dispute bond 0.001 ETH. Addresses are per chain (CREATE = deployer + nonce),
 so the **Base Sepolia registry has the same address as v1 on Ethereum Sepolia**: always give the
 chain together with an address. Etherscan / Basescan verification was skipped (no API key).
+
+## 11. Phase 6 additions: reasoned disputes, policy registry, Safe + timelock
+
+The v2 registry and NFT are unchanged (immutable). Phase 6 adds three contracts next to them; design,
+role map, deployments and runbooks are in [governance.md](governance.md).
+
+| Contract | Role |
+|---|---|
+| `DisputeResolver.sol` | Holds `REVIEWER_ROLE`; `resolveDispute(id, upheld, reasonHash, reasonURI)` callable by registry reviewers; emits `DisputeReasoned` (the reviewer, the SHA-256 and URI of the pinned written reason) and asks the collection to emit ERC-4906 `MetadataUpdate` after a revocation. Stateless, ownerless. |
+| `PolicyRegistry.sol` | `Ownable2Step`, owned by the timelock. `setPolicy(sha256, version, uri)` appends to a public history; `current()`, `policyAt(i)`, `isRegistered(hash)`, `policyActiveAt(t)` (the policy in force at a verdict's `issuedAt`). Seeded at deployment with policies 5.1.0-permissive and 5.1.0. |
+| `MintGateTimelock.sol` | OpenZeppelin `TimelockController` (1 h): proposer + canceller = the Safe, executor = anyone, no admin. |
+| Safe v1.4.1 | Canonical proxy (L1 `Safe` on Sepolia, `SafeL2` on Base Sepolia), 2-of-3; holds `DEFAULT_ADMIN_ROLE` (after `acceptDefaultAdminTransfer`), `PAUSER_ROLE` and the treasury. Vendored bytecode for tests: `Blockchain/vendor/safe-1.4.1/`. |
+
+Scripts: `scripts/deploy-governance.js` (Safe, timelock, policy registry, resolver + its role; idempotent),
+`scripts/handover.js` (pauser + treasury → Safe, `beginDefaultAdminTransfer(Safe)`), `scripts/lib/safe.js`
+(Safe deployment, SafeTx hashing / signing / execution). Tests: `test/v2/{PolicyRegistry,DisputeResolver,Governance}.test.js`
+(27 tests, the governance suite runs the real Safe bytecode), Foundry `Governance.fuzz.t.sol` (3 properties)
+and four new invariants in `MintGate.invariant.t.sol`: bond conservation (`balance + withdrawn == deposited`),
+bond snapshot (a dispute keeps the bond it was opened with, whatever `setDisputeBond` does later), payouts
+follow the outcome (a reporter's credits + withdrawals = bonds of their upheld disputes; the treasury's =
+bonds of rejected ones), one open dispute per image.
+
+**Gas on Sepolia (2026-11-11):** a plain ETH transfer to a new address used **204,600 gas** (21,000
+elsewhere): Sepolia now charges heavily for creating state, which also explains the 7× contract-creation
+gas of § 9. Budget Sepolia transactions by `eth_estimateGas`, never by fixed limits.

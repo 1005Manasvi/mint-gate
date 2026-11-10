@@ -141,6 +141,7 @@ class ChainEvent(Base):
     contract: Mapped[str] = mapped_column(String(42))
     event: Mapped[str] = mapped_column(String(40))
     args: Mapped[dict] = mapped_column(JSONB)
+    block_time: Mapped[int | None] = mapped_column(BigInteger)  # migration 0006
 
     __table_args__ = (
         UniqueConstraint("chain_id", "tx", "log_index", name="uq_chain_event"),
@@ -165,8 +166,49 @@ class Token(Base):
     minted_tx: Mapped[str] = mapped_column(String(66))
 
 
+class DisputeEvidence(Base):
+    """What a reporter submitted (pinned) before sending `openDispute`; matched by `evidence_uri`."""
+
+    __tablename__ = "dispute_evidence"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    chain_id: Mapped[int] = mapped_column(Integer)
+    registry_address: Mapped[str] = mapped_column("registry", String(42))
+    contract: Mapped[str] = mapped_column(String(42))
+    token_id: Mapped[Decimal] = mapped_column(UINT256)
+    image_sha256: Mapped[str] = mapped_column(String(64), index=True)
+    disputant: Mapped[str] = mapped_column(String(42), index=True)
+    evidence_uri: Mapped[str] = mapped_column(Text, unique=True)
+    evidence_sha256: Mapped[str] = mapped_column(String(64))
+    doc: Mapped[dict] = mapped_column(JSONB)
+    original_file: Mapped[str | None] = mapped_column(Text)  # storage-relative path of an uploaded original
+    created_at: Mapped[datetime] = _created()
+
+
+class SafeProposal(Base):
+    """A governance Safe transaction collecting owner signatures (EIP-712 SafeTx, Safe v1.4.1)."""
+
+    __tablename__ = "safe_proposals"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    chain_id: Mapped[int] = mapped_column(Integer)
+    safe: Mapped[str] = mapped_column(String(42))
+    safe_tx_hash: Mapped[str] = mapped_column(String(66), unique=True)
+    to: Mapped[str] = mapped_column(String(42))
+    value: Mapped[Decimal] = mapped_column(UINT256)
+    data: Mapped[str] = mapped_column(Text)
+    operation: Mapped[int] = mapped_column(SmallInteger)
+    nonce: Mapped[Decimal] = mapped_column(UINT256)
+    kind: Mapped[str] = mapped_column(String(32))
+    description: Mapped[str] = mapped_column(Text)
+    signatures: Mapped[dict] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))  # owner -> 0x sig
+    status: Mapped[str] = mapped_column(String(12), server_default="pending")  # pending | executed | replaced
+    executed_tx: Mapped[str | None] = mapped_column(String(66))
+    created_at: Mapped[datetime] = _created()
+
+    __table_args__ = (Index("ix_safe_proposals_chain_status", "chain_id", "status"),)
+
+
 class Dispute(Base):
-    """Projection of DisputeOpened / DisputeResolved (the dispute UI is Phase 6)."""
+    """Projection of DisputeOpened / DisputeResolved / DisputeReasoned (+ the backend's evidence)."""
 
     __tablename__ = "disputes"
     chain_id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -182,6 +224,14 @@ class Dispute(Base):
     resolved_block: Mapped[int | None] = mapped_column(BigInteger)
     resolved_tx: Mapped[str | None] = mapped_column(String(66))
     reviewer: Mapped[str | None] = mapped_column(String(42))
+    # migration 0006
+    evidence_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("dispute_evidence.id"))
+    reason_uri: Mapped[str | None] = mapped_column(Text)
+    reason_hash: Mapped[str | None] = mapped_column(String(64))
+    backend_evidence: Mapped[dict | None] = mapped_column(JSONB)
+    backend_evidence_uri: Mapped[str | None] = mapped_column(Text)
+
+    evidence: Mapped[DisputeEvidence | None] = relationship(lazy="joined")
 
 
 class AuditLog(Base):
