@@ -189,50 +189,221 @@ the shipped detector already catches the held-out 10 % (40 / 40, [91.2, 100] %);
 the OOS primary metric by +0.05 pp [-0.5, +0.6] but raises the OOS photo false-alarm rate by 2.01 pp
 (limit 2 pp), so the gate **refused** to ship the retrained probe. Nothing was applied.
 
-## End to end: policy 5.0.0 (`training/evaluate_system.py`, GPU profile)
+## Phase 5b: NFT-native evaluation (real copymints, real AI collections)
 
-Full pipeline against the live index (284,861 references), **n = 300 uploads per category** (fewer
-where the pool is smaller: n = pool), drawn without replacement, Wilson 95 % CIs
-(`model/system_eval.json`, `assets/system_evaluation.png`). `oos_*` = out-of-source sets.
+Phase 5's sets were mostly not NFT-native (OpenFake = photo-realistic news, forgery benchmark = edited
+photos, NFT copies = synthetic attacks). Phase 5b measures the gate on what happens on NFT marketplaces,
+with **real on-chain tokens only** (no self-generated images: the real AI set has 518 images, above the
+300 needed). Every contract was checked with Alchemy `getContractMetadata` and a public page.
 
-| Upload | n | PASS | REVIEW | FAIL |
+### The collections
+
+**Copymints** (`training/copymint_data.py` → `data/copymint/`, never added to `reference_items`), 300
+tokens each, sampled at random from every token on-chain, files = the token image as Alchemy's CDN
+serves it (`cachedUrl`, = what a copyminter uploads; 1 file via the on-chain `tokenURI` + IPFS, 2
+AVIF files via Alchemy's PNG rendition because Mint-Gate does not accept AVIF):
+
+| Collection | Chain, contract | Copies | Pairing (checked on pixels) | Evidence |
 |---|---|---|---|---|
-| Genuine NFT-collection art (test split) | 300 | 92.7 % [89.1, 95.1] | 6.3 % | 1.0 % [0.3, 2.9] |
-| Genuine NFT art, new collections (oos) | 300 | 84.0 % [79.4, 87.7] | 12.7 % | 3.3 % [1.8, 6.0] |
-| Genuine pixel-art punk (test split) | 300 | 92.0 % [88.4, 94.6] | 2.0 % | 6.0 % [3.8, 9.3] ¹ |
-| Genuine pixel art, new collections (oos) | 54 | 66.7 % [53.4, 77.8] | 14.8 % | 18.5 % [10.4, 30.8] |
-| Genuine painting (test split) | 295 | 76.6 % [71.5, 81.1] | 16.6 % | 6.8 % [4.4, 10.2] |
-| Genuine painting, Rijksmuseum (oos) | 300 | 84.3 % [79.8, 88.0] | 15.7 % | 0.0 % [0.0, 1.3] |
-| Genuine photo (test split) | 129 | 81.4 % [73.8, 87.2] | 17.1 % | 1.6 % [0.4, 5.5] |
-| Genuine photo, COCO + DOCCI (oos) | 300 | 42.3 % [36.9, 48.0] | 33.7 % | 24.0 % [19.5, 29.1] |
-| Modern AI (DALL·E 3, MJ, SD3, SDXL) | 300 | 0.3 % [0.1, 1.9] | 1.0 % | 98.7 % [96.6, 99.5] |
-| Unseen Flux (held out of training) | 300 | 2.0 % [0.9, 4.3] | 2.7 % | 95.3 % [92.3, 97.2] |
-| 2025-26 generators + Flux.1-dev (oos) | 300 | 11.3 % [8.2, 15.4] | 24.0 % | 64.7 % [59.1, 69.9] |
-| Other AI-art generators | 300 | 3.0 % [1.6, 5.6] | 18.3 % | 78.7 % [73.7, 82.9] |
-| Older generators (GenImage) | 158 | 3.8 % [1.8, 8.0] | 18.4 % | 77.8 % [70.8, 83.6] |
-| Exact copy of a protected work | 300 | 0.0 % [0.0, 1.3] | 0.0 % | 100 % [98.7, 100] |
-| Edited copy of a protected painting | 300 | 1.7 % [0.7, 3.8] | 30.7 % | 67.7 % [62.2, 72.7] |
-| Copy-move forgery | 295 | 0.7 % [0.2, 2.4] | 16.3 % | 83.0 % [78.3, 86.9] |
-| Spliced forgery | 295 | 0.0 % [0.0, 1.3] | 78.3 % | 21.7 % [17.4, 26.8] |
-| Exact re-upload of an indexed Ethereum NFT | 300 | 1.0 % [0.3, 2.9] | 0.7 % | 98.3 % [96.2, 99.3] |
-| Edited copy of an indexed Ethereum NFT | 300 | 65.7 % [60.1, 70.8] | 23.7 % | 10.7 % [7.7, 14.7] |
-| Edited copy of a generative-collection NFT | 300 | 60.7 % [55.0, 66.0] | 39.0 % | 0.3 % [0.1, 1.9] |
+| RR/BAYC | Ethereum `0x2EE6AF0dFf3A1CE3F7E3414C52c48fd50d73691e` | BAYC, same art | metadata name "#7400" = BAYC id; 299 / 299 verified | contract name "Bored Ape Yacht Club", OpenSea `rrbayc` ("conceptual art by Ryder Ripps"), Yuga Labs v. Ripps (C.D. Cal., 2022) |
+| CryptoPhunks V2 | Ethereum `0xf07468eAd8cf26c752C676E43C814FEe9c8CF402` | CryptoPunks, mirrored | same id; 275 / 275 verified (25 are the held-out punks) | contract CryptoPhunksV2, OpenSea `crypto-phunks` (verified): "CryptoPhunks face left" |
+| Phunky Ape Yacht Club | Ethereum `0x176e0fe17314def59f0f06e976e1b74203be4a55` | BAYC, mirrored | same id; 300 / 300 verified | contract PhunkyApeYachtClub (Etherscan-verified), OpenSea `phunkyapeyachtclub` ("Not affiliated with Yuga Labs") |
 
-Pooled: genuine PASS **78.5 % [76.6, 80.3]** (n = 1,978), genuine wrongly failed **6.8 % [5.8, 8.0]**,
-forgeries stopped (REVIEW or FAIL) **87.1 % [85.9, 88.2]** (n = 3,448), auto-failed 66.0 % [64.4, 67.5];
-on v1's forgery categories 91.7 % [90.6, 92.7] stopped (v4: 82.7 %, n = 50 each).
-False alarms per domain (REVIEW or FAIL / FAIL): collection NFTs 11.7 % / 2.2 % (n = 600), pixel art
-11.9 % / 7.9 % (354), paintings 19.5 % / 3.4 % (595), **photos 45.9 % / 17.2 % (429)**.
+Pairing check = mean absolute RGB difference of the foreground at 64 px (copy un-mirrored, area
+averaged): verified pairs 1-8 / 255, wrong tokens ~40. 55 of the seed CryptoPunks carry Larva Labs'
+red / purple "for sale" / "bid" backgrounds (the copies have the standard blue), hence foreground only.
 
-¹ 15 of the 18 are pixel-identical to a *different* protected seed punk (the local CryptoPunks
-dataset holds the same image under two IDs), so blocking them is correct; 3 / 300 (1.0 %) remain.
+**AI-generated collections** (`training/ai_nft_data.py` → `data/ai_nft/` + OOS group `ai_nft:*`,
+own select / report split; list approved by the owner on 2026-11-10). Label = the creator's own
+statement in the token / contract metadata (`data/ai_nft/collections.json` keeps it verbatim); 40
+tokens per collection (Mappings / New Realities 39: two tokens without an image). None is in the
+training manifest or the Phase 5 OOS set.
 
-What changed vs policy 4.0.0 (n = 50 per category then, so v4's own CIs are ±10-14 pp): AI is
-caught far more often (modern 88 → 98.7 % FAIL, unseen Flux 76 → 95.3 %, older generators 32 → 78 %
-FAIL); genuine collection NFTs pass a little less often (98 → 92.7 %), mostly REVIEW from TruFor;
-TruFor flags every spliced forgery (295 / 295 `manipulation` REVIEW; FAIL 16 → 21.7 % via the AI
-detector) and sends 34 % of edited collection-NFT copies to REVIEW (v4 passed all of them). The weak spots are explicit: new pixel-art
-collections (n = 54) and photographs from new sources (the AI-detector photo finding above).
+| Collection | Chain, contract | Minted | Stated method |
+|---|---|---|---|
+| BrainDrops #1 Brain Loops | Ethereum `0xdfde78d2baec499fe18f2be74b6c287eed9511d7` (BrainDrops, project = token id / 10⁶) | 2021-11 | text-to-image model |
+| BrainDrops #3 Genesis | same contract | 2021-11 | "raw AI images" |
+| BrainDrops #4 DreamScapes | same | 2021-12 | VQGAN+CLIP |
+| BrainDrops #5 Confluence | same | 2022-01 | neural generative model trained on the artist's sketchbook |
+| BrainDrops #11 ClipMatrix Creatures | same | 2022-03 | AI text-to-3D (animated; first frame) |
+| BrainDrops #15 Life In West America (Roope Rainisto) | same | 2023-02 | custom-trained generative models ("post-photography") |
+| BrainDrops #16 All AI Art Looks The Same | same | 2023-03 | 14 AI artists |
+| BrainDrops #17 Materia Mania | same | 2023-03 | diffusion models |
+| BrainDrops #25 Mappings | same | 2023-08 | generative AI process |
+| BrainDrops #30 corpo\|real | same | 2024-01 | AI-collaborative fashion |
+| BrainDrops #32 Anthrocinematica | same | 2024-03/04 | AI video (stills) |
+| BrainDrops #35 New Realities | same | 2024-06 | AI latent space |
+| Bastard GAN Punks V2 | Ethereum `0x31385d3520bced94f77aae104b406994d8f2168c` | 2021-03/06 | GAN trained on CryptoPunks attributes (pixel art) |
+
+Dropped: Winds of Yawanawa (Refik Anadol, "Data Paintings": no AI method stated) and the BrainDrops
+projects that state no method. **Gap:** no anime collection with a verifiable AI claim was found.
+BrainDrops ships originals of up to 44 MB / 100 MP: 57 files above the 25 MB fetch cap were fetched as
+Alchemy's 2,048 px rendition (Mappings 39, New Realities 14, Materia Mania 3, All AI Art 1), and 95 of the
+518 kept files exceed Mint-Gate's 10 MB upload limit (15 the 40 MP limit). The end-to-end run therefore
+submits what an artist would (`ai_nft_data.as_upload`: the original if accepted, else 2,048 px JPEG q95);
+the provenance check reads the original bytes.
+
+### AI detection on real AI collections (`training.ai_backbones evaluate`, no retraining)
+
+Shipped detector (CLIP-B/32 + SigLIP 2 B/16, unchanged thresholds) flags **444 / 518 = 85.7 % [82.4, 88.5]**
+of the AI-collection tokens at the review threshold; the other candidates on disk: SigLIP 2 alone 81.3 %,
+CLIP-B/32 alone (= v1) 74.5 %, DINOv2 S/B 60.8 / 70.3 %. (CLIP-L/14 and So400m were not re-run: their
+weights were deleted after Phase 5, they lost on CPU cost.) With the new group the OOS AUC is 0.911
+[0.900, 0.920] (all), report half 0.914; Phase 5's numbers without it: `model/benchmarks/ai_detector_phase5.json`.
+
+| Collection | Flagged (95 % CI), n = 40 |
+|---|---|
+| DreamScapes, Genesis, Materia Mania, corpo\|real, Anthrocinematica | 100 % [91.2, 100] each |
+| Brain Loops | 97.5 % [87.1, 99.6] |
+| Mappings, New Realities (n = 39) | 97.4 % [86.8, 99.6] |
+| Life In West America | 90.0 % [77.0, 96.0] |
+| All AI Art Looks The Same | 87.5 % [73.9, 94.5] |
+| Confluence | 80.0 % [65.2, 89.5] |
+| ClipMatrix Creatures | 65.0 % [49.5, 77.9] |
+| **Bastard GAN Punks V2** | **0.0 % [0.0, 8.8]** |
+
+Misses: **GAN pixel art is invisible to the detector** (24 × 24 punks re-drawn by a GAN look like any
+other pixel-art collection; genuine pixel art is the detector's other weak domain, so there is no room to
+lower the threshold there). ClipMatrix (3D renders, first GIF frame) and Confluence (a model trained on
+the artist's own sketches, then hand-processed) are the other weak spots: collection labels are noisy
+by nature (an artist may retouch outputs), which is why every number is per collection.
+
+**Provenance on the original files** (`training.provenance_eval --nft`, `model/benchmarks/provenance_nft.json`):
+no AI collection file carries an AI watermark or generator metadata; **18 / 518 (3.5 % [2.2, 5.4])** carry
+Adobe Photoshop C2PA credentials that declare AI-assisted editing (9 corpo|real, 9 New Realities) →
+advisory REVIEW, never AI evidence. Copymints: no signal at all (0 / 900). On-chain NFT art has
+essentially no provenance trail: detection has to come from the pixels.
+
+### Copy detection on real copymints: what the live index revealed
+
+The first run looked perfect (every copymint stopped) and was wrong: three bugs in the index and the
+member rule, each fixed and re-measured.
+
+1. **New tokens entered the index as one-off works.** `collection_member` was only ever set by migration
+   0004; `repo.add_nft_items` did not set it, so every token added later (Phase 5b's BAYC backfill, and
+   any new mint `ingest sync` picks up) was a "one-off" and *its siblings* "copied" it. Fixed in
+   `repo.add_nft_items` (+ test), the 4,000 rows repaired, and plain `ingest embed` now warns about
+   rows without the `nn_sscd` density term (only `--follow` / `--rebuild-nn` maintain it).
+2. **The index cap left 40 % of BAYC unprotected** (6,000 of 10,000 apes): the most-copied collection
+   is now complete (288,860 ready references).
+3. **The member pixel rule could not verify a real copy, and matched genuine siblings.** A PDQ-close
+   collection member counted as an exact copy if ≤ 13 of 128 × 128 pixels differed (NEAREST, level 48).
+   On real files: (a) a full-size upload vs the indexed reference (a LANCZOS 128 px JPEG of Alchemy's
+   250 px thumbnail) differs by hundreds of pixels at every edge, so **0 of 874 real copies and 1 of 401
+   full-size re-uploads of indexed on-chain tokens passed it** (Phase 4's "98 % of exact re-uploads FAIL"
+   re-uploaded the 128 px thumbnail itself); (b) mirrored copies were never tried (PDQ searched the 8
+   dihedral variants, the pixel check did not); (c) **44 of 892 genuine new CryptoPunks (4.9 %) matched a
+   different punk**: they differ only by dark-on-dark traits (a mole, a beard, an eyebrow shade) that a
+   48-level threshold cannot see. Phase 5's footnote ("15 of 18 punk FAILs are dataset duplicates") was
+   wrong: the 10,000 seed punks hold only 4 duplicate-image pairs.
+
+**The gate** (`benchmark/member_rule.py`, `model/benchmarks/member_rule.json`): 18 pixel-rule candidates
+(NEAREST / LANCZOS / BOX × as uploaded / dihedral × level 48 / 24 / 16), each with its budget from the
+benchmark exactly as Phase 4 did (half the closest genuine VAL sibling), measured on the benchmark TEST
+split, on 1,893 live genuine uploads that are not indexed (the held-out punks, OOS NFT / pixel art) and on
+the 874 copymints with an indexed original. Shift tolerance and a localised-difference statistic were
+also tried offline: **no pixel statistic against 128 px JPEG thumbnails separates a copy of detailed art
+from a sibling** (copies of BAYC differ by more than siblings of pixel art do). So the pixel rule's job is
+now to be safe, and a new, separate signal catches re-mints:
+
+| Member rule | Budget | Benchmark member copies accepted | Live genuine matched to another token |
+|---|---|---|---|
+| Phase 4: NEAREST, as uploaded, level 48 | 13 px | 15 / 140 | **45** (44 new punks + 1) |
+| **Shipped: BOX, dihedral, level 16** | 22 px | 7 / 140 | **6** (5 new punks + 1) |
+
+**New check `copy_member`** (REVIEW-only, weight 0): the upload's SSCD (as uploaded and mirrored) vs the
+top-10 collection members, margin = cos(upload, member) − nn_sscd(member): closer to a token than that
+token's own nearest sibling. Threshold 0.15 = max(99.8th percentile of the benchmark's genuine VAL
+margins, largest margin of a live calibration half + 0.01); measured on data it did not see:
+benchmark TEST member copies flagged 18.6 % [13.0, 25.8] (always the right member), genuine NFT
+distractors 1 / 1,465 (0.07 %), live held-out genuine 0 / 624 [0, 0.6 %]. Why not a lower threshold:
+at 0.11 RR/BAYC would be caught 64 %, but benchmark genuine flags rise to 0.8 %.
+
+**Result on the real copymints** (`training.copymint_eval`, full pipeline, policy 5.1.0 vs the Phase 4
+rule on the same repaired index; `model/copymint_eval.json`, `copymint_eval_phase4rule.json`):
+
+| Copymint (n = 300 each) | PASS, Phase 4 rule | **PASS, copy engine 1.1.0** | Stopped by a copy check | Report names the right original |
+|---|---|---|---|---|
+| RR/BAYC (same art) | 68.7 % [63.2, 73.7] | **43.3 % [37.9, 49.0]** | 36.7 % `copy_member` REVIEW | 296 / 299 |
+| Phunky Ape Yacht Club (mirrored) | 66.0 % [60.5, 71.1] | **40.7 % [35.3, 46.3]** | 38.3 % `copy_member` REVIEW | 296 / 300 |
+| CryptoPhunks V2 (mirrored) | 96.7 % [94.0, 98.2] | **94.7 % [91.5, 96.7]** | 2.3 % (6 `copy_exact` FAIL via the dihedral rule) | 107 / 275 |
+
+(The rest of "stopped" is TruFor's REVIEW, which fires on ~1 in 3 BAYC images: coincidental, not copy
+evidence.) Misses and their causes: every miss had its original among the PDQ candidates except
+`pdq_far` (CryptoPhunks 33, PHAYC 37: the mirrored PDQ is > 31 bits away) and 25 phunks of held-out
+punks (original not indexed, by design); the rest fail the pixel rule on resampling, and SSCD cannot
+separate punk siblings at all (phunk margins −0.09 median). **Open limit, planned for a later phase:**
+the index keeps 128 px JPEG thumbnails, too lossy to prove identity for detailed art; storing larger
+references (256-512 px) for the most-copied collections is the fix to test next (owner decision
+2026-11-10: document now, fix later).
+
+## End to end: policy 5.1.0 (`training/evaluate_system.py`, GPU profile)
+
+Full pipeline against the live index (288,860 references), **n = 300 uploads per category** (fewer
+where the pool is smaller: n = pool), drawn without replacement, Wilson 95 % CIs
+(`model/system_eval.json`, `assets/system_evaluation.png`; the policy 5.0.0 run is kept in
+`model/system_eval_policy5.0.0.json`). `oos_*` = out-of-source sets. New in Phase 5b: the three real
+copymint collections (each copy uploaded as the original token *file*) and the real AI NFT collections.
+
+| Upload | n | PASS | REVIEW | FAIL | 5.0.0 PASS / FAIL |
+|---|---|---|---|---|---|
+| Genuine NFT-collection art (test split) ² | 300 | 86.7 % [82.3, 90.0] | 12.3 % | 1.0 % [0.3, 2.9] | 92.7 / 1.0 |
+| Genuine NFT art, new collections (oos) ² | 300 | 79.7 % [74.8, 83.8] | 17.0 % | 3.3 % [1.8, 6.0] | 84.0 / 3.3 |
+| Genuine pixel-art punk (test split) ¹ | 300 | **96.0 % [93.1, 97.7]** | 2.0 % | **2.0 % [0.9, 4.3]** | 92.0 / 6.0 |
+| Genuine pixel art, new collections (oos) | 54 | 59.3 % [46.0, 71.3] | 22.2 % | 18.5 % [10.4, 30.8] | 66.7 / 18.5 |
+| Genuine painting (test split) | 295 | 76.6 % [71.5, 81.1] | 16.6 % | 6.8 % [4.4, 10.2] | 76.6 / 6.8 |
+| Genuine painting, Rijksmuseum (oos) | 300 | 84.3 % [79.8, 88.0] | 15.7 % | 0.0 % [0.0, 1.3] | 84.3 / 0.0 |
+| Genuine photo (test split) | 129 | 81.4 % [73.8, 87.2] | 17.1 % | 1.6 % [0.4, 5.5] | 81.4 / 1.6 |
+| Genuine photo, COCO + DOCCI (oos) | 300 | 42.3 % [36.9, 48.0] | 33.7 % | 24.0 % [19.5, 29.1] | 42.3 / 24.0 |
+| Modern AI (DALL·E 3, MJ, SD3, SDXL) | 300 | 0.3 % [0.1, 1.9] | 1.0 % | 98.7 % [96.6, 99.5] | 0.3 / 98.7 |
+| Unseen Flux (held out of training) | 300 | 2.0 % [0.9, 4.3] | 2.7 % | 95.3 % [92.3, 97.2] | 2.0 / 95.3 |
+| 2025-26 generators + Flux.1-dev (oos) | 300 | 11.3 % [8.2, 15.4] | 24.0 % | 64.7 % [59.1, 69.9] | 11.3 / 64.7 |
+| Other AI-art generators | 300 | 3.0 % [1.6, 5.6] | 18.3 % | 78.7 % [73.7, 82.9] | 3.0 / 78.7 |
+| Older generators (GenImage) | 158 | 3.8 % [1.8, 8.0] | 18.4 % | 77.8 % [70.8, 83.6] | 3.8 / 77.8 |
+| **Real AI NFT collections (BrainDrops + BGAN Punks, oos)** | 300 | **8.3 % [5.7, 12.0]** | 25.7 % | **66.0 % [60.5, 71.1]** | new |
+| Exact copy of a protected work | 300 | 0.0 % [0.0, 1.3] | 0.0 % | 100 % [98.7, 100] | 0.0 / 100 |
+| Edited copy of a protected painting | 300 | 1.7 % [0.7, 3.8] | 30.7 % | 67.7 % [62.2, 72.7] | 1.7 / 67.7 |
+| Copy-move forgery | 295 | 0.7 % [0.2, 2.4] | 16.3 % | 83.0 % [78.3, 86.9] | 0.7 / 83.0 |
+| Spliced forgery | 295 | 0.0 % [0.0, 1.3] | 78.3 % | 21.7 % [17.4, 26.8] | 0.0 / 21.7 |
+| Re-upload of an indexed Ethereum NFT's 128 px thumbnail ³ | 300 | 2.0 % [0.9, 4.3] | 0.7 % | 97.3 % [94.8, 98.6] | 1.0 / 98.3 |
+| Edited copy of an indexed Ethereum NFT | 300 | 64.0 % [58.4, 69.2] | 27.3 % | 8.7 % [6.0, 12.4] | 65.7 / 10.7 |
+| Edited copy of a generative-collection NFT | 300 | 58.3 % [52.7, 63.8] | 40.7 % | 1.0 % [0.3, 2.9] | 60.7 / 0.3 |
+| **Real copymint: RR/BAYC (same art, token file)** | 300 | **43.3 % [37.9, 49.0]** | 56.7 % | 0.0 % [0.0, 1.3] | new |
+| **Real copymint: Phunky Ape Yacht Club (mirrored)** | 300 | **40.7 % [35.3, 46.3]** | 59.3 % | 0.0 % [0.0, 1.3] | new |
+| **Real copymint: CryptoPhunks V2 (mirrored punks)** | 300 | **94.7 % [91.5, 96.7]** | 3.3 % | 2.0 % [0.9, 4.3] | new |
+
+Pooled: genuine PASS **77.4 % [75.5, 79.1]** (n = 1,978), genuine wrongly failed **6.2 % [5.2, 7.4]**
+(5.0.0: 78.5 % / 6.8 %). Forgeries stopped (REVIEW or FAIL) **78.5 % [77.4, 79.7]** (n = 4,648),
+auto-failed 53.2 % [51.8, 54.6]; the drop vs 5.0.0's 87.1 % is the new, harder categories, not a
+regression: on 5.0.0's own forgery categories 5.1.0 stops **87.4 % [86.2, 88.4]** (n = 3,448, auto-failed
+65.8 %), and the four Phase 5b categories alone are stopped 53.2 % [50.4, 56.1] (n = 1,200). v1's forgery
+categories: 92.0 % [90.9, 93.0] stopped. False alarms per domain (REVIEW or FAIL / FAIL): collection NFTs
+16.8 % / 2.2 % (n = 600, see ²), pixel art 9.6 % / 4.5 % (354), paintings 19.5 % / 3.4 % (595),
+**photos 45.9 % / 17.2 % (429)**.
+
+¹ The remaining FAILs are `copy_exact` matches to a *different* punk (a sibling within the member pixel
+budget). Policy 5.0.0's note called 15 of its 18 FAILs dataset duplicates (the same image under two IDs);
+Phase 5b's live gate showed they were sibling false matches of the 128 px NEAREST rule, which the
+BOX / dihedral / level-16 rule cuts from 18 to 6.
+² These "genuine" sets are images of tokens that **are** in the index (huggingnft BAYC / Azuki / MAYC and
+the OOS on-chain tokens), so a full-size upload of one is a re-mint of an existing token. The new
+REVIEW-only `copy_member` check flags 18 + 17 of them: checked for the 353-image test pool, 22 of its 23
+`copy_member` flags point to the image's own token (PDQ ≤ 22 bits, or the identical seed file) and 1 to a
+sibling (102 bits). FAIL is unchanged (only REVIEW can come from `copy_member`).
+³ This category re-uploads the index's own 128 px thumbnail, so it measures index recall, not a real
+re-upload: Phase 5b showed that uploading the token's **file** fails the 128 px pixel rule for detailed
+art (the RR/BAYC / PHAYC rows: 0 % FAIL, caught only by `copy_member` REVIEW). The −1 pp vs 5.0.0 is
+within the CIs (2 `copy_exact` FAILs moved to PASS under the stricter member rule).
+
+What changed vs policy 5.0.0 (same AI detector, same TruFor): only the copy engine (1.1.0) and the
+REVIEW-only `copy_member` check. Genuine punks wrongly failed 6.0 → 2.0 %; re-mints of indexed tokens
+now reach REVIEW (real RR/BAYC 31 → 57 % stopped, PHAYC 34 → 59 %); edited copies of collection NFTs
+are more often REVIEW (39 → 41 %), edited on-chain copies FAIL less (`copy_exact` 7 → 1, now REVIEW).
+CryptoPhunks stays the open gap: mirrored 24 px punks are siblings to every signal at 128 px. AI: the
+detector stops 91.7 % of real AI NFT collections end to end (detector alone 85.7 %, see Phase 5b), the
+detector alone flags none of the BGAN Punks (GAN pixel art). The weak spots stay explicit: new pixel-art
+collections (n = 54), photographs from new sources, and copymints of detailed art without larger
+reference images.
 
 ## Manipulation forensics (Phase 5): TruFor vs ResNet-18 vs block matching
 

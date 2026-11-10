@@ -20,6 +20,10 @@ Forged / plagiarised uploads (should NOT pass):
                         Midjourney 7, Illustrious, Recraft, ...) + Flux.1-dev from another publisher
   exact_duplicate, edited_copy_nft, edited_copy_painting, exact_onchain_nft, edited_onchain_nft,
   copy_move_human_art, splice_human_art   (as in policy 4.0.0)
+REAL on-chain forgeries (Phase 5b), uploaded as the token's original file bytes:
+  copymint_rrbayc, copymint_cryptophunks, copymint_phayc   training/copymint_data.py (pool = every
+                        sampled copy; copies of non-indexed originals stay in: that is the real world)
+  ai_nft_collection     training/ai_nft_data.py: tokens of collections that state they are AI art
 
 Output: model/system_eval.json (+ per-domain false-alarm table) and assets/system_evaluation.png
 Run from backend/:   python -m training.evaluate_system --n 300
@@ -47,6 +51,10 @@ from detection.pipeline import MintGatePipeline
 from detection.preprocessing import load_path
 from ingest.seed import is_collection_member, seed_path
 from training import stats
+from training.ai_nft_data import RAW_DIR as AI_NFT_RAW
+from training.ai_nft_data import as_upload
+from training.copymint_data import IMG_DIR as COPYMINT_DIR
+from training.copymint_data import MANIFEST as COPYMINT_MANIFEST
 from training.oos_data import IMG_DIR as OOS_DIR
 from training.oos_data import MANIFEST as OOS_MANIFEST
 from training.realworld_data import load_manifest, open_image
@@ -151,7 +159,7 @@ def main():
         "ai_art_generators": (ai_art, open_image),
         "ai_older_generators": (ai_photo, open_image),
         "ai_unseen_flux": (unseen, open_image),
-        "oos_ai_2025": (oos_by(lambda r: r["label"] == "ai"), oos_img),
+        "oos_ai_2025": (oos_by(lambda r: r["label"] == "ai" and r["domain"] != "ai_nft_collection"), oos_img),
         "exact_duplicate": (seed, ref),
         "edited_copy_nft": (nft_refs, lambda f: near_duplicate(ref(f), rng)),
         "edited_copy_painting": (art_refs, lambda f: near_duplicate(ref(f), rng)),
@@ -161,6 +169,20 @@ def main():
             lambda r: splice(open_image(r), open_image(rng.choice(human_art + photos)), rng),
         ),
     }
+    if COPYMINT_MANIFEST.exists():
+        cm = json.loads(COPYMINT_MANIFEST.read_text())
+        for key in sorted({r["collection"] for r in cm}):
+            pools[f"copymint_{key}"] = (
+                [r for r in cm if r["collection"] == key],
+                lambda r: (COPYMINT_DIR / r["file"]).read_bytes(),
+            )
+    ai_nft = oos_by(lambda r: r["domain"] == "ai_nft_collection")
+    if ai_nft and AI_NFT_RAW.exists():
+        raw = {f.stem: f for f in AI_NFT_RAW.iterdir()}
+        pools["ai_nft_collection"] = (
+            ai_nft,
+            lambda r: as_upload(raw[r["file"].removeprefix("ainft_").removesuffix(".jpg")].read_bytes()),
+        )
     if onchain:
         thumb = lambda u: load_path(resolve_image("alchemy", u))  # noqa: E731
         pools["exact_onchain_nft"] = (onchain, thumb)
@@ -182,7 +204,8 @@ def main():
         items = random.Random(f"eval-{cat}").sample(pool, min(args.n, len(pool)))
         dec, scores, onchain_dup, flags = [], [], 0, {}
         for it in items:
-            report, _ = pipe.analyse(png(load(it)))
+            x = load(it)  # bytes = the original file as uploaded; an image = re-encoded as PNG
+            report, _ = pipe.analyse(x if isinstance(x, bytes) else png(x))
             dec.append(report["decision"])
             scores.append(report["score"])
             for name, c in report["checks"].items():  # which checks drove the decision

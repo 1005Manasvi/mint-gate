@@ -4,6 +4,7 @@ Both expose the same four calls the engine needs:
   exact(pdq8, max_bits)  -> [(Reference, bits)]   PDQ Hamming distance <= max_bits
   knn(vector, k)         -> [Reference]           ANN on the fused vector (inner product)
   knn_sscd(vector, k)    -> [Reference]           ANN on SSCD alone (region crops)
+  knn_members(vector, k) -> [Reference]           SSCD ANN over collection members only (copy_member)
   load_image(ref)        -> PIL image             for LightGlue verification
 `nn_sscd` / `nn_dino` (each reference's nearest neighbour inside the index) are kept current on
 insert: a newcomer can become an existing reference's nearest neighbour.
@@ -84,6 +85,13 @@ class MemoryCopyIndex:
 
     def knn_sscd(self, vector, k):
         return self._top(self.sscd @ vector, k) if len(self) else []
+
+    def knn_members(self, vector, k):
+        if not len(self):
+            return []
+        sims = np.where(np.array(self.collection, bool), self.sscd @ vector, -np.inf)
+        k = min(k, int(np.isfinite(sims).sum()))
+        return [self._ref(int(i)) for i in np.argsort(-sims)[:k]]
 
     def load_image(self, ref: Reference):
         return load_path(ref.image_path)
@@ -264,6 +272,10 @@ class PgCopyIndex:
 
     def knn_sscd(self, vector, k):
         return self._knn("sscd", vector, k, members=False)  # region crops: one-off works only
+
+    def knn_members(self, vector, k):
+        """Collection members by SSCD alone (the copy_member margin is SSCD-only, Phase 5b)."""
+        return self._knn("sscd", vector, k, members=True)
 
     def load_image(self, ref: Reference):
         return load_path(ref.image_path)

@@ -10,9 +10,13 @@ reverse search off:
 Reports per group: AI-evidence rate (recall on AI / false-alarm rate on genuine), which signal fired,
 and C2PA presence, with 95 % CIs.
 
-Run from backend/:   python -m training.provenance_eval
+`--nft` (Phase 5b) runs on the original token files of the NFT-native sets instead: AI collections
+(data/ai_nft/raw/, training/ai_nft_data.py) and copymints (data/copymint/images/) -> provenance_nft.json.
+
+Run from backend/:   python -m training.provenance_eval [--nft]
 """
 
+import argparse
 import json
 import random
 import time
@@ -30,6 +34,20 @@ from training import stats
 from training.oos_data import COCO, COCO_OK_LICENCES, FLUX_REPO, OPENFAKE, V1_COLLECTIONS, fetch_bytes
 
 OUT = MODEL_DIR / "benchmarks" / "provenance.json"
+
+
+def nft_sources():
+    """(label, group, raw bytes) of the Phase 5b original token files (local, as fetched)."""
+    from training.ai_nft_data import BRAINDROPS
+    from training.ai_nft_data import RAW_DIR as AI_RAW
+    from training.copymint_data import IMG_DIR as CM_DIR
+
+    slugs = sorted([s for s, _, _ in BRAINDROPS.values()] + ["bastard_gan_punks_v2"], key=len, reverse=True)
+    for f in sorted(AI_RAW.iterdir()):
+        slug = next(s for s in slugs if f.stem.startswith(s + "_"))
+        yield "ai", f"ai_nft:{slug}", f.read_bytes()
+    for f in sorted(CM_DIR.iterdir()):
+        yield "copy", f"copymint:{f.stem.split('_')[0]}", f.read_bytes()
 
 
 def signal_of(r):
@@ -119,12 +137,20 @@ def onchain(http, per=6):
 
 
 def main():
-    fs = HfFileSystem()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--nft", action="store_true", help="Phase 5b NFT-native original files")
+    args = ap.parse_args()
+    out_file = OUT.with_name("provenance_nft.json") if args.nft else OUT
     rows = []
     t0 = time.time()
-    for label, group, raw in sources(fs):
+    for label, group, raw in nft_sources() if args.nft else sources(HfFileSystem()):
         try:
-            img = prepare(raw)
+            if args.nft:  # metadata / C2PA from the original bytes; pixels from the file an artist could upload
+                from training.ai_nft_data import as_upload
+
+                img = prepare(as_upload(raw))
+            else:
+                img = prepare(raw)
         except InvalidImage:
             continue
         r = pv.analyse(raw, img.rgb)
@@ -145,8 +171,10 @@ def main():
         if len(rows) % 200 == 0:
             print(len(rows), f"{time.time() - t0:.0f}s", flush=True)
     out = {"n": len(rows), "groups": {}, "pooled": {}}
-    for label in ("ai", "authentic"):
+    for label in ("ai", "authentic", "copy"):
         sub = [x for x in rows if x["label"] == label]
+        if not sub:
+            continue
         out["pooled"][label] = {
             "ai_evidence": stats.rate([x["value"] >= pv.AI_GENERATED for x in sub]),
             "any_evidence": stats.rate([x["value"] != pv.NOTHING for x in sub]),
@@ -164,7 +192,7 @@ def main():
         }
     ms = sorted(x["ms"] for x in rows)
     out["ms_p50"], out["ms_p95"] = ms[len(ms) // 2], ms[int(len(ms) * 0.95)]
-    OUT.write_text(json.dumps(out, indent=1))
+    out_file.write_text(json.dumps(out, indent=1))
     print(json.dumps(out["pooled"], indent=1))
     for g, e in out["groups"].items():
         print(f"{g:40s} {e['label']:9s} AI evidence {stats.fmt_rate(e['ai_evidence'])}  {e['signals']}")

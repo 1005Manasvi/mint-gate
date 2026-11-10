@@ -105,6 +105,8 @@ def test_backfill_is_resumable_and_finds_trait_duplicates(clean_db, fake_net):
         assert coll.ingested == 5 and coll.backfill_done and coll.name == "BoredApeYachtClub"
         rows = repo.nft_items_by_status(s, "pending")
         assert [int(r.token_id) for r in rows] == [1, 2, 4, 5]
+        # Phase 5b bug: ingested tokens were one-offs (siblings then "copied" each other)
+        assert all(r.collection_member for r in rows)
         assert [int(r.token_id) for r in repo.nft_items_by_status(s, "failed")] == [3]
         assert [[int(t) for t in toks] for _, toks in repo.trait_duplicates(s, coll.id)] == [[1, 4]]
 

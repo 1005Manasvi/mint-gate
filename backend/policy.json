@@ -1,12 +1,13 @@
 {
-  "version": "5.0.0",
+  "version": "5.1.0",
   "weights": {
     "ai_detector": 0.45,
     "manipulation": 0.1,
     "copy_move": 0.15,
     "copy_semantic": 0.2,
     "copy_exact": 0.1,
-    "provenance": 0.0
+    "provenance": 0.0,
+    "copy_member": 0.0
   },
   "checks": {
     "copy_exact": {
@@ -39,6 +40,12 @@
       "label": "Provenance evidence (C2PA, AI watermark, generator metadata, web)",
       "review": 0.5,
       "fail": 0.9
+    },
+    "copy_member": {
+      "label": "SSCD margin vs collection members (closer than the token's own nearest sibling; REVIEW-only)",
+      "review": 0.15,
+      "fail": 0.35,
+      "max_status": "REVIEW"
     }
   },
   "score": {
@@ -587,6 +594,96 @@
               ]
             }
           }
+        }
+      }
+    },
+    "copy_member": {
+      "source": "benchmark/member_rule.py",
+      "threshold": 0.15,
+      "rule": "max(q99.8 benchmark genuine VAL, live calibration-half max + 0.01), rounded up",
+      "benchmark_test": {
+        "member_copies_flagged": {
+          "rate": 0.1857,
+          "k": 26,
+          "n": 140,
+          "ci95": [
+            0.13,
+            0.2582
+          ]
+        },
+        "member_copies_right_member": {
+          "rate": 0.1857,
+          "k": 26,
+          "n": 140,
+          "ci95": [
+            0.13,
+            0.2582
+          ]
+        },
+        "genuine_flagged": {
+          "rate": 0.0007,
+          "k": 1,
+          "n": 1465,
+          "ci95": [
+            0.0001,
+            0.0039
+          ]
+        }
+      },
+      "live_report_half_genuine_flagged": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 624,
+        "ci95": [
+          0.0,
+          0.0061
+        ]
+      },
+      "copies": {
+        "copymint:cryptophunks (own token)": {
+          "rate": 0.0,
+          "k": 0,
+          "n": 275,
+          "ci95": [
+            0.0,
+            0.0138
+          ]
+        },
+        "copymint:phayc (own token)": {
+          "rate": 0.3833,
+          "k": 115,
+          "n": 300,
+          "ci95": [
+            0.3301,
+            0.4395
+          ]
+        },
+        "copymint:rrbayc (own token)": {
+          "rate": 0.3679,
+          "k": 110,
+          "n": 299,
+          "ci95": [
+            0.3152,
+            0.4239
+          ]
+        },
+        "oos_huggingnft": {
+          "rate": 0.0267,
+          "k": 16,
+          "n": 600,
+          "ci95": [
+            0.0165,
+            0.0429
+          ]
+        },
+        "oos_onchain (own token)": {
+          "rate": 0.0998,
+          "k": 40,
+          "n": 401,
+          "ci95": [
+            0.0741,
+            0.133
+          ]
         }
       }
     }

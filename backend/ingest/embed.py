@@ -243,5 +243,11 @@ def run(follow=False, interval=60, rebuild=False):
         if n:
             log(f"[embed] {n} references fingerprinted in {time.time() - t:.0f}s")
         if not follow:
+            with db.session() as s:
+                missing = s.execute(
+                    text("SELECT count(*) FROM reference_items WHERE status = 'ready' AND nn_sscd IS NULL")
+                ).scalar()
+            if missing:  # copy_semantic's density term is 0 for them: they would over-match
+                log(f"[embed] WARNING: {missing} ready references have no nn_sscd: run `--rebuild-nn` (or `--follow`)")
             return
         time.sleep(interval if not n else 1)

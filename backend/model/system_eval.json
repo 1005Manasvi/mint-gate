@@ -1,63 +1,63 @@
 {
   "n_per_category": 300,
   "sampling": "without replacement, n = min(n, pool)",
-  "policy_version": "5.0.0",
-  "copy_engine": "copy-engine-1.0.0+gpu",
+  "policy_version": "5.1.0",
+  "copy_engine": "copy-engine-1.1.0+gpu",
   "ai_detector": "ai-probe-clip-b32+siglip2-b16-20261106",
   "genuine_pass_rate": {
-    "rate": 0.7851,
-    "k": 1553,
+    "rate": 0.7735,
+    "k": 1530,
     "n": 1978,
     "ci95": [
-      0.7665,
-      0.8027
+      0.7545,
+      0.7914
     ]
   },
   "genuine_wrongly_failed": {
-    "rate": 0.0683,
-    "k": 135,
+    "rate": 0.0622,
+    "k": 123,
     "n": 1978,
     "ci95": [
-      0.058,
-      0.0802
+      0.0524,
+      0.0737
     ]
   },
   "forgery_stopped_rate (REVIEW or FAIL)": {
-    "rate": 0.8709,
-    "k": 3003,
-    "n": 3448,
+    "rate": 0.7855,
+    "k": 3651,
+    "n": 4648,
     "ci95": [
-      0.8593,
-      0.8817
+      0.7735,
+      0.7971
     ]
   },
   "forgery_auto_failed_rate": {
-    "rate": 0.6598,
-    "k": 2275,
-    "n": 3448,
+    "rate": 0.5318,
+    "k": 2472,
+    "n": 4648,
     "ci95": [
-      0.6438,
-      0.6754
+      0.5175,
+      0.5462
     ]
   },
   "v1_comparable_forgery_stopped": {
-    "rate": 0.9172,
-    "k": 2337,
+    "rate": 0.9199,
+    "k": 2344,
     "n": 2548,
     "ci95": [
-      0.9059,
-      0.9273
+      0.9088,
+      0.9299
     ]
   },
   "false_alarm_by_domain": {
     "collection NFTs": {
       "flagged (REVIEW or FAIL)": {
-        "rate": 0.1167,
-        "k": 70,
+        "rate": 0.1683,
+        "k": 101,
         "n": 600,
         "ci95": [
-          0.0934,
-          0.1448
+          0.1405,
+          0.2004
         ]
       },
       "failed": {
@@ -76,21 +76,21 @@
     },
     "pixel art": {
       "flagged (REVIEW or FAIL)": {
-        "rate": 0.1186,
-        "k": 42,
+        "rate": 0.096,
+        "k": 34,
         "n": 354,
         "ci95": [
-          0.089,
-          0.1565
+          0.0695,
+          0.1312
         ]
       },
       "failed": {
-        "rate": 0.0791,
-        "k": 28,
+        "rate": 0.0452,
+        "k": 16,
         "n": 354,
         "ci95": [
-          0.0553,
-          0.1119
+          0.028,
+          0.0722
         ]
       },
       "categories": [
@@ -247,7 +247,7 @@
           0.2619
         ]
       },
-      "mean_score": 87.2,
+      "mean_score": 87.3,
       "blocked_as_existing_onchain_token": {
         "rate": 0.0,
         "k": 0,
@@ -268,12 +268,12 @@
       "n": 300,
       "pool": 892,
       "PASS": {
-        "rate": 0.92,
-        "k": 276,
+        "rate": 0.96,
+        "k": 288,
         "n": 300,
         "ci95": [
-          0.8837,
-          0.9457
+          0.9314,
+          0.977
         ]
       },
       "REVIEW": {
@@ -286,24 +286,24 @@
         ]
       },
       "FAIL": {
-        "rate": 0.06,
-        "k": 18,
+        "rate": 0.02,
+        "k": 6,
         "n": 300,
         "ci95": [
-          0.0383,
-          0.0928
+          0.0092,
+          0.0429
         ]
       },
       "not_pass": {
-        "rate": 0.08,
-        "k": 24,
+        "rate": 0.04,
+        "k": 12,
         "n": 300,
         "ci95": [
-          0.0543,
-          0.1163
+          0.023,
+          0.0686
         ]
       },
-      "mean_score": 94.5,
+      "mean_score": 96.0,
       "blocked_as_existing_onchain_token": {
         "rate": 0.0,
         "k": 0,
@@ -314,7 +314,7 @@
         ]
       },
       "check_flags": {
-        "copy_exact:FAIL": 18,
+        "copy_exact:FAIL": 6,
         "copy_exact:REVIEW": 1,
         "copy_move:REVIEW": 5,
         "copy_semantic:REVIEW": 1
@@ -324,21 +324,21 @@
       "n": 300,
       "pool": 353,
       "PASS": {
-        "rate": 0.9267,
-        "k": 278,
+        "rate": 0.8667,
+        "k": 260,
         "n": 300,
         "ci95": [
-          0.8915,
-          0.9511
+          0.8235,
+          0.9005
         ]
       },
       "REVIEW": {
-        "rate": 0.0633,
-        "k": 19,
+        "rate": 0.1233,
+        "k": 37,
         "n": 300,
         "ci95": [
-          0.0409,
-          0.0968
+          0.0908,
+          0.1654
         ]
       },
       "FAIL": {
@@ -351,15 +351,15 @@
         ]
       },
       "not_pass": {
-        "rate": 0.0733,
-        "k": 22,
+        "rate": 0.1333,
+        "k": 40,
         "n": 300,
         "ci95": [
-          0.0489,
-          0.1085
+          0.0995,
+          0.1765
         ]
       },
-      "mean_score": 94.8,
+      "mean_score": 93.3,
       "blocked_as_existing_onchain_token": {
         "rate": 0.0,
         "k": 0,
@@ -370,6 +370,7 @@
         ]
       },
       "check_flags": {
+        "copy_member:REVIEW": 18,
         "copy_move:FAIL": 3,
         "copy_move:REVIEW": 8,
         "manipulation:REVIEW": 12
@@ -379,21 +380,21 @@
       "n": 300,
       "pool": 947,
       "PASS": {
-        "rate": 0.84,
-        "k": 252,
+        "rate": 0.7967,
+        "k": 239,
         "n": 300,
         "ci95": [
-          0.7943,
-          0.8771
+          0.7475,
+          0.8383
         ]
       },
       "REVIEW": {
-        "rate": 0.1267,
-        "k": 38,
+        "rate": 0.17,
+        "k": 51,
         "n": 300,
         "ci95": [
-          0.0937,
-          0.1691
+          0.1317,
+          0.2166
         ]
       },
       "FAIL": {
@@ -406,15 +407,15 @@
         ]
       },
       "not_pass": {
-        "rate": 0.16,
-        "k": 48,
+        "rate": 0.2033,
+        "k": 61,
         "n": 300,
         "ci95": [
-          0.1229,
-          0.2057
+          0.1617,
+          0.2525
         ]
       },
-      "mean_score": 91.7,
+      "mean_score": 92.5,
       "blocked_as_existing_onchain_token": {
         "rate": 0.0,
         "k": 0,
@@ -427,6 +428,7 @@
       "check_flags": {
         "ai_detector:FAIL": 10,
         "ai_detector:REVIEW": 10,
+        "copy_member:REVIEW": 17,
         "copy_move:REVIEW": 5,
         "manipulation:REVIEW": 24
       }
@@ -435,21 +437,21 @@
       "n": 54,
       "pool": 54,
       "PASS": {
-        "rate": 0.6667,
-        "k": 36,
+        "rate": 0.5926,
+        "k": 32,
         "n": 54,
         "ci95": [
-          0.5336,
-          0.7776
+          0.4597,
+          0.7132
         ]
       },
       "REVIEW": {
-        "rate": 0.1481,
-        "k": 8,
+        "rate": 0.2222,
+        "k": 12,
         "n": 54,
         "ci95": [
-          0.077,
-          0.266
+          0.132,
+          0.3494
         ]
       },
       "FAIL": {
@@ -462,12 +464,12 @@
         ]
       },
       "not_pass": {
-        "rate": 0.3333,
-        "k": 18,
+        "rate": 0.4074,
+        "k": 22,
         "n": 54,
         "ci95": [
-          0.2224,
-          0.4664
+          0.2868,
+          0.5403
         ]
       },
       "mean_score": 82.9,
@@ -483,6 +485,7 @@
       "check_flags": {
         "ai_detector:FAIL": 10,
         "ai_detector:REVIEW": 5,
+        "copy_member:REVIEW": 4,
         "copy_move:REVIEW": 2,
         "manipulation:REVIEW": 4
       }
@@ -581,7 +584,7 @@
           0.6313
         ]
       },
-      "mean_score": 70.4,
+      "mean_score": 70.5,
       "blocked_as_existing_onchain_token": {
         "rate": 0.0,
         "k": 0,
@@ -752,7 +755,7 @@
           0.9825
         ]
       },
-      "mean_score": 52.4,
+      "mean_score": 52.6,
       "blocked_as_existing_onchain_token": {
         "rate": 0.0,
         "k": 0,
@@ -825,61 +828,6 @@
         "manipulation:REVIEW": 13
       }
     },
-    "oos_ai_2025": {
-      "n": 300,
-      "pool": 733,
-      "PASS": {
-        "rate": 0.1133,
-        "k": 34,
-        "n": 300,
-        "ci95": [
-          0.0822,
-          0.1542
-        ]
-      },
-      "REVIEW": {
-        "rate": 0.24,
-        "k": 72,
-        "n": 300,
-        "ci95": [
-          0.1952,
-          0.2914
-        ]
-      },
-      "FAIL": {
-        "rate": 0.6467,
-        "k": 194,
-        "n": 300,
-        "ci95": [
-          0.591,
-          0.6986
-        ]
-      },
-      "not_pass": {
-        "rate": 0.8867,
-        "k": 266,
-        "n": 300,
-        "ci95": [
-          0.8458,
-          0.9178
-        ]
-      },
-      "mean_score": 56.1,
-      "blocked_as_existing_onchain_token": {
-        "rate": 0.0,
-        "k": 0,
-        "n": 300,
-        "ci95": [
-          0.0,
-          0.0126
-        ]
-      },
-      "check_flags": {
-        "ai_detector:FAIL": 194,
-        "ai_detector:REVIEW": 69,
-        "manipulation:REVIEW": 14
-      }
-    },
     "exact_duplicate": {
       "n": 300,
       "pool": 15037,
@@ -919,7 +867,7 @@
           1.0
         ]
       },
-      "mean_score": 81.5,
+      "mean_score": 81.9,
       "blocked_as_existing_onchain_token": {
         "rate": 0.0,
         "k": 0,
@@ -932,6 +880,7 @@
       "check_flags": {
         "ai_detector:REVIEW": 3,
         "copy_exact:FAIL": 300,
+        "copy_member:REVIEW": 24,
         "copy_move:FAIL": 1,
         "copy_move:REVIEW": 12,
         "copy_semantic:FAIL": 52,
@@ -943,42 +892,42 @@
       "n": 300,
       "pool": 12347,
       "PASS": {
-        "rate": 0.6067,
-        "k": 182,
+        "rate": 0.5833,
+        "k": 175,
         "n": 300,
         "ci95": [
-          0.5504,
-          0.6603
+          0.5268,
+          0.6377
         ]
       },
       "REVIEW": {
-        "rate": 0.39,
-        "k": 117,
+        "rate": 0.4067,
+        "k": 122,
         "n": 300,
         "ci95": [
-          0.3365,
-          0.4463
+          0.3526,
+          0.4631
         ]
       },
       "FAIL": {
-        "rate": 0.0033,
-        "k": 1,
+        "rate": 0.01,
+        "k": 3,
         "n": 300,
         "ci95": [
-          0.0006,
-          0.0186
+          0.0034,
+          0.029
         ]
       },
       "not_pass": {
-        "rate": 0.3933,
-        "k": 118,
+        "rate": 0.4167,
+        "k": 125,
         "n": 300,
         "ci95": [
-          0.3397,
-          0.4496
+          0.3623,
+          0.4732
         ]
       },
-      "mean_score": 90.5,
+      "mean_score": 91.7,
       "blocked_as_existing_onchain_token": {
         "rate": 0.0,
         "k": 0,
@@ -990,7 +939,8 @@
       },
       "check_flags": {
         "ai_detector:REVIEW": 12,
-        "copy_exact:FAIL": 1,
+        "copy_exact:FAIL": 3,
+        "copy_member:REVIEW": 11,
         "copy_move:REVIEW": 9,
         "manipulation:REVIEW": 103
       }
@@ -1176,16 +1126,238 @@
         "manipulation:REVIEW": 295
       }
     },
+    "copymint_cryptophunks": {
+      "n": 300,
+      "pool": 300,
+      "PASS": {
+        "rate": 0.9467,
+        "k": 284,
+        "n": 300,
+        "ci95": [
+          0.9151,
+          0.9669
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.0333,
+        "k": 10,
+        "n": 300,
+        "ci95": [
+          0.0182,
+          0.0603
+        ]
+      },
+      "FAIL": {
+        "rate": 0.02,
+        "k": 6,
+        "n": 300,
+        "ci95": [
+          0.0092,
+          0.0429
+        ]
+      },
+      "not_pass": {
+        "rate": 0.0533,
+        "k": 16,
+        "n": 300,
+        "ci95": [
+          0.0331,
+          0.0849
+        ]
+      },
+      "mean_score": 95.4,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "copy_exact:FAIL": 6,
+        "copy_exact:REVIEW": 1,
+        "copy_move:REVIEW": 3,
+        "manipulation:REVIEW": 6
+      }
+    },
+    "copymint_phayc": {
+      "n": 300,
+      "pool": 300,
+      "PASS": {
+        "rate": 0.4067,
+        "k": 122,
+        "n": 300,
+        "ci95": [
+          0.3526,
+          0.4631
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.5933,
+        "k": 178,
+        "n": 300,
+        "ci95": [
+          0.5369,
+          0.6474
+        ]
+      },
+      "FAIL": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "not_pass": {
+        "rate": 0.5933,
+        "k": 178,
+        "n": 300,
+        "ci95": [
+          0.5369,
+          0.6474
+        ]
+      },
+      "mean_score": 89.4,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "copy_member:REVIEW": 115,
+        "manipulation:REVIEW": 102
+      }
+    },
+    "copymint_rrbayc": {
+      "n": 300,
+      "pool": 300,
+      "PASS": {
+        "rate": 0.4333,
+        "k": 130,
+        "n": 300,
+        "ci95": [
+          0.3785,
+          0.4899
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.5667,
+        "k": 170,
+        "n": 300,
+        "ci95": [
+          0.5101,
+          0.6215
+        ]
+      },
+      "FAIL": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "not_pass": {
+        "rate": 0.5667,
+        "k": 170,
+        "n": 300,
+        "ci95": [
+          0.5101,
+          0.6215
+        ]
+      },
+      "mean_score": 89.5,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "copy_member:REVIEW": 110,
+        "manipulation:REVIEW": 94
+      }
+    },
+    "ai_nft_collection": {
+      "n": 300,
+      "pool": 518,
+      "PASS": {
+        "rate": 0.0833,
+        "k": 25,
+        "n": 300,
+        "ci95": [
+          0.0571,
+          0.1201
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.2567,
+        "k": 77,
+        "n": 300,
+        "ci95": [
+          0.2105,
+          0.309
+        ]
+      },
+      "FAIL": {
+        "rate": 0.66,
+        "k": 198,
+        "n": 300,
+        "ci95": [
+          0.6047,
+          0.7113
+        ]
+      },
+      "not_pass": {
+        "rate": 0.9167,
+        "k": 275,
+        "n": 300,
+        "ci95": [
+          0.8799,
+          0.9429
+        ]
+      },
+      "mean_score": 57.4,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 197,
+        "ai_detector:REVIEW": 55,
+        "copy_move:FAIL": 1,
+        "copy_move:REVIEW": 2,
+        "manipulation:REVIEW": 41,
+        "provenance:REVIEW": 5
+      }
+    },
     "exact_onchain_nft": {
       "n": 300,
       "pool": 3000,
       "PASS": {
-        "rate": 0.01,
-        "k": 3,
+        "rate": 0.02,
+        "k": 6,
         "n": 300,
         "ci95": [
-          0.0034,
-          0.029
+          0.0092,
+          0.0429
         ]
       },
       "REVIEW": {
@@ -1198,40 +1370,40 @@
         ]
       },
       "FAIL": {
-        "rate": 0.9833,
-        "k": 295,
+        "rate": 0.9733,
+        "k": 292,
         "n": 300,
         "ci95": [
-          0.9616,
-          0.9929
+          0.9483,
+          0.9864
         ]
       },
       "not_pass": {
-        "rate": 0.99,
-        "k": 297,
+        "rate": 0.98,
+        "k": 294,
         "n": 300,
         "ci95": [
-          0.971,
-          0.9966
+          0.9571,
+          0.9908
         ]
       },
-      "mean_score": 78.8,
+      "mean_score": 78.5,
       "blocked_as_existing_onchain_token": {
-        "rate": 0.76,
-        "k": 228,
+        "rate": 0.7067,
+        "k": 212,
         "n": 300,
         "ci95": [
-          0.7086,
-          0.8048
+          0.6528,
+          0.7553
         ]
       },
       "check_flags": {
-        "ai_detector:FAIL": 12,
-        "ai_detector:REVIEW": 23,
-        "copy_exact:FAIL": 293,
-        "copy_exact:REVIEW": 2,
-        "copy_move:FAIL": 1,
-        "copy_move:REVIEW": 2,
+        "ai_detector:FAIL": 10,
+        "ai_detector:REVIEW": 27,
+        "copy_exact:FAIL": 291,
+        "copy_exact:REVIEW": 1,
+        "copy_member:REVIEW": 1,
+        "copy_move:REVIEW": 1,
         "manipulation:REVIEW": 5
       }
     },
@@ -1239,58 +1411,114 @@
       "n": 300,
       "pool": 3000,
       "PASS": {
-        "rate": 0.6567,
-        "k": 197,
+        "rate": 0.64,
+        "k": 192,
         "n": 300,
         "ci95": [
-          0.6013,
-          0.7081
+          0.5842,
+          0.6922
         ]
       },
       "REVIEW": {
-        "rate": 0.2367,
-        "k": 71,
+        "rate": 0.2733,
+        "k": 82,
         "n": 300,
         "ci95": [
-          0.1921,
-          0.2879
+          0.226,
+          0.3264
         ]
       },
       "FAIL": {
-        "rate": 0.1067,
-        "k": 32,
+        "rate": 0.0867,
+        "k": 26,
         "n": 300,
         "ci95": [
-          0.0766,
-          0.1467
+          0.0598,
+          0.124
         ]
       },
       "not_pass": {
-        "rate": 0.3433,
-        "k": 103,
+        "rate": 0.36,
+        "k": 108,
         "n": 300,
         "ci95": [
-          0.2919,
-          0.3987
+          0.3078,
+          0.4158
         ]
       },
-      "mean_score": 83.6,
+      "mean_score": 83.3,
       "blocked_as_existing_onchain_token": {
-        "rate": 0.0167,
-        "k": 5,
+        "rate": 0.0033,
+        "k": 1,
         "n": 300,
         "ci95": [
-          0.0071,
-          0.0384
+          0.0006,
+          0.0186
         ]
       },
       "check_flags": {
         "ai_detector:FAIL": 25,
-        "ai_detector:REVIEW": 33,
-        "copy_exact:FAIL": 7,
+        "ai_detector:REVIEW": 43,
+        "copy_exact:FAIL": 1,
+        "copy_member:REVIEW": 1,
         "copy_move:FAIL": 1,
         "copy_move:REVIEW": 3,
-        "manipulation:REVIEW": 48
+        "manipulation:REVIEW": 51
+      }
+    },
+    "oos_ai_2025": {
+      "n": 300,
+      "pool": 733,
+      "PASS": {
+        "rate": 0.1133,
+        "k": 34,
+        "n": 300,
+        "ci95": [
+          0.0822,
+          0.1542
+        ]
+      },
+      "REVIEW": {
+        "rate": 0.24,
+        "k": 72,
+        "n": 300,
+        "ci95": [
+          0.1952,
+          0.2914
+        ]
+      },
+      "FAIL": {
+        "rate": 0.6467,
+        "k": 194,
+        "n": 300,
+        "ci95": [
+          0.591,
+          0.6986
+        ]
+      },
+      "not_pass": {
+        "rate": 0.8867,
+        "k": 266,
+        "n": 300,
+        "ci95": [
+          0.8458,
+          0.9178
+        ]
+      },
+      "mean_score": 56.1,
+      "blocked_as_existing_onchain_token": {
+        "rate": 0.0,
+        "k": 0,
+        "n": 300,
+        "ci95": [
+          0.0,
+          0.0126
+        ]
+      },
+      "check_flags": {
+        "ai_detector:FAIL": 194,
+        "ai_detector:REVIEW": 69,
+        "manipulation:REVIEW": 14
       }
     }
   }

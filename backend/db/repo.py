@@ -319,6 +319,9 @@ def add_nft_items(s, collection: NftCollection, items: list[dict]) -> int:
             "attributes": it.get("attributes"),
             "trait_hash": it.get("trait_hash"),
             "status": it.get("status", "pending"),
+            # a token of a generative collection: its siblings must never count as copies of it
+            # (before Phase 5b only migration 0004 set this, so later backfills / new mints were one-offs)
+            "collection_member": True,
         }
         for it in items
     ]

@@ -12,7 +12,7 @@ plus an on-chain rule that refuses to mint without a passing one.
 
 ## 2. System
 
-| Stage | Technique | Role in policy v5.0.0 |
+| Stage | Technique | Role in policy v5.1.0 |
 |---|---|---|
 | Provenance (Phase 5) | raw upload bytes: C2PA manifest (signature chain verified), Stable Diffusion / SDXL DWT-DCT watermark, generator metadata (A1111, ComfyUI, IPTC XMP), optional reverse image search | status only: AI evidence → FAIL, advisory → REVIEW, trusted capture → AI detector capped at REVIEW |
 | Preprocessing | format allow-list, decompression-bomb guard, RGB, SHA-256; *detector view* (same 256 px + JPEG normalisation as the training data) | — |
@@ -20,7 +20,8 @@ plus an on-chain rule that refuses to mint without a passing one.
 | `manipulation` (Phase 5) | TruFor (Noiseprint++ + SegFormer): score + localisation map; GPU profile only, non-commercial | weight 0.10, **REVIEW only** |
 | Copy-move | 16×16 block matching, shift-vector voting; score = dominance of one displacement | weight 0.15 |
 | `copy_semantic` (Phase 4) | SSCD + DINOv2-S fusion (+ 18 SSCD region crops on GPU), density-relative, vs one-off works | weight 0.20 |
-| `copy_exact` (Phase 4) | PDQ 256-bit (8 dihedral hashes), exact in-memory search; collection members only when pixel-identical | weight 0.10 |
+| `copy_exact` (Phase 4, 5b) | PDQ 256-bit (8 dihedral hashes), exact in-memory search; collection members only when pixel-identical (128 px BOX, 8 dihedral variants, level 16) | weight 0.10 |
+| `copy_member` (Phase 5b) | SSCD of the upload (as is + mirrored) vs the 10 nearest collection members; margin = cos − the member's own nearest-sibling cos | weight 0, **REVIEW only** |
 
 The ResNet-18 of policies 3.x / 4.0 is retired (section 4.6).
 
@@ -161,7 +162,7 @@ live 285k index, each fixed and re-measured):
    (exact search: 100 %): one-off works got their own partial HNSW index (100 %).
 2. A member rule calibrated on 1,500 CryptoPunks (PDQ + SSCD cosine ≥ 0.978) failed 36 % of genuine
    new punks against 9,000+: members now count only when pixel-identical (128 px nearest RGB,
-   2× margin below the closest genuine val sibling).
+   2× margin below the closest genuine val sibling; Phase 5b: BOX resampling, dihedral, level 16).
 3. HNSW over PDQ bits missed 6 % of exact matches: PDQ is searched exactly in memory (9 MB).
 4. The PDQ quality gate switched exact detection off for flat NFT art: re-uploads of indexed
    Ethereum NFTs passed 38 %; after the fixes 0 % pass (98 % FAIL).
@@ -207,7 +208,7 @@ Decision: ResNet-18 retired, TruFor REVIEW-only, GPU profile, never in the permi
 on 15.9 % [13.4, 18.8] of AI files (Midjourney 7 100 %, GPT-image-1.5 47.5 % via C2PA with an expired
 OpenAI certificate, ComfyUI / A1111 metadata on z-image and Illustrious).
 
-**End to end (policy 5.0.0, n = 300 per category, 20 categories).** Genuine PASS 78.5 % [76.6, 80.3]
+**End to end (policy 5.0.0, n = 300 per category, 20 categories; superseded by 5.1.0, section 4.7).** Genuine PASS 78.5 % [76.6, 80.3]
 (n = 1,978), wrongly failed 6.8 % [5.8, 8.0]; forgeries stopped 87.1 % [85.9, 88.2] (n = 3,448);
 modern AI FAIL 98.7 %, unseen Flux 95.3 %, 2025-26 generators stopped 88.7 % (64.7 % FAIL); exact
 re-uploads of indexed Ethereum NFTs 98.3 % FAIL. False alarms (REVIEW or FAIL): collection NFTs
@@ -221,6 +222,52 @@ retrained probe raised photo false alarms by 2.01 pp, so the gate refused it.
 **CPU latency.** p50 1.5-1.6 s / p95 1.9-2.0 s on 2 threads: above the 1.5 s budget (v4 1.10 / 1.35 s).
 int8 quantisation was rejected (-14.8 pp); an ONNX Runtime export saves ~180 ms but crashes next to
 the copy engine on this Windows laptop and is deferred to the Linux container (Phase 7).
+
+### 4.7 Phase 5b: real copymints and real AI NFT collections
+
+Phases 4-5 measured copies made by *us* (attacks on indexed works) and AI images from generator
+datasets. Phase 5b tests what is actually minted. Every contract was verified (Alchemy contract
+metadata, Etherscan / OpenSea pages, the project's own statements); none of these tokens is in the
+index. Full tables with addresses and evidence: `docs/models.md`.
+
+**Copymints.** 300 tokens each of RR/BAYC (Ryder Ripps' re-mint of the Bored Apes, same art), Phunky
+Ape Yacht Club (mirrored Bored Apes) and CryptoPhunks V2 (mirrored CryptoPunks), each uploaded as the
+copy's own token file and paired with its original (pairing checked by a foreground pixel distance,
+verified for all 874 copies whose original is indexed). The first run stopped every copymint, and was
+wrong: two index bugs made siblings look like copies. Fixed, the Phase 4 rule let 69 % / 66 % / 97 %
+of them through. Three bugs and one design limit explained it:
+1. `repo.add_nft_items` never set `collection_member`: every BAYC row added after Phase 4 was treated
+   as a one-off work, so its siblings "copied" it (fixed; 4k rows repaired).
+2. `ingest embed` without `--follow` left `nn_sscd` empty, which disables the density-relative
+   margin for those rows (now warns; repaired).
+3. The member pixel rule compared NEAREST-resampled 128 px images *as uploaded*: a mirrored copy, or a
+   full-size file against a thumbnail, never matched. A benchmark of 18 rule variants
+   (`benchmark/member_rule.py`) shipped BOX resampling over the 8 dihedral variants at level 16: live
+   genuine uploads wrongly matched to another token 45 → 6, benchmark member copies accepted 15 → 7.
+4. **Limit:** no pixel statistic against 128 px JPEG thumbnails separates a copy of detailed art from a
+   sibling. A new REVIEW-only check, `copy_member` (SSCD, as uploaded and mirrored, closer to a token
+   than that token's own nearest sibling by ≥ 0.15), now catches re-mints without auto-failing
+   anyone: benchmark genuine distractors 1 / 1,465, live held-out genuine 0 / 624.
+
+Result (policy 5.1.0, copy engine 1.1.0): RR/BAYC stopped 56.7 % [51.0, 62.2] (was 31.3 %), PHAYC
+59.3 % [53.7, 64.7] (was 34.0 %), with the right original named for 296 / 299 and 296 / 300.
+CryptoPhunks stay at 5.3 % [3.3, 8.5]: mirrored 24 px punks are siblings to every signal at 128 px.
+Storing larger reference images for the most-copied collections is the next fix (owner decision:
+document now, fix later).
+
+**AI NFT collections.** 518 tokens from 12 BrainDrops projects (AI art by named artists, method
+stated per project) and Bastard GAN Punks V2, added to the out-of-source set as group `ai_nft:*`
+(no retraining). The shipped detector flags 85.7 % [82.4, 88.5] (SigLIP 2 alone 81.3 %, CLIP-B/32
+74.5 %); 100 % on five projects, 0 % [0, 8.8] on BGAN Punks (GAN-generated pixel art). OOS AUC with the
+new group 0.911 [0.900, 0.920]. Provenance on the original files: no AI watermark or generator metadata;
+18 / 518 carry Photoshop C2PA credentials declaring AI-assisted edits (advisory REVIEW). On-chain art has
+essentially no provenance trail. End to end the gate stops 91.7 % [88.0, 94.3] of them (66.0 % FAIL).
+
+**End to end (policy 5.1.0, n = 300 per category, 24 categories).** Genuine PASS 77.4 % [75.5, 79.1]
+(n = 1,978), wrongly failed 6.2 % [5.2, 7.4]; forgeries stopped 78.5 % [77.4, 79.7] (n = 4,648): 87.4 %
+[86.2, 88.4] on 5.0.0's categories, 53.2 % [50.4, 56.1] on the four real-world Phase 5b ones. Genuine punks
+wrongly failed 6.0 → 2.0 %. Genuine collection NFTs pass 86.7 % (was 92.7 %): the extra REVIEWs are
+uploads of tokens that are themselves indexed (22 / 23 checked point to the token itself), i.e. re-mints.
 
 ## 5. Blockchain layer
 
@@ -243,15 +290,18 @@ source verified on Sourcify (exact match).
 
 ## 6. Limitations and future work
 
-1. **Error rates (policy 5.0.0, n = 300 per category).** 6.8 % [5.8, 8.0] of genuine uploads are
-   wrongly rejected and 14.7 % go to human review; 12.9 % of forgeries pass, mainly 2025-26
-   generators (11.3 % PASS) and edited copies of collection NFTs.
+1. **Error rates (policy 5.1.0, n = 300 per category).** 6.2 % [5.2, 7.4] of genuine uploads are
+   wrongly rejected and 16.4 % go to human review; 21.5 % of forgeries pass, mainly real copymints
+   (RR/BAYC 43 %, PHAYC 41 %, CryptoPhunks 95 % PASS), edited copies of collection NFTs and 2025-26
+   generators (11.3 % PASS).
 2. **Photographs.** Genuine photos from new sources are the weakest domain (42.3 % PASS, 24.0 %
    FAIL out-of-source). Trusted C2PA camera credentials cap the AI detector at REVIEW; the real fix
    is high-resolution genuine photos in training, gated by `retrain_gate.py`.
 3. **Generative collections.** Edited copies of collection items are indistinguishable from new
    siblings by appearance alone; only pixel-identical copies are blocked (TruFor now sends 34 % to
-   review). JPEG re-uploads of textured collection art usually exceed the pixel budget.
+   review). JPEG re-uploads of textured collection art usually exceed the pixel budget. Real copymints of detailed
+   art reach only REVIEW (`copy_member`): the index's 128 px thumbnails cannot prove identity, so larger
+   reference images are the planned fix; mirrored CryptoPunks (CryptoPhunks) are still missed.
 4. **Generators.** New generators appear monthly. The out-of-source protocol and the retraining gate
    (`training/retrain_gate.py`) are the process for them; one generator must stay held out.
 5. **CPU budget.** The CPU profile is ~0.1 s (p50) to ~0.5 s (p95) over the 1.5 s target; the GPU

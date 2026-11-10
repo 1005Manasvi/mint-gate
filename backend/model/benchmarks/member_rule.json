@@ -1,0 +1,2976 @@
+{
+ "generated": "2026-11-10 21:48",
+ "baseline": "nearest@48",
+ "pixel_rule_winner": "box+dihedral@16",
+ "pixel_rule_candidates": {
+  "nearest@48": {
+   "budget": 13,
+   "closest_genuine_val_sibling": 27,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.1071,
+     "k": 15,
+     "n": 140,
+     "ci95": [
+      0.066,
+      0.1693
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0493,
+      "k": 44,
+      "n": 892,
+      "ci95": [
+       0.0369,
+       0.0656
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0025,
+      "k": 1,
+      "n": 401,
+      "ci95": [
+       0.0004,
+       0.014
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0025,
+      "k": 1,
+      "n": 401,
+      "ci95": [
+       0.0004,
+       0.014
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 45,
+   "genuine_false_total": 45,
+   "copies_accepted_total": 16
+  },
+  "nearest@24": {
+   "budget": 26,
+   "closest_genuine_val_sibling": 53,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.05,
+     "k": 7,
+     "n": 140,
+     "ci95": [
+      0.0244,
+      0.0996
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0269,
+      "k": 24,
+      "n": 892,
+      "ci95": [
+       0.0181,
+       0.0397
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 401,
+      "ci95": [
+       0.0,
+       0.0095
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0025,
+      "k": 1,
+      "n": 401,
+      "ci95": [
+       0.0004,
+       0.014
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 25,
+   "genuine_false_total": 25,
+   "copies_accepted_total": 7
+  },
+  "nearest@16": {
+   "budget": 59,
+   "closest_genuine_val_sibling": 119,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.0286,
+     "k": 4,
+     "n": 140,
+     "ci95": [
+      0.0112,
+      0.0712
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0673,
+      "k": 60,
+      "n": 892,
+      "ci95": [
+       0.0526,
+       0.0856
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 401,
+      "ci95": [
+       0.0,
+       0.0095
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0025,
+      "k": 1,
+      "n": 401,
+      "ci95": [
+       0.0004,
+       0.014
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 61,
+   "genuine_false_total": 61,
+   "copies_accepted_total": 4
+  },
+  "nearest+dihedral@48": {
+   "budget": 13,
+   "closest_genuine_val_sibling": 27,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.1071,
+     "k": 15,
+     "n": 140,
+     "ci95": [
+      0.066,
+      0.1693
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0493,
+      "k": 44,
+      "n": 892,
+      "ci95": [
+       0.0369,
+       0.0656
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0025,
+      "k": 1,
+      "n": 401,
+      "ci95": [
+       0.0004,
+       0.014
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0025,
+      "k": 1,
+      "n": 401,
+      "ci95": [
+       0.0004,
+       0.014
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 45,
+   "genuine_false_total": 45,
+   "copies_accepted_total": 16
+  },
+  "nearest+dihedral@24": {
+   "budget": 26,
+   "closest_genuine_val_sibling": 53,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.05,
+     "k": 7,
+     "n": 140,
+     "ci95": [
+      0.0244,
+      0.0996
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0269,
+      "k": 24,
+      "n": 892,
+      "ci95": [
+       0.0181,
+       0.0397
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 401,
+      "ci95": [
+       0.0,
+       0.0095
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0025,
+      "k": 1,
+      "n": 401,
+      "ci95": [
+       0.0004,
+       0.014
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 25,
+   "genuine_false_total": 25,
+   "copies_accepted_total": 7
+  },
+  "nearest+dihedral@16": {
+   "budget": 59,
+   "closest_genuine_val_sibling": 119,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.0286,
+     "k": 4,
+     "n": 140,
+     "ci95": [
+      0.0112,
+      0.0712
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0673,
+      "k": 60,
+      "n": 892,
+      "ci95": [
+       0.0526,
+       0.0856
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 401,
+      "ci95": [
+       0.0,
+       0.0095
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0025,
+      "k": 1,
+      "n": 401,
+      "ci95": [
+       0.0004,
+       0.014
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 61,
+   "genuine_false_total": 61,
+   "copies_accepted_total": 4
+  },
+  "lanczos@48": {
+   "budget": 10,
+   "closest_genuine_val_sibling": 20,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.2143,
+     "k": 30,
+     "n": 140,
+     "ci95": [
+      0.1544,
+      0.2894
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0014,
+     "k": 2,
+     "n": 1465,
+     "ci95": [
+      0.0004,
+      0.005
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0493,
+      "k": 44,
+      "n": 892,
+      "ci95": [
+       0.0369,
+       0.0656
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0667,
+      "k": 40,
+      "n": 600,
+      "ci95": [
+       0.0493,
+       0.0895
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.419,
+      "k": 168,
+      "n": 401,
+      "ci95": [
+       0.3717,
+       0.4678
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0798,
+      "k": 32,
+      "n": 401,
+      "ci95": [
+       0.0571,
+       0.1105
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 76,
+   "genuine_false_total": 78,
+   "copies_accepted_total": 198
+  },
+  "lanczos@24": {
+   "budget": 18,
+   "closest_genuine_val_sibling": 36,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.0714,
+     "k": 10,
+     "n": 140,
+     "ci95": [
+      0.0393,
+      0.1265
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0135,
+      "k": 12,
+      "n": 892,
+      "ci95": [
+       0.0077,
+       0.0234
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0224,
+      "k": 9,
+      "n": 401,
+      "ci95": [
+       0.0119,
+       0.0421
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0324,
+      "k": 13,
+      "n": 401,
+      "ci95": [
+       0.019,
+       0.0547
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 25,
+   "genuine_false_total": 25,
+   "copies_accepted_total": 19
+  },
+  "lanczos@16": {
+   "budget": 23,
+   "closest_genuine_val_sibling": 47,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.0357,
+     "k": 5,
+     "n": 140,
+     "ci95": [
+      0.0153,
+      0.0809
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0067,
+      "k": 6,
+      "n": 892,
+      "ci95": [
+       0.0031,
+       0.0146
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0075,
+      "k": 3,
+      "n": 401,
+      "ci95": [
+       0.0025,
+       0.0218
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0324,
+      "k": 13,
+      "n": 401,
+      "ci95": [
+       0.019,
+       0.0547
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 19,
+   "genuine_false_total": 19,
+   "copies_accepted_total": 8
+  },
+  "lanczos+dihedral@48": {
+   "budget": 0,
+   "closest_genuine_val_sibling": 0,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.1857,
+     "k": 26,
+     "n": 140,
+     "ci95": [
+      0.13,
+      0.2582
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0392,
+      "k": 35,
+      "n": 892,
+      "ci95": [
+       0.0283,
+       0.0541
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0183,
+      "k": 11,
+      "n": 600,
+      "ci95": [
+       0.0103,
+       0.0325
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0923,
+      "k": 37,
+      "n": 401,
+      "ci95": [
+       0.0677,
+       0.1246
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0349,
+      "k": 14,
+      "n": 401,
+      "ci95": [
+       0.0209,
+       0.0577
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.2145,
+      "k": 59,
+      "n": 275,
+      "ci95": [
+       0.1701,
+       0.2668
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0145,
+      "k": 4,
+      "n": 275,
+      "ci95": [
+       0.0057,
+       0.0368
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 49,
+   "genuine_false_total": 49,
+   "copies_accepted_total": 122
+  },
+  "lanczos+dihedral@24": {
+   "budget": 18,
+   "closest_genuine_val_sibling": 36,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.1,
+     "k": 14,
+     "n": 140,
+     "ci95": [
+      0.0605,
+      0.1609
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0135,
+      "k": 12,
+      "n": 892,
+      "ci95": [
+       0.0077,
+       0.0234
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0224,
+      "k": 9,
+      "n": 401,
+      "ci95": [
+       0.0119,
+       0.0421
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0324,
+      "k": 13,
+      "n": 401,
+      "ci95": [
+       0.019,
+       0.0547
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.1127,
+      "k": 31,
+      "n": 275,
+      "ci95": [
+       0.0806,
+       0.1556
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0036,
+      "k": 1,
+      "n": 275,
+      "ci95": [
+       0.0006,
+       0.0203
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 25,
+   "genuine_false_total": 25,
+   "copies_accepted_total": 54
+  },
+  "lanczos+dihedral@16": {
+   "budget": 23,
+   "closest_genuine_val_sibling": 47,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.05,
+     "k": 7,
+     "n": 140,
+     "ci95": [
+      0.0244,
+      0.0996
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0067,
+      "k": 6,
+      "n": 892,
+      "ci95": [
+       0.0031,
+       0.0146
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0075,
+      "k": 3,
+      "n": 401,
+      "ci95": [
+       0.0025,
+       0.0218
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0324,
+      "k": 13,
+      "n": 401,
+      "ci95": [
+       0.019,
+       0.0547
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0218,
+      "k": 6,
+      "n": 275,
+      "ci95": [
+       0.01,
+       0.0468
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0036,
+      "k": 1,
+      "n": 275,
+      "ci95": [
+       0.0006,
+       0.0203
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 19,
+   "genuine_false_total": 19,
+   "copies_accepted_total": 16
+  },
+  "box@48": {
+   "budget": 10,
+   "closest_genuine_val_sibling": 20,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.2,
+     "k": 28,
+     "n": 140,
+     "ci95": [
+      0.1422,
+      0.2739
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0007,
+     "k": 1,
+     "n": 1465,
+     "ci95": [
+      0.0001,
+      0.0039
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0549,
+      "k": 49,
+      "n": 892,
+      "ci95": [
+       0.0418,
+       0.0719
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.065,
+      "k": 39,
+      "n": 600,
+      "ci95": [
+       0.0479,
+       0.0876
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.2743,
+      "k": 110,
+      "n": 401,
+      "ci95": [
+       0.2329,
+       0.32
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0773,
+      "k": 31,
+      "n": 401,
+      "ci95": [
+       0.055,
+       0.1076
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 80,
+   "genuine_false_total": 81,
+   "copies_accepted_total": 138
+  },
+  "box@24": {
+   "budget": 18,
+   "closest_genuine_val_sibling": 36,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.0714,
+     "k": 10,
+     "n": 140,
+     "ci95": [
+      0.0393,
+      0.1265
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0146,
+      "k": 13,
+      "n": 892,
+      "ci95": [
+       0.0085,
+       0.0248
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0125,
+      "k": 5,
+      "n": 401,
+      "ci95": [
+       0.0053,
+       0.0289
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0274,
+      "k": 11,
+      "n": 401,
+      "ci95": [
+       0.0154,
+       0.0484
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 24,
+   "genuine_false_total": 24,
+   "copies_accepted_total": 15
+  },
+  "box@16": {
+   "budget": 22,
+   "closest_genuine_val_sibling": 45,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.0357,
+     "k": 5,
+     "n": 140,
+     "ci95": [
+      0.0153,
+      0.0809
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0056,
+      "k": 5,
+      "n": 892,
+      "ci95": [
+       0.0024,
+       0.0131
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 401,
+      "ci95": [
+       0.0,
+       0.0095
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0025,
+      "k": 1,
+      "n": 401,
+      "ci95": [
+       0.0004,
+       0.014
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 275,
+      "ci95": [
+       0.0,
+       0.0138
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 6,
+   "genuine_false_total": 6,
+   "copies_accepted_total": 5
+  },
+  "box+dihedral@48": {
+   "budget": 0,
+   "closest_genuine_val_sibling": 0,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.1857,
+     "k": 26,
+     "n": 140,
+     "ci95": [
+      0.13,
+      0.2582
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0392,
+      "k": 35,
+      "n": 892,
+      "ci95": [
+       0.0283,
+       0.0541
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.01,
+      "k": 6,
+      "n": 600,
+      "ci95": [
+       0.0046,
+       0.0216
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0623,
+      "k": 25,
+      "n": 401,
+      "ci95": [
+       0.0426,
+       0.0904
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0299,
+      "k": 12,
+      "n": 401,
+      "ci95": [
+       0.0172,
+       0.0516
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.2945,
+      "k": 81,
+      "n": 275,
+      "ci95": [
+       0.2438,
+       0.351
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0182,
+      "k": 5,
+      "n": 275,
+      "ci95": [
+       0.0078,
+       0.0418
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 47,
+   "genuine_false_total": 47,
+   "copies_accepted_total": 132
+  },
+  "box+dihedral@24": {
+   "budget": 18,
+   "closest_genuine_val_sibling": 36,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.1,
+     "k": 14,
+     "n": 140,
+     "ci95": [
+      0.0605,
+      0.1609
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0146,
+      "k": 13,
+      "n": 892,
+      "ci95": [
+       0.0085,
+       0.0248
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0125,
+      "k": 5,
+      "n": 401,
+      "ci95": [
+       0.0053,
+       0.0289
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0274,
+      "k": 11,
+      "n": 401,
+      "ci95": [
+       0.0154,
+       0.0484
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.1273,
+      "k": 35,
+      "n": 275,
+      "ci95": [
+       0.093,
+       0.1719
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0036,
+      "k": 1,
+      "n": 275,
+      "ci95": [
+       0.0006,
+       0.0203
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 24,
+   "genuine_false_total": 24,
+   "copies_accepted_total": 54
+  },
+  "box+dihedral@16": {
+   "budget": 22,
+   "closest_genuine_val_sibling": 45,
+   "benchmark_test": {
+    "member_copies_accepted": {
+     "rate": 0.05,
+     "k": 7,
+     "n": 140,
+     "ci95": [
+      0.0244,
+      0.0996
+     ]
+    },
+    "member_copies_wrong_member": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 140,
+     "ci95": [
+      0.0,
+      0.0267
+     ]
+    },
+    "genuine_falsely_accepted": {
+     "rate": 0.0,
+     "k": 0,
+     "n": 1465,
+     "ci95": [
+      0.0,
+      0.0026
+     ]
+    }
+   },
+   "live_genuine": {
+    "new_punk": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 892,
+      "ci95": [
+       0.0,
+       0.0043
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0056,
+      "k": 5,
+      "n": 892,
+      "ci95": [
+       0.0024,
+       0.0131
+      ]
+     }
+    },
+    "oos_huggingnft": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 600,
+      "ci95": [
+       0.0,
+       0.0064
+      ]
+     }
+    },
+    "oos_onchain": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 401,
+      "ci95": [
+       0.0,
+       0.0095
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0025,
+      "k": 1,
+      "n": 401,
+      "ci95": [
+       0.0004,
+       0.014
+      ]
+     }
+    }
+   },
+   "copymint": {
+    "copymint:rrbayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 299,
+      "ci95": [
+       0.0,
+       0.0127
+      ]
+     }
+    },
+    "copymint:cryptophunks": {
+     "self_accepted": {
+      "rate": 0.0182,
+      "k": 5,
+      "n": 275,
+      "ci95": [
+       0.0078,
+       0.0418
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0036,
+      "k": 1,
+      "n": 275,
+      "ci95": [
+       0.0006,
+       0.0203
+      ]
+     }
+    },
+    "copymint:phayc": {
+     "self_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     },
+     "other_accepted": {
+      "rate": 0.0,
+      "k": 0,
+      "n": 300,
+      "ci95": [
+       0.0,
+       0.0126
+      ]
+     }
+    }
+   },
+   "genuine_false_live": 6,
+   "genuine_false_total": 6,
+   "copies_accepted_total": 12
+  }
+ },
+ "copy_member": {
+  "threshold": 0.15,
+  "rule": "max(q99.8 benchmark genuine VAL, live calibration-half max + 0.01), rounded up",
+  "benchmark_test": {
+   "member_copies_flagged": {
+    "rate": 0.1857,
+    "k": 26,
+    "n": 140,
+    "ci95": [
+     0.13,
+     0.2582
+    ]
+   },
+   "member_copies_right_member": {
+    "rate": 0.1857,
+    "k": 26,
+    "n": 140,
+    "ci95": [
+     0.13,
+     0.2582
+    ]
+   },
+   "genuine_flagged": {
+    "rate": 0.0007,
+    "k": 1,
+    "n": 1465,
+    "ci95": [
+     0.0001,
+     0.0039
+    ]
+   }
+  },
+  "live_report_half_genuine_flagged": {
+   "rate": 0.0,
+   "k": 0,
+   "n": 624,
+   "ci95": [
+    0.0,
+    0.0061
+   ]
+  },
+  "copies": {
+   "copymint:cryptophunks (own token)": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 275,
+    "ci95": [
+     0.0,
+     0.0138
+    ]
+   },
+   "copymint:phayc (own token)": {
+    "rate": 0.3833,
+    "k": 115,
+    "n": 300,
+    "ci95": [
+     0.3301,
+     0.4395
+    ]
+   },
+   "copymint:rrbayc (own token)": {
+    "rate": 0.3679,
+    "k": 110,
+    "n": 299,
+    "ci95": [
+     0.3152,
+     0.4239
+    ]
+   },
+   "oos_huggingnft": {
+    "rate": 0.0267,
+    "k": 16,
+    "n": 600,
+    "ci95": [
+     0.0165,
+     0.0429
+    ]
+   },
+   "oos_onchain (own token)": {
+    "rate": 0.0998,
+    "k": 40,
+    "n": 401,
+    "ci95": [
+     0.0741,
+     0.133
+    ]
+   }
+  }
+ }
+}

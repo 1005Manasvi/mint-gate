@@ -253,3 +253,34 @@ and anything the next phase must know. Keep entries brief: this file is read at 
 - **Next: Phase 5b** (`phase-5b-nft-datasets.md`, decided 2026-11-07, before Phase 6): Phase 5's evaluation
   sets are not NFT-native (OpenFake = photo-realistic news, forgery sets = edited photos). Measure the gate on
   real copymint collections and real AI-generated NFT collections first; then Phase 6.
+
+## Phase 5b: NFT-native evaluation, real copymints + real AI NFT collections (done, 2026-11-11)
+- **Copymint data** (`training/copymint_data.py` → `data/copymint/`, 900 files, never in `reference_items`):
+  RR/BAYC, Phunky Ape Yacht Club, CryptoPhunks V2 (addresses + evidence in `docs/models.md`); token files via
+  Alchemy CDN / on-chain `tokenURI` + Pinata gateway; pairing to the original verified by foreground MAD for all
+  874 copies with an indexed original. `training/copymint_eval.py` = full pipeline per copy + miss causes.
+- **Index bugs found and fixed:** `repo.add_nft_items` did not set `collection_member` (every post-Phase-4 BAYC
+  row was a one-off; repaired by SQL + `ingest.embed.update_nn`); plain `ingest embed` leaves `nn_sscd` empty
+  (now warns). Index: 288,860 ready references.
+- **Copy engine 1.1.0 / policy 5.1.0** (`benchmark/member_rule.py --ship`): member pixel rule = BOX, dihedral,
+  level 16, 22 px (18 variants gated; live genuine false matches 45 → 6); new **REVIEW-only `copy_member`**
+  check (SSCD as-is + mirrored vs members, margin cos − nn_sscd ≥ 0.15; benchmark genuine 1 / 1,465, live
+  held-out 0 / 624). Copymints stopped: RR/BAYC 31 → **56.7 %**, PHAYC 34 → **59.3 %** (0 % FAIL), right
+  original named 296/299, 296/300; **CryptoPhunks 5.3 %** (open). Owner decision: auto-FAIL of detailed-art
+  copymints needs larger reference images than the 128 px thumbnails: **planned, not done**.
+- **AI NFT data** (`training/ai_nft_data.py`, owner-approved list): 12 BrainDrops projects + Bastard GAN Punks
+  V2, 518 files, OOS group `ai_nft:*` (domain `ai_nft_collection`, select / report split), originals in
+  `data/ai_nft/raw/` (`as_upload` shrinks > 10 MB / 40 MP files). No retraining: detector flags **85.7 %
+  [82.4, 88.5]**; BGAN Punks 0 % [0, 8.8] (GAN pixel art); OOS AUC with the group 0.911. Provenance on the
+  originals (`provenance_eval --nft`): no AI evidence, 18 Photoshop C2PA "AI-edited" → advisory REVIEW.
+- **End to end (policy 5.1.0, 24 categories, n = 300):** genuine PASS 77.4 % [75.5, 79.1], wrongly failed
+  6.2 % [5.2, 7.4]; 5.0.0's forgery categories stopped 87.4 % [86.2, 88.4]; real AI NFTs stopped 91.7 %;
+  genuine punks FAIL 6.0 → 2.0 %. The extra REVIEWs on "genuine" collection NFTs (+6 pp) are re-uploads of
+  indexed tokens (22 / 23 checked point to the token itself). `oos_ai_2025` now excludes `ai_nft_collection`.
+  Phase 5's AI table and end-to-end run kept as `model/benchmarks/ai_detector_phase5*.json|md`,
+  `model/system_eval_policy5.0.0.json`.
+- **Tests:** 176 fast pytest pass (+ `test_nft_eval_data.py` 6, `copy_member` engine test), frontend 5;
+  ruff / prettier clean. `pre-commit` itself is blocked on this laptop by Windows Application Control
+  (WinError 4551): run the linters directly or rely on CI.
+- **Next: Phase 6** (owner inputs above). Open for a later phase: larger references for copymint auto-FAIL,
+  mirrored-punk copymints, BGAN-style GAN pixel art.

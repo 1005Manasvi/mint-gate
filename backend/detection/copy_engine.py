@@ -7,6 +7,10 @@
                query is against a background set of AI images, SSCD's score normalisation)
                                                                             -> copy_semantic
   4. verify    ALIKED + LightGlue + MAGSAC on the top-10                    -> copy_geometric (inliers)
+  5. members   (Phase 5b, if `member_semantic` is set) SSCD of the upload and of its mirror vs the
+               collection members: margin = cos(upload, member) - nn_sscd(member), i.e. closer to a
+               token than that token's own nearest sibling (re-mints such as RR/BAYC / PHAYC)
+                                                                            -> copy_member (REVIEW-only)
 
 Every parameter comes from `model/copy_engine.json`, written by `python -m benchmark.copydet
 evaluate` from the VAL split of the benchmark, so the engine runs exactly what was measured.
@@ -20,6 +24,7 @@ import json
 from dataclasses import dataclass, field
 
 import numpy as np
+from PIL import Image
 
 from config import MODEL_DIR
 from detection import fingerprints as fp
@@ -27,6 +32,7 @@ from detection import fingerprints as fp
 PARAMS_FILE = MODEL_DIR / "copy_engine.json"
 BACKGROUND_FILE = MODEL_DIR / "copydet" / "background.npz"
 NO_MATCH_BITS = 256
+NO_MEMBER = -1.0  # copy_member value when the index has no collection members
 
 
 def load_params(path=PARAMS_FILE) -> dict:
@@ -41,6 +47,7 @@ class Fingerprint:
     sscd: np.ndarray
     dino: np.ndarray | None = None
     crops: np.ndarray | None = None  # (n_windows, 512) SSCD region descriptors (query side only)
+    sscd_mirror: np.ndarray | None = None  # SSCD of the left-right mirror (query side, copy_member)
 
     def vector(self, w: float) -> np.ndarray:
         """The ANN vector: inner product of two of them = w * cos_sscd + (1 - w) * cos_dino."""
@@ -95,6 +102,12 @@ class CopyEngine:
         """Reference fingerprints (query=True adds the dihedral PDQ hashes and region crops)."""
         sscd = self.sscd.encode(images)
         dino = self.dino.encode(images) if self.dino else [None] * len(images)
+        ms = self.p.get("member_semantic") or {}
+        mirror = (
+            self.sscd.encode([im.transpose(Image.FLIP_LEFT_RIGHT) for im in images])
+            if query and ms.get("mirror")
+            else [None] * len(images)
+        )
         out = []
         for i, im in enumerate(images):
             h, q = fp.pdq(im)
@@ -106,6 +119,7 @@ class CopyEngine:
                     sscd=sscd[i],
                     dino=dino[i],
                     crops=self._crops(im) if query and self.regions else None,
+                    sscd_mirror=mirror[i],
                 )
             )
         return out
@@ -154,11 +168,16 @@ class CopyEngine:
         """PDQ-close references, filtered per kind of reference:
         one-off works: PDQ quality >= pdq_min_quality (flat images make the hash unreliable);
         collection members: siblings are PDQ-close by design (CryptoPunks: 0-10 bits apart), so the
-        match must be pixel-identical too: <= member_max_diff_px strongly differing pixels at 64x64
-        (training/calibrate.py). The quality gate does not apply there: flat NFT art has low PDQ
-        quality, and the pixel check is the stronger test anyway."""
+        match must be pixel-identical too: <= member_max_diff_px strongly differing pixels at 128 px
+        (training/calibrate.py). `member_rule` (benchmark/member_rule.py) sets the resampling filter
+        and whether the 8 rotations / mirrors of the upload are tried (mirrored copymints such as
+        CryptoPhunks); without it the Phase 4 rule runs (NEAREST, as uploaded). The quality gate does
+        not apply there: flat NFT art has low PDQ quality, and the pixel check is the stronger test."""
         cands = index.exact(f.pdq8, self.p["pdq_max_bits"])
         max_px = self.p.get("member_max_diff_px", 0)
+        rule = self.p.get("member_rule") or {}
+        resample, dihedral = rule.get("resample", "nearest"), bool(rule.get("dihedral", False))
+        level = int(rule.get("level", 48))
         out, q64, tried = [], None, 0
         for r, d in sorted(cands, key=lambda x: x[1]):
             if not r.collection:
@@ -169,13 +188,30 @@ class CopyEngine:
                 continue  # one verified member is enough evidence; at most 5 image loads
             tried += 1
             try:
-                ref = fp.rgb_small(index.load_image(r))
+                ref = fp.rgb_small(index.load_image(r), resample)
             except (OSError, ValueError):
                 continue
-            q64 = fp.rgb_small(img) if q64 is None else q64
-            if fp.differing_pixels(q64, ref) <= max_px:
+            if q64 is None:
+                q = fp.rgb_small(img, resample)
+                q64 = fp.dihedral_small(q) if dihedral else [q]
+            if fp.member_diff(q64, ref, level) <= max_px:
                 out.append((r, d))
         return out
+
+    # ---- collection members (Phase 5b) --------------------------------------------------------------
+
+    def _member(self, f: Fingerprint, index):
+        """(margin, member, mirrored) of the best member: cos - nn_sscd, as uploaded or mirrored."""
+        ms = self.p["member_semantic"]
+        best = (NO_MEMBER, None, False)
+        for vec, mirrored in ((f.sscd, False), (f.sscd_mirror, True)):
+            if vec is None:
+                continue
+            for r in index.knn_members(vec, ms.get("k", 10)):
+                m = float(r.sscd @ vec) - r.nn_sscd
+                if m > best[0]:
+                    best = (m, r, mirrored)
+        return best
 
     # ---- analysis ---------------------------------------------------------------------------------
 
@@ -234,6 +270,10 @@ class CopyEngine:
         if self.matcher is not None:  # only when the benchmark gate adopted LightGlue
             values["copy_geometric"] = int(verified[0]) if verified else 0
             details["copy_geometric"] = {"nearest": verified[1].name if verified else None}
+        if self.p.get("member_semantic"):  # only when benchmark/member_rule.py shipped it
+            m, r, mirrored = self._member(f, index)
+            values["copy_member"] = round(m, 4)
+            details["copy_member"] = {"nearest": r.name if r else None, "mirrored": mirrored}
         return {
             "values": values,
             "details": details,

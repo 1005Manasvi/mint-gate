@@ -37,3 +37,4 @@ backend/model/trufor/*.safetensors
 backend/model/trufor/*.pth.tar
 backend/model/backbones/*/vision.onnx
 backend/model/system_eval_progress.json
+backend/model/copymint_eval_progress*.json

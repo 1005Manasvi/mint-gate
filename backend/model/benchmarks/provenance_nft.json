@@ -1,0 +1,447 @@
+{
+ "n": 1418,
+ "groups": {
+  "ai_nft:all_ai_art_looks_the_same": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:anthrocinematica": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:bastard_gan_punks_v2": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:brain_loops": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:clipmatrix_creatures": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:confluence": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:corpo_real": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.225,
+    "k": 9,
+    "n": 40,
+    "ci95": [
+     0.1232,
+     0.375
+    ]
+   },
+   "signals": {
+    "c2pa": 9
+   },
+   "examples": [
+    "C2PA credentials declare AI-assisted editing"
+   ]
+  },
+  "ai_nft:dreamscapes": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:genesis": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:life_in_west_america": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:mappings": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 39,
+    "ci95": [
+     0.0,
+     0.0897
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 39,
+    "ci95": [
+     0.0,
+     0.0897
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:materia_mania": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 40,
+    "ci95": [
+     0.0,
+     0.0876
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "ai_nft:new_realities": {
+   "label": "ai",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 39,
+    "ci95": [
+     0.0,
+     0.0897
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.2308,
+    "k": 9,
+    "n": 39,
+    "ci95": [
+     0.1265,
+     0.3834
+    ]
+   },
+   "signals": {
+    "c2pa": 9
+   },
+   "examples": [
+    "C2PA credentials declare AI-assisted editing"
+   ]
+  },
+  "copymint:cryptophunks": {
+   "label": "copy",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 300,
+    "ci95": [
+     0.0,
+     0.0126
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 300,
+    "ci95": [
+     0.0,
+     0.0126
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "copymint:phayc": {
+   "label": "copy",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 300,
+    "ci95": [
+     0.0,
+     0.0126
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 300,
+    "ci95": [
+     0.0,
+     0.0126
+    ]
+   },
+   "signals": {},
+   "examples": []
+  },
+  "copymint:rrbayc": {
+   "label": "copy",
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 300,
+    "ci95": [
+     0.0,
+     0.0126
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 300,
+    "ci95": [
+     0.0,
+     0.0126
+    ]
+   },
+   "signals": {},
+   "examples": []
+  }
+ },
+ "pooled": {
+  "ai": {
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 518,
+    "ci95": [
+     0.0,
+     0.0074
+    ]
+   },
+   "any_evidence": {
+    "rate": 0.0347,
+    "k": 18,
+    "n": 518,
+    "ci95": [
+     0.0221,
+     0.0543
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0347,
+    "k": 18,
+    "n": 518,
+    "ci95": [
+     0.0221,
+     0.0543
+    ]
+   },
+   "signals": {
+    "c2pa": 18
+   }
+  },
+  "copy": {
+   "ai_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 900,
+    "ci95": [
+     0.0,
+     0.0043
+    ]
+   },
+   "any_evidence": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 900,
+    "ci95": [
+     0.0,
+     0.0043
+    ]
+   },
+   "c2pa_present": {
+    "rate": 0.0,
+    "k": 0,
+    "n": 900,
+    "ci95": [
+     0.0,
+     0.0043
+    ]
+   },
+   "signals": {}
+  }
+ },
+ "ms_p50": 17,
+ "ms_p95": 388
+}

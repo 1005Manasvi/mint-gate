@@ -79,13 +79,19 @@ def features(keys, batch=32):
             files = [r["file"] for r in recs]
             if not files:
                 continue
-            if out.exists() and list(np.load(out)["files"]) == files:
-                print(f"{key} {name}: cached")
-                continue
+            feats, start = [], 0
+            if out.exists():
+                old = np.load(out)
+                old_files = list(old["files"])
+                if old_files == files:
+                    print(f"{key} {name}: cached")
+                    continue
+                if old_files == files[: len(old_files)]:  # rows appended (e.g. a new OOS group): encode the tail
+                    feats, start = [old["x"]], len(old_files)
+                    print(f"{key} {name}: {start} cached, {len(files) - start} new")
             bb = bb or Backbone(key)
-            feats = []
             with ThreadPoolExecutor(4) as ex:
-                for i in range(0, len(recs), batch):
+                for i in range(start, len(recs), batch):
                     imgs = list(ex.map(loader, recs[i : i + batch]))
                     feats.append(bb.encode(imgs).astype(np.float16))
                     if (i // batch) % 50 == 0:
@@ -292,7 +298,9 @@ def evaluate(keys, permissive=False, extras=False):
     # fine-tuned candidates (training/lora_finetune.py): realworld rows only, so not with extras
     for f in [] if (permissive or extras) else sorted(BENCH_DIR.glob("probs_*.npz")):
         d = np.load(f)
-        assert list(d["oos_files"]) == [r["file"] for r in D.oos], f"{f.name}: OOS manifest changed"
+        if list(d["oos_files"]) != [r["file"] for r in D.oos]:  # OOS set grew: rerun lora_finetune --score-only
+            print(f"skip {f.stem}: scored on an older OOS manifest")
+            continue
         probs[f.stem.removeprefix("probs_")] = (d["rw"], d["oos"])
     singles = list(probs)
     for a, b in itertools.combinations([k for k in singles if k in probes], 2):

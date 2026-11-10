@@ -99,3 +99,19 @@ def test_member_exact_copy_needs_pixel_identity():
     idx = tiny_copy_index(eng)
     assert eng.analyse(reupload, idx)["details"]["copy_exact"]["nearest"] == "punk.png"
     assert eng.analyse(sibling, idx)["details"]["copy_exact"]["nearest"] is None
+
+
+def test_copy_member_margin_catches_a_mirrored_remint():
+    """Phase 5b: copy_member = cos(upload or its mirror, member) - the member's own nn_sscd; one-off
+    works are not members and never count here; without `member_semantic` the value is absent."""
+    eng = copy_engine()
+    idx = tiny_copy_index(eng)
+    punk = fixture_image("punk.png")
+    assert "copy_member" not in eng.analyse(punk, idx)["values"]
+    eng.p = {**eng.p, "member_semantic": {"k": 10, "mirror": True, "threshold": 0.15}}
+    idx.nn_sscd[0] = 0.6  # the punk's nearest sibling
+    out = eng.analyse(ImageOps.mirror(punk), idx)
+    assert abs(out["values"]["copy_member"] - 0.4) < 1e-3  # mirror of the mirror = the punk: cos 1.0 - 0.6
+    assert out["details"]["copy_member"] == {"nearest": "punk.png", "mirrored": True}
+    empty = MemoryCopyIndex()
+    assert eng.analyse(punk, empty)["values"]["copy_member"] == -1.0

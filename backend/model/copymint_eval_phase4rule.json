@@ -1,0 +1,419 @@
+{
+  "generated": "2026-11-10 22:59",
+  "policy_version": "5.1.0",
+  "copy_engine": "copy-engine-1.0.0+gpu",
+  "copy_params_sha": "400d68593988",
+  "member_max_diff_px": 13,
+  "member_dihedral": false,
+  "per_collection": {
+    "rrbayc": {
+      "name": "RR/BAYC",
+      "chain": "Ethereum",
+      "address": "0x2EE6AF0dFf3A1CE3F7E3414C52c48fd50d73691e",
+      "copies": "Bored Ape Yacht Club",
+      "transform": "none",
+      "all_sampled": {
+        "n": 300,
+        "PASS": {
+          "rate": 0.6867,
+          "k": 206,
+          "n": 300,
+          "ci95": [
+            0.6321,
+            0.7365
+          ]
+        },
+        "REVIEW": {
+          "rate": 0.3133,
+          "k": 94,
+          "n": 300,
+          "ci95": [
+            0.2635,
+            0.3679
+          ]
+        },
+        "FAIL": {
+          "rate": 0.0,
+          "k": 0,
+          "n": 300,
+          "ci95": [
+            0.0,
+            0.0126
+          ]
+        },
+        "stopped (REVIEW or FAIL)": {
+          "rate": 0.3133,
+          "k": 94,
+          "n": 300,
+          "ci95": [
+            0.2635,
+            0.3679
+          ]
+        },
+        "stopped_by_copy_checks": {
+          "rate": 0.0,
+          "k": 0,
+          "n": 300,
+          "ci95": [
+            0.0,
+            0.0126
+          ]
+        },
+        "right_original_named": {
+          "rate": 0.9867,
+          "k": 296,
+          "n": 300,
+          "ci95": [
+            0.9662,
+            0.9948
+          ]
+        },
+        "not_blocked_as_copy_of_right_original": {
+          "member_pixel_rule:resampling": 299,
+          "original_not_indexed": 1
+        },
+        "check_flags": {
+          "manipulation:REVIEW": 94
+        }
+      },
+      "original_indexed_and_pair_verified": {
+        "n": 299,
+        "PASS": {
+          "rate": 0.6856,
+          "k": 205,
+          "n": 299,
+          "ci95": [
+            0.6309,
+            0.7356
+          ]
+        },
+        "REVIEW": {
+          "rate": 0.3144,
+          "k": 94,
+          "n": 299,
+          "ci95": [
+            0.2644,
+            0.3691
+          ]
+        },
+        "FAIL": {
+          "rate": 0.0,
+          "k": 0,
+          "n": 299,
+          "ci95": [
+            0.0,
+            0.0127
+          ]
+        },
+        "stopped (REVIEW or FAIL)": {
+          "rate": 0.3144,
+          "k": 94,
+          "n": 299,
+          "ci95": [
+            0.2644,
+            0.3691
+          ]
+        },
+        "stopped_by_copy_checks": {
+          "rate": 0.0,
+          "k": 0,
+          "n": 299,
+          "ci95": [
+            0.0,
+            0.0127
+          ]
+        },
+        "right_original_named": {
+          "rate": 0.99,
+          "k": 296,
+          "n": 299,
+          "ci95": [
+            0.9709,
+            0.9966
+          ]
+        },
+        "not_blocked_as_copy_of_right_original": {
+          "member_pixel_rule:resampling": 299
+        },
+        "check_flags": {
+          "manipulation:REVIEW": 94
+        }
+      }
+    },
+    "cryptophunks": {
+      "name": "CryptoPhunks V2",
+      "chain": "Ethereum",
+      "address": "0xf07468eAd8cf26c752C676E43C814FEe9c8CF402",
+      "copies": "CryptoPunks",
+      "transform": "mirror",
+      "all_sampled": {
+        "n": 300,
+        "PASS": {
+          "rate": 0.9667,
+          "k": 290,
+          "n": 300,
+          "ci95": [
+            0.9397,
+            0.9818
+          ]
+        },
+        "REVIEW": {
+          "rate": 0.03,
+          "k": 9,
+          "n": 300,
+          "ci95": [
+            0.0159,
+            0.056
+          ]
+        },
+        "FAIL": {
+          "rate": 0.0033,
+          "k": 1,
+          "n": 300,
+          "ci95": [
+            0.0006,
+            0.0186
+          ]
+        },
+        "stopped (REVIEW or FAIL)": {
+          "rate": 0.0333,
+          "k": 10,
+          "n": 300,
+          "ci95": [
+            0.0182,
+            0.0603
+          ]
+        },
+        "stopped_by_copy_checks": {
+          "rate": 0.0033,
+          "k": 1,
+          "n": 300,
+          "ci95": [
+            0.0006,
+            0.0186
+          ]
+        },
+        "right_original_named": {
+          "rate": 0.35,
+          "k": 105,
+          "n": 300,
+          "ci95": [
+            0.2982,
+            0.4056
+          ]
+        },
+        "not_blocked_as_copy_of_right_original": {
+          "member_pixel_rule:resampling": 242,
+          "original_not_indexed": 25,
+          "pdq_far": 33
+        },
+        "check_flags": {
+          "copy_exact:FAIL": 1,
+          "copy_move:REVIEW": 3,
+          "manipulation:REVIEW": 6
+        }
+      },
+      "original_indexed_and_pair_verified": {
+        "n": 275,
+        "PASS": {
+          "rate": 0.9636,
+          "k": 265,
+          "n": 275,
+          "ci95": [
+            0.9344,
+            0.9801
+          ]
+        },
+        "REVIEW": {
+          "rate": 0.0327,
+          "k": 9,
+          "n": 275,
+          "ci95": [
+            0.0173,
+            0.061
+          ]
+        },
+        "FAIL": {
+          "rate": 0.0036,
+          "k": 1,
+          "n": 275,
+          "ci95": [
+            0.0006,
+            0.0203
+          ]
+        },
+        "stopped (REVIEW or FAIL)": {
+          "rate": 0.0364,
+          "k": 10,
+          "n": 275,
+          "ci95": [
+            0.0199,
+            0.0656
+          ]
+        },
+        "stopped_by_copy_checks": {
+          "rate": 0.0036,
+          "k": 1,
+          "n": 275,
+          "ci95": [
+            0.0006,
+            0.0203
+          ]
+        },
+        "right_original_named": {
+          "rate": 0.3818,
+          "k": 105,
+          "n": 275,
+          "ci95": [
+            0.3264,
+            0.4405
+          ]
+        },
+        "not_blocked_as_copy_of_right_original": {
+          "member_pixel_rule:resampling": 242,
+          "pdq_far": 33
+        },
+        "check_flags": {
+          "copy_exact:FAIL": 1,
+          "copy_move:REVIEW": 3,
+          "manipulation:REVIEW": 6
+        }
+      }
+    },
+    "phayc": {
+      "name": "Phunky Ape Yacht Club",
+      "chain": "Ethereum",
+      "address": "0x176e0fe17314def59f0f06e976e1b74203be4a55",
+      "copies": "Bored Ape Yacht Club",
+      "transform": "mirror",
+      "all_sampled": {
+        "n": 300,
+        "PASS": {
+          "rate": 0.66,
+          "k": 198,
+          "n": 300,
+          "ci95": [
+            0.6047,
+            0.7113
+          ]
+        },
+        "REVIEW": {
+          "rate": 0.34,
+          "k": 102,
+          "n": 300,
+          "ci95": [
+            0.2887,
+            0.3953
+          ]
+        },
+        "FAIL": {
+          "rate": 0.0,
+          "k": 0,
+          "n": 300,
+          "ci95": [
+            0.0,
+            0.0126
+          ]
+        },
+        "stopped (REVIEW or FAIL)": {
+          "rate": 0.34,
+          "k": 102,
+          "n": 300,
+          "ci95": [
+            0.2887,
+            0.3953
+          ]
+        },
+        "stopped_by_copy_checks": {
+          "rate": 0.0,
+          "k": 0,
+          "n": 300,
+          "ci95": [
+            0.0,
+            0.0126
+          ]
+        },
+        "right_original_named": {
+          "rate": 0.9867,
+          "k": 296,
+          "n": 300,
+          "ci95": [
+            0.9662,
+            0.9948
+          ]
+        },
+        "not_blocked_as_copy_of_right_original": {
+          "member_pixel_rule:resampling": 263,
+          "pdq_far": 37
+        },
+        "check_flags": {
+          "manipulation:REVIEW": 102
+        }
+      },
+      "original_indexed_and_pair_verified": {
+        "n": 300,
+        "PASS": {
+          "rate": 0.66,
+          "k": 198,
+          "n": 300,
+          "ci95": [
+            0.6047,
+            0.7113
+          ]
+        },
+        "REVIEW": {
+          "rate": 0.34,
+          "k": 102,
+          "n": 300,
+          "ci95": [
+            0.2887,
+            0.3953
+          ]
+        },
+        "FAIL": {
+          "rate": 0.0,
+          "k": 0,
+          "n": 300,
+          "ci95": [
+            0.0,
+            0.0126
+          ]
+        },
+        "stopped (REVIEW or FAIL)": {
+          "rate": 0.34,
+          "k": 102,
+          "n": 300,
+          "ci95": [
+            0.2887,
+            0.3953
+          ]
+        },
+        "stopped_by_copy_checks": {
+          "rate": 0.0,
+          "k": 0,
+          "n": 300,
+          "ci95": [
+            0.0,
+            0.0126
+          ]
+        },
+        "right_original_named": {
+          "rate": 0.9867,
+          "k": 296,
+          "n": 300,
+          "ci95": [
+            0.9662,
+            0.9948
+          ]
+        },
+        "not_blocked_as_copy_of_right_original": {
+          "member_pixel_rule:resampling": 263,
+          "pdq_far": 37
+        },
+        "check_flags": {
+          "manipulation:REVIEW": 102
+        }
+      }
+    }
+  }
+}

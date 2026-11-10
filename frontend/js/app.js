@@ -12,6 +12,7 @@ const CHECK_ORDER = [
   "copy_move",
   "copy_exact",
   "copy_semantic",
+  "copy_member",
   "copy_geometric",
 ];
 const CHECK_TITLE = {
@@ -21,6 +22,7 @@ const CHECK_TITLE = {
   copy_move: "Copy-move",
   copy_exact: "Exact copy (PDQ)",
   copy_semantic: "Edited copy (SSCD)",
+  copy_member: "Re-mint of a collection NFT (SSCD)",
   copy_geometric: "Partial copy (LightGlue)",
 };
 const CHAIN_NAMES = { 1: "Ethereum", 8453: "Base" };
@@ -397,7 +399,7 @@ $("analyzeBtn").addEventListener("click", async () => {
 function fmtValue(name, v) {
   if (name === "ai_detector" || name === "manipulation") return `${(v * 100).toFixed(1)}%`;
   if (name === "provenance") return PROVENANCE_TEXT[v] ?? String(v);
-  if (name === "copy_semantic") return v.toFixed(3);
+  if (name === "copy_semantic" || name === "copy_member") return v.toFixed(3);
   if (name === "copy_exact") return `${v} bits`;
   if (name === "copy_geometric") return `${v} inliers`;
   if (name === "copy_move") return `${Number(v).toFixed(2)}×`;

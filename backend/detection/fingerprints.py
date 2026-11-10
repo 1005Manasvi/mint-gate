@@ -131,11 +131,29 @@ class DinoV2(_Encoder):
 PIXEL_CHECK_PX = 128  # one 24x24 CryptoPunk grid cell = ~5x5 pixels: 64 px blurred it away
 
 
-def rgb_small(img: Image.Image) -> np.ndarray:
-    """128x128 RGB, NEAREST: the pixel-level check for exact copies of collection members. Colour
-    matters (siblings often differ only in hue) and so does sharpness: bilinear resampling averaged
-    a one-cell accessory away, letting 3 genuine test siblings through as "exact" (benchmark)."""
-    return np.asarray(img.convert("RGB").resize((PIXEL_CHECK_PX,) * 2, Image.NEAREST), dtype=np.int16)
+RESAMPLE = {"nearest": Image.NEAREST, "lanczos": Image.LANCZOS, "box": Image.BOX}
+
+
+def rgb_small(img: Image.Image, resample: str = "nearest") -> np.ndarray:
+    """128x128 RGB: the pixel-level check for exact copies of collection members. Colour matters
+    (siblings often differ only in hue) and so does sharpness: bilinear resampling at 64 px averaged
+    a one-cell accessory away, letting 3 genuine test siblings through as "exact" (benchmark).
+    `resample` is the engine's `member_rule.resample` (benchmark/member_rule.py chooses it)."""
+    return np.asarray(img.convert("RGB").resize((PIXEL_CHECK_PX,) * 2, RESAMPLE[resample]), dtype=np.int16)
+
+
+def dihedral_small(a: np.ndarray) -> list[np.ndarray]:
+    """The 8 rotations / mirrors of a square (h, w, 3) array (the same group pdq_dihedral hashes)."""
+    out = []
+    for k in range(4):
+        r = np.rot90(a, k)
+        out += [r, r[:, ::-1]]
+    return out
+
+
+def member_diff(q_variants: list[np.ndarray], ref: np.ndarray, level: int = 48) -> int:
+    """Smallest differing-pixel count of any query variant (1 = as uploaded, 8 = dihedral) vs ref."""
+    return min(differing_pixels(q, ref, level) for q in q_variants)
 
 
 def differing_pixels(a: np.ndarray, b: np.ndarray, level: int = 48) -> int:

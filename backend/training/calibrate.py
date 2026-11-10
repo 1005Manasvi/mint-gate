@@ -12,6 +12,8 @@ Every threshold comes from a benchmark, never from hand-tuning:
                   on genuine VAL images, from the forgery benchmark (model/benchmarks/forgery.json).
                   REVIEW-only: artists legitimately composite / retouch their own work.
   copy_move       block matching (unchanged): kept, or recomputed with `--recalibrate-copy-move`.
+  copy_member     (Phase 5b) REVIEW-only SSCD margin vs collection members: benchmark/member_rule.py
+                  --ship writes it (and the member pixel rule); calibrate keeps it unchanged.
   provenance      fixed by design: 1.0 = AI evidence (FAIL), 0.6 = advisory (REVIEW), 0 = nothing,
                   -1 = trusted capture chain, which caps the AI detector at REVIEW (`positive_evidence`).
 The ResNet-18 check is retired (chance level on real forgeries, docs/models.md).
@@ -38,7 +40,7 @@ from detection.preprocessing import load_path
 from training.realworld_data import open_image, records
 from training.split import load_split, paths
 
-POLICY_VERSION = "5.0.0"
+POLICY_VERSION = "5.1.0"
 COPY_FPR_REVIEW, COPY_FPR_FAIL = 0.01, 0.002
 # ResNet-18's 0.15 is split between the AI detector (+0.05) and TruFor (0.10). When a check does not
 # run (TruFor on CPU / permissive) its weight simply does not count. Provenance acts through its
@@ -93,7 +95,7 @@ def copy_values(profile="gpu"):
     # only counts when it is also pixel-identical (detection.copy_engine._exact). The PDQ quality
     # gate applies to one-off works only.
     pd_raw = cd.popcount_distances(cd.load("pdq_queries"), cd.load("pdq_refs"))
-    px = member_pixels(pd_raw, member, b, eng["pdq_max_bits"])
+    px = member_pixels(pd_raw, member, b, eng["pdq_max_bits"], eng.get("member_rule") or {})
     max_px = member_pixel_budget(px, b)
     eng["member_max_diff_px"] = max_px
     eng.pop("member_exact_min_sscd", None)
@@ -113,13 +115,20 @@ def copy_values(profile="gpu"):
     return v, nearest, b, v1
 
 
-def member_pixels(pd_raw, member, b, max_bits, per_query=5):
-    """(queries, refs) differing-pixel counts for the <= 5 PDQ-closest members within max_bits
-    (cached); every other pair is 4096 (never pixel-identical)."""
+def member_pixels(pd_raw, member, b, max_bits, rule, per_query=5):
+    """(queries, refs) differing-pixel counts for the <= 5 PDQ-closest members within max_bits under
+    the engine's `member_rule` (resample filter, dihedral; cached per rule); every other pair is 4096."""
     from benchmark.build_copydet import source_path
     from detection import fingerprints as fp
 
-    cache = cd_cache() / "member_pixels.npy"
+    resample, dihedral = rule.get("resample", "nearest"), bool(rule.get("dihedral", False))
+    level = int(rule.get("level", 48))
+    tag = (
+        ""
+        if (resample, dihedral, level) == ("nearest", False, 48)
+        else f"_{resample}{'_d' if dihedral else ''}_{level}"
+    )
+    cache = cd_cache() / f"member_pixels{tag}.npy"
     if cache.exists():
         return np.load(cache)
     out = np.full(pd_raw.shape, 4096, np.int16)
@@ -128,11 +137,12 @@ def member_pixels(pd_raw, member, b, max_bits, per_query=5):
         close = np.flatnonzero(member & (pd_raw[i] <= max_bits))
         if not len(close):
             continue
-        q64 = fp.rgb_small(b.query_image(i))
+        q = fp.rgb_small(b.query_image(i), resample)
+        qv = fp.dihedral_small(q) if dihedral else [q]
         for j in close[np.argsort(pd_raw[i, close], kind="stable")][:per_query]:
             if j not in refs:
-                refs[j] = fp.rgb_small(load_path(source_path(b.refs[j]["name"])))
-            out[i, j] = fp.differing_pixels(q64, refs[j])
+                refs[j] = fp.rgb_small(load_path(source_path(b.refs[j]["name"])), resample)
+            out[i, j] = fp.member_diff(qv, refs[j], level)
     np.save(cache, out)
     return out
 
@@ -313,6 +323,9 @@ def main():
     else:
         weights.pop("manipulation")
     checks["provenance"] = {"review": 0.5, "fail": 0.9}
+    if "copy_member" in policy["checks"]:  # Phase 5b: written by benchmark/member_rule.py --ship, kept as is
+        checks["copy_member"] = dict(policy["checks"]["copy_member"])
+        weights["copy_member"] = 0.0
     for k, label in {**LABELS_DET, "ai_detector": ai_label}.items():
         if k in checks:
             checks[k] = {"label": label, **checks[k]}
@@ -324,6 +337,8 @@ def main():
         "positive_evidence": {"check": "provenance", "below": 0, "cap": {"ai_detector": "REVIEW"}},
         "calibration": {"copy": copy_cal, "detectors": det_cal},
     }
+    if "copy_member" in policy.get("calibration", {}):
+        new["calibration"]["copy_member"] = policy["calibration"]["copy_member"]
     out_file.write_text(json.dumps(new, indent=2))
     print("updated", out_file, "->", new["version"])
 

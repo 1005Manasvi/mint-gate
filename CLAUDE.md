@@ -8,7 +8,7 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 
 ## Architecture (current state)
 - `backend/detection/`: provenance + preprocessing → checks → `policy.py` (PASS / REVIEW / FAIL), policy
-  **v5.0.0** (`policy.permissive.json` = `5.0.0-permissive` when `MINTGATE_PERMISSIVE_ONLY=1`).
+  **v5.1.0** (`policy.permissive.json` = `5.1.0-permissive` when `MINTGATE_PERMISSIVE_ONLY=1`).
   - AI detector (Phase 5) = linear probes on frozen **CLIP-B/32 + SigLIP 2 B/16** (w 0.3 / 0.7),
     `ai_detector.py` format 2 + `backbones.py` (vision towers only, fp16 safetensors in `model/backbones/`,
     SHA-256 manifest, fetched by `python -m training.ai_backbones fetch`). Chosen by the out-of-source gate
@@ -26,9 +26,11 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
     fusion + 18 SSCD region crops, density-relative (`copy_semantic`); params `model/copy_engine.json`
     are written by `benchmark.copydet evaluate` (val-tuned). Index: `copy_index.py` (`PgCopyIndex` =
     pgvector HNSW on `reference_items`, one-off works in their own partial HNSW indexes [0005];
-    PDQ searched **exactly** from an in-memory cache; `MemoryCopyIndex` for tests). Collection
-    members count only as exact copies, and only if pixel-identical too (`member_max_diff_px`, 128 px
-    NEAREST RGB; CryptoPunks siblings are PDQ-close). Profiles: GPU = 18 SSCD region crops, CPU = none
+    PDQ searched **exactly** from an in-memory cache; `MemoryCopyIndex` for tests). Copy engine
+    **1.1.0** (Phase 5b, `benchmark/member_rule.py --ship`): a PDQ-close collection member is an exact
+    copy only if pixel-identical (`member_rule` = BOX, dihedral, level 16; `member_max_diff_px` 22 at
+    128 px); re-mints are caught by the REVIEW-only `copy_member` check (SSCD of upload + mirror vs
+    members: cos − nn_sscd ≥ 0.15, `member_semantic`). Profiles: GPU = 18 SSCD region crops, CPU = none
     (`regions_cpu`, 1.5 s budget). LightGlue (`local_match.py`) was benchmarked and rejected: unused. v1 `reference_index.py` / `hashing.py` / `feature_match.py` / `training/build_index.py`
     are kept only for the benchmark baseline (`build_index` still writes `index/files.json` = seed list).
   - `copy_move.py`: block matching with shift-vector voting.
@@ -83,7 +85,12 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
   evaluate_system (n <= 300 per category, sampled without replacement, resumable), independent_check (v1)).
   Data in `backend/data/realworld/` (20,309 images, manifest.json); held-out generator = Flux.
   Forgery benchmark: `benchmark/build_forgery.py` + `benchmark/forgery.py` (`data/benchmark/forgery/`).
-- Results: README.md, PROJECT_REPORT.md, `docs/models.md` (model register + benchmark). Policy v5.0.0. Tests: `backend/tests/` (pytest), `Blockchain/test/` (Hardhat) + `Blockchain/test/foundry/`; security review: `docs/security.md`.
+- **NFT-native evaluation (Phase 5b):** `training/copymint_data.py` (RR/BAYC, CryptoPhunks V2, PHAYC →
+  `data/copymint/`, never in `reference_items`), `training/copymint_eval.py` (full pipeline per copy,
+  miss causes; `--copy-params` for before/after), `training/ai_nft_data.py` (12 BrainDrops projects +
+  Bastard GAN Punks V2 → OOS group `ai_nft:*`, originals in `data/ai_nft/raw/`, `as_upload` for > 10 MB
+  files), `training.provenance_eval --nft`, `evaluate_system` categories `copymint_*` / `ai_nft_collection`.
+- Results: README.md, PROJECT_REPORT.md, `docs/models.md` (model register + benchmark). Policy v5.1.0. Tests: `backend/tests/` (pytest), `Blockchain/test/` (Hardhat) + `Blockchain/test/foundry/`; security review: `docs/security.md`.
 
 ## Commands (Windows; venv = Python 3.12 + CUDA torch 2.6)
 - Python: `venv\Scripts\python.exe` (run from `backend/` as `-m training.xxx`).
@@ -114,6 +121,17 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
 - CI: `.github/workflows/ci.yml` (python, contracts [+ chain pytest], foundry, slither, e2e, lint). Accepted findings: `docs/security.md`.
 
 ## Hard-won gotchas (do not relearn these)
+- **Phase 5b:** `repo.add_nft_items` must set `collection_member` (before 5b only migration 0004 did, so
+  every later backfill / sync row was a one-off and its siblings "copied" it). Plain `ingest embed` does
+  not fill `nn_sscd` (only `--follow` / `--rebuild-nn`): it now warns; `ingest.embed.update_nn` repairs a
+  few thousand rows (~40 min for 4k). Re-uploads must be tested with the token's *file*, not the 128 px
+  thumbnail (Phase 4's 98 % did that). The 128 px JPEG thumbnails are too lossy to prove identity of
+  detailed art (open: larger references). Seed CryptoPunks carry red / purple "for sale" backgrounds.
+  Level 48 hides dark-on-dark punk traits (moles, beards). Alchemy `searchContractMetadata` is gone
+  (use public pages + `getContractMetadata`); its CDN serves some files as AVIF (not uploadable) and
+  `cdn-cgi/image/width=N` renditions; ipfs.io / dweb.link refuse scripts, Pinata's gateway works.
+  BrainDrops originals reach 44 MB / 100 MP (upload limit 10 MB / 40 MP). Docker Desktop crashed once
+  under memory pressure (GPU eval + CPU eval + Postgres): run long jobs one at a time.
 - **Phase 5:** the laptop runs out of *commit* memory (page file can't grow when C: is full; another
   project's jobs share the machine): long jobs crash with MemoryError / "bad allocation" / access
   violations in MKL. Every long job checkpoints and resumes (`benchmark.forgery run`, `evaluate_system`,
