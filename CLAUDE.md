@@ -83,8 +83,8 @@ portfolio project. Work is split into phases: see `docs/phases/README.md`.
   Sepolia Safe `0xEdE58D8Ff74e72fc7568e68c8927a68884a290Fb`, timelock `0xC56840B4…104F`, PolicyRegistry
   `0xaa3d8342…78Fe`, resolver `0xdb049075…48Cc`; Base Sepolia Safe `0x66bf57DC…2C67`, timelock `0x1B2c4708…1c7d`,
   PolicyRegistry `0x7d56206F…A017`, resolver `0xC56840B4…104F` (= Sepolia's timelock address!).
-  Hand-over done 2026-11-11 (pauser + treasury = Safe; admin transfer begun): **admin becomes the Safe only
-  when a second owner signs the `accept-admin` proposal on `/explorer`**. Scripts: `deploy-governance.js`,
+  Hand-over **complete 2026-11-13**: registry admin + pauser + treasury = the Safe on both chains (`accept-admin`
+  executed: Sepolia tx `0x752b2f03…b6f2`, Base Sepolia `0x6add01f1…fd52`); the deployer key has no admin role. Scripts: `deploy-governance.js`,
   `handover.js`, `scripts/lib/safe.js` (vendored artifacts `Blockchain/vendor/safe-1.4.1/`, LGPL-3.0).
   Backend: `backend/governance/` (`safe.py` EIP-712 SafeTx + proposals table `safe_proposals`, `actions.py`,
   CLI `python -m governance policies|propose|sign|exec|timelock-exec|list`), `backend/disputes/` (`api.py`

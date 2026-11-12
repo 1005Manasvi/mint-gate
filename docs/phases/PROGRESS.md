@@ -323,12 +323,14 @@ and anything the next phase must know. Keep entries brief: this file is read at 
   back → explorer verifies policy; two Safe owners sign the admin hand-over on /explorer, a third party executes).
 - **Sepolia gas finding:** a plain ETH transfer to a new address costs 204,600 gas there (state-creation
   repricing); never hard-code 21,000.
-- **OWNER ACTION (blocks "ADMIN is held by a Safe"):** the `accept-admin` proposals (Sepolia
-  `0xccd5a9e0…dc913`, Base Sepolia `0x06987d71…84e9`) are signed by owner 1; a second owner (`0x1F79…E2E2` or
-  `0xCb03…57c2`) must sign: start the stack with `CHAIN_NETWORKS=sepolia,baseSepolia` (server + indexer), open
-  http://127.0.0.1:5000/explorer with that wallet in MetaMask → Governance → "Sign as owner" (gasless) → "Execute"
-  (any wallet with a little ETH). Until then the deployer is still admin; pauser and treasury are already the Safe.
-  The proposals live in the local dev DB (`safe_proposals`).
+- **Admin hand-over complete (2026-11-13):** the `accept-admin` proposals were signed by owner 1 (CLI) and
+  owner 2 `0x1F79…E2E2` (wallet, on `/explorer`) and executed: Sepolia tx
+  `0x752b2f032cc13648d612e78d00d4540ae4d8efde19669bdaaa13a24911a5b6f2` (block 12121336), Base Sepolia tx
+  `0x6add01f1fc5f782642b714e82c8faf962f583359bc0450508298ec75a6f8fd52` (block 57974469). Checked on chain:
+  `defaultAdmin()` = the Safe and `pendingDefaultAdmin()` empty on both; the deployer has neither admin nor
+  pauser. Both acceptance criteria of Phase 6 are met. `indexer --once` failed against the public RPCs
+  (Sepolia "pruned history unavailable", Base Sepolia HTTP 413), so the two proposals were marked executed
+  with `governance.safe.mark_executed` after checking `ExecutionSuccess` in each receipt.
 - **Open / for Phase 7:** run the indexer for Base Sepolia (never indexed yet, ~3.6M blocks); disputes have no
   on-chain timeout (immutable registry); testnet verifier + reviewer are still the deployer key; Safe proposals are
   stored in the app DB (no Safe Transaction Service, which needs an API key); larger copymint references (5b).

@@ -109,6 +109,7 @@ with the same nonce are marked `replaced` when another one executes.
 set the treasury to the Safe and began the admin transfer. After the 1 h delay, the proposal
 `accept-admin` (already created and signed by owner 1 on both chains) needs one more owner signature on
 `/explorer`, then **Execute**. Check: `registry.defaultAdmin()` = the Safe; `pendingDefaultAdmin()` empty.
+**Done on both testnets 2026-11-13** (Sepolia tx `0x752b2f03…b6f2`, Base Sepolia tx `0x6add01f1…fd52`).
 
 ### 4.2 Verifier key rotation (planned or after a leak)
 

@@ -176,8 +176,8 @@ These are design limits, not bugs; the roadmap addresses them.
 - **v2 disputes have no timeout.** A dispute nobody resolves keeps its bond locked (the registry is
   immutable; Phase 6 adds a 7-day review target and Discord alerts, docs/governance.md § 3).
 - **Admin → Safe (Phase 6).** Admin, pauser and treasury move to a 2-of-3 Safe on both testnets; the
-  admin transfer is two-step (1 h) and completes when a second owner signs `accept-admin`
-  (docs/governance.md § 4.1). Until then the deployer is still admin.
+  admin transfer is two-step (1 h); it completed on both testnets on 2026-11-13 (docs/governance.md § 4.1),
+  so the deployer key alone can no longer change roles, pause or the policy.
 - **Testnet verifier and reviewer are still one wallet** (`0xeed8…eD7F`, also Safe owner 1).
   Production needs separate keys; the Safe can rotate both without a redeploy.
 - **Reviewers are wallets (Phase 6).** Disputes and the REVIEW queue accept SIWE sessions whose wallet
